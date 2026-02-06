@@ -1,0 +1,192 @@
+﻿@page "/auditorias/nueva"
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Models.Catalogos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h2>Nueva Auditoría</h2>
+
+<EditForm Model="model" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label">Fecha inicio</label>
+            <InputDate class="form-control" @bind-Value="model.FechaInicio" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Fecha fin</label>
+            <InputDate class="form-control" @bind-Value="model.FechaFin" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Tipo</label>
+            <InputSelect class="form-select" @bind-Value="model.TipoAuditoria">
+                <option value="Interna">Interna</option>
+                <option value="Externa">Externa</option>
+                <option value="Cliente">Cliente</option>
+            </InputSelect>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Estatus</label>
+            <InputSelect class="form-select" @bind-Value="model.Estatus">
+                <option value="Planeada">Planeada</option>
+                <option value="En Proceso">En Proceso</option>
+                <option value="Cerrada">Cerrada</option>
+            </InputSelect>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">Objetivo</label>
+            <InputText class="form-control" @bind-Value="model.Objetivo" />
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">Alcance</label>
+            <InputText class="form-control" @bind-Value="model.Alcance" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Auditor líder (temporal)</label>
+            <InputText class="form-control" @bind-Value="model.AuditorLiderId" />
+        </div>
+
+        <div class="col-md-8">
+            <div class="alert alert-info mb-0">
+                <div><b>Se crearán procesos automáticamente</b> al guardar.</div>
+                @if (previewLoaded)
+                {
+                    <div class="small mt-1">
+                        Procesos activos: <b>@previewProcesos</b> |
+                        Producción (unidades activas): <b>@previewUnidadesProd</b>
+                    </div>
+                }
+                else
+                {
+                    <div class="small mt-1">Cargando preview...</div>
+                }
+            </div>
+        </div>
+
+        <div class="col-12 d-flex gap-2 mt-2">
+            <button type="submit" class="btn btn-success" disabled="@guardando">
+                @(guardando ? "Guardando..." : "Guardar")
+            </button>
+
+            <button type="button" class="btn btn-outline-secondary" @onclick="Cancelar" disabled="@guardando">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    private Auditoria model = new()
+    {
+        FechaInicio = DateTime.Today,
+        FechaFin = DateTime.Today,
+        TipoAuditoria = "Interna",
+        Estatus = "Planeada",
+        AuditorLiderId = "sistema",
+        Objetivo = "",
+        Alcance = ""
+    };
+
+    private bool guardando;
+
+    // preview
+    private bool previewLoaded;
+    private int previewProcesos;
+    private int previewUnidadesProd;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var procesos = await Db.Procesos.Where(p => p.Activo).ToListAsync();
+        previewProcesos = procesos.Count;
+
+        var prod = procesos.FirstOrDefault(p => p.Codigo == "MX-7000-D1");
+        if (prod != null)
+        {
+            previewUnidadesProd = await Db.UnidadesNegocio
+                .Where(u => u.ProcesoId == prod.ProcesoId && u.Activo)
+                .CountAsync();
+        }
+
+        previewLoaded = true;
+    }
+
+    private async Task Guardar()
+    {
+        if (guardando) return;
+        guardando = true;
+
+        // 1) Guardar auditoría
+        Db.Auditorias.Add(model);
+        await Db.SaveChangesAsync();
+        var auditoriaId = model.AuditoriaId;
+
+        // 2) Cargar procesos activos
+        var procesos = await Db.Procesos
+            .Where(p => p.Activo)
+            .OrderBy(p => p.Codigo)
+            .ToListAsync();
+
+        var prod = procesos.FirstOrDefault(p => p.Codigo == "MX-7000-D1");
+
+        // 3) Crear AuditoriaProceso para NO Producción
+        var auditoriaProcesos = new List<AuditoriaProceso>();
+
+        foreach (var p in procesos)
+        {
+            if (prod != null && p.ProcesoId == prod.ProcesoId)
+                continue;
+
+            auditoriaProcesos.Add(new AuditoriaProceso
+            {
+                AuditoriaId = auditoriaId,
+                ProcesoId = p.ProcesoId,
+                AuditorAsignadoId = "",
+                UnidadNegocioId = null,
+                LineaNombre = null
+            });
+        }
+
+        // 4) Crear AuditoriaProceso para Producción por UnidadNegocio
+        if (prod != null)
+        {
+            var unidades = await Db.UnidadesNegocio
+                .Where(u => u.ProcesoId == prod.ProcesoId && u.Activo)
+                .OrderBy(u => u.Codigo)
+                .ToListAsync();
+
+            foreach (var u in unidades)
+            {
+                auditoriaProcesos.Add(new AuditoriaProceso
+                {
+                    AuditoriaId = auditoriaId,
+                    ProcesoId = prod.ProcesoId,
+                    UnidadNegocioId = u.UnidadNegocioId,
+                    AuditorAsignadoId = "",
+                    LineaNombre = "" // pendiente por capturar
+                });
+            }
+        }
+
+        // 5) Guardar AuditoriaProcesos (con protección para no duplicar si reintentan)
+        var yaTiene = await Db.AuditoriaProcesos.AnyAsync(x => x.AuditoriaId == auditoriaId);
+        if (!yaTiene && auditoriaProcesos.Count > 0)
+        {
+            Db.AuditoriaProcesos.AddRange(auditoriaProcesos);
+            await Db.SaveChangesAsync();
+        }
+
+        // 6) Navegar al detalle
+        Nav.NavigateTo($"auditorias/{auditoriaId}");
+    }
+
+    private void Cancelar() => Nav.NavigateTo("auditorias");
+}

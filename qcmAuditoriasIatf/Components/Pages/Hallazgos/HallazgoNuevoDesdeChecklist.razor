@@ -1,0 +1,227 @@
+﻿@page "/auditorias/{auditoriaId:int}/procesos/{auditoriaProcesoId:int}/checklist/{preguntaId:int}/hallazgo/nuevo"
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.Hallazgos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h2>Nuevo hallazgo</h2>
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else if (ap is null || pregunta is null)
+{
+    <div class="alert alert-danger">No se encontró el contexto (proceso/pregunta).</div>
+    <button class="btn btn-outline-secondary" @onclick="Volver">Volver</button>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="fw-semibold">@ap.Proceso?.Codigo - @ap.Proceso?.Nombre</div>
+            <div class="text-muted small">
+                Auditoría: <b>#@auditoriaId</b> |
+                Auditor asignado: <b>@(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Sin asignar" : ap.AuditorAsignadoId)</b>
+                @if (!string.IsNullOrWhiteSpace(ap.LineaNombre))
+                {
+                    <span> | Línea: <b>@ap.LineaNombre</b></span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="fw-semibold">Pregunta</div>
+            <div>@pregunta.Pregunta</div>
+
+            @if (!string.IsNullOrWhiteSpace(pregunta.Requisito))
+            {
+                <div class="text-muted small mt-1">@pregunta.Requisito</div>
+            }
+
+            @if (pregunta.Clausula is not null)
+            {
+                <div class="text-muted small mt-2">
+                    Cláusula: <b>@pregunta.Clausula.Codigo</b> - @pregunta.Clausula.Descripcion
+                </div>
+            }
+        </div>
+    </div>
+
+    <EditForm Model="vm" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Tipo de hallazgo</label>
+                <InputSelect class="form-select" @bind-Value="vm.TipoHallazgoId">
+                    <option value="0">-- Selecciona --</option>
+                    @foreach (var t in tiposHallazgo)
+                    {
+                        <option value="@t.TipoHallazgoId">@t.Nombre</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Fecha compromiso</label>
+                <InputDate class="form-control" @bind-Value="vm.FechaCompromiso" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Responsable (temporal)</label>
+                <InputText class="form-control" @bind-Value="vm.ResponsableId" />
+                <div class="form-text">Por ahora texto. Luego puede venir de Identity.</div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Evidencia (opcional)</label>
+                <InputText class="form-control" @bind-Value="vm.Evidencia" />
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Descripción del hallazgo</label>
+                <InputTextArea class="form-control" @bind-Value="vm.Descripcion" rows="4" />
+            </div>
+
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-danger" type="submit" disabled="@guardando">
+                    @(guardando ? "Guardando..." : "Guardar hallazgo")
+                </button>
+                <button class="btn btn-outline-secondary" type="button" @onclick="Volver" disabled="@guardando">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int auditoriaId { get; set; }
+    [Parameter] public int auditoriaProcesoId { get; set; }
+    [Parameter] public int preguntaId { get; set; }
+
+    private bool cargando = true;
+    private bool guardando;
+    private string? errorMsg;
+
+    private AuditoriaProceso? ap;
+    private ChecklistPregunta? pregunta;
+    private List<TipoHallazgo> tiposHallazgo = new();
+
+    private Vm vm = new();
+
+    private class Vm
+    {
+        public int TipoHallazgoId { get; set; }
+        public DateTime FechaCompromiso { get; set; } = DateTime.Today.AddDays(7);
+        public string? ResponsableId { get; set; }
+        public string? Evidencia { get; set; }
+        public string? Descripcion { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        ap = await Db.AuditoriaProcesos
+            .Include(x => x.Proceso)
+            .FirstOrDefaultAsync(x => x.AuditoriaProcesoId == auditoriaProcesoId && x.AuditoriaId == auditoriaId);
+
+        pregunta = await Db.ChecklistPreguntas
+            .Include(p => p.Clausula)
+            .FirstOrDefaultAsync(p => p.PreguntaId == preguntaId);
+
+        tiposHallazgo = await Db.TiposHallazgo
+            .OrderBy(x => x.Nombre)
+            .ToListAsync();
+
+        // Defaults útiles
+        if (ap is not null && string.IsNullOrWhiteSpace(vm.ResponsableId))
+        {
+            vm.ResponsableId = string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "sistema" : ap.AuditorAsignadoId;
+        }
+
+        if (pregunta is not null && string.IsNullOrWhiteSpace(vm.Descripcion))
+        {
+            vm.Descripcion = $"No cumple: {pregunta.Pregunta}";
+        }
+
+        cargando = false;
+    }
+
+    private async Task Guardar()
+    {
+        if (guardando) return;
+        guardando = true;
+        errorMsg = null;
+
+        try
+        {
+            if (ap is null || pregunta is null)
+                return;
+
+            if (vm.TipoHallazgoId == 0)
+            {
+                errorMsg = "Selecciona un tipo de hallazgo.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(vm.Descripcion))
+            {
+                errorMsg = "La descripción es obligatoria.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(vm.ResponsableId))
+            {
+                errorMsg = "El responsable es obligatorio.";
+                return;
+            }
+
+            var hallazgo = new Hallazgo
+            {
+                AuditoriaId = auditoriaId,
+                ProcesoId = ap.ProcesoId,
+                ClausulaId = pregunta.ClausulaId,
+                TipoHallazgoId = vm.TipoHallazgoId,
+
+                AuditoriaProcesoId = auditoriaProcesoId, 
+                PreguntaId = preguntaId,                 
+
+                Descripcion = vm.Descripcion.Trim(),
+                Evidencia = string.IsNullOrWhiteSpace(vm.Evidencia) ? null : vm.Evidencia.Trim(),
+
+                ResponsableId = vm.ResponsableId.Trim(),
+                FechaCompromiso = vm.FechaCompromiso,
+                Estatus = "Abierto"
+            };
+
+            Db.Hallazgos.Add(hallazgo);
+            await Db.SaveChangesAsync();
+
+            Nav.NavigateTo($"auditorias/{auditoriaId}/procesos/{auditoriaProcesoId}/checklist");
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private void Volver() => Nav.NavigateTo($"auditorias/{auditoriaId}/procesos/{auditoriaProcesoId}/checklist");
+}

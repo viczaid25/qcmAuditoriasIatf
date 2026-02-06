@@ -1,0 +1,93 @@
+﻿@page "/procesos/{Id:int}/editar"
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h2>Editar Proceso</h2>
+
+@if (model == null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <EditForm Model="model" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Código</label>
+                <InputText class="form-control" @bind-Value="model.Codigo" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Nombre</label>
+                <InputText class="form-control" @bind-Value="model.Nombre" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Área</label>
+                <InputText class="form-control" @bind-Value="model.Area" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Unidad de negocio (solo Producción)</label>
+                <InputSelect class="form-select" @bind-Value="model.UnidadNegocio">
+                    <option value="">(N/A)</option>
+                    @foreach (var u in UnidadesProduccion)
+                    {
+                        <option value="@u">@u</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Nombre de línea (manual)</label>
+                <InputText class="form-control" @bind-Value="model.LineaNombre" />
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Descripción</label>
+                <InputTextArea class="form-control" rows="3" @bind-Value="model.Descripcion" />
+            </div>
+
+            <div class="col-12">
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="model.Activo" />
+                    <label class="form-check-label">Activo</label>
+                </div>
+            </div>
+
+            <div class="col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-success">Guardar</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private static readonly string[] UnidadesProduccion =
+    [
+        "Alternador", "Marchas", "Car Mechatronics", "EPS", "Multimedia", "Car Electronics"
+    ];
+
+    private Proceso? model;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        model = await Db.Procesos.FirstOrDefaultAsync(x => x.ProcesoId == Id);
+    }
+
+    private async Task Guardar()
+    {
+        await Db.SaveChangesAsync();
+        Nav.NavigateTo("procesos");
+    }
+
+    private void Cancelar() => Nav.NavigateTo("procesos");
+}

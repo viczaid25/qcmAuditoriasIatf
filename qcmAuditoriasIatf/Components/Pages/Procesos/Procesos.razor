@@ -1,0 +1,112 @@
+﻿@page "/procesos"
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h2>Procesos</h2>
+
+<div class="d-flex gap-2 align-items-center mb-3">
+    <button class="btn btn-primary" @onclick="IrNuevo">Nuevo</button>
+
+    <input class="form-control" style="max-width:360px"
+           placeholder="Buscar por código o nombre..."
+           @bind="q" @bind:event="oninput" />
+
+    <div class="form-check ms-2">
+        <input class="form-check-input" type="checkbox" id="soloActivos" @bind="soloActivos" />
+        <label class="form-check-label" for="soloActivos">Solo activos</label>
+    </div>
+</div>
+
+@if (lista == null)
+{
+    <p>Cargando...</p>
+}
+else if (lista.Count == 0)
+{
+    <div class="alert alert-secondary">No hay procesos.</div>
+}
+else
+{
+    <table class="table table-bordered table-hover align-middle">
+        <thead>
+            <tr>
+                <th style="width:140px;">Código</th>
+                <th>Nombre</th>
+                <th style="width:180px;">Área</th>
+                <th style="width:160px;">Unidad</th>
+                <th style="width:200px;">Línea</th>
+                <th style="width:90px;">Activo</th>
+                <th style="width:180px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Filtrados())
+            {
+                <tr>
+                    <td>@p.Codigo</td>
+                    <td>@p.Nombre</td>
+                    <td>@p.Area</td>
+                    <td>@(p.UnidadNegocio ?? "-")</td>
+                    <td>@(p.LineaNombre ?? "-")</td>
+                    <td>@(p.Activo ? "Sí" : "No")</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary me-2"
+                                @onclick="() => IrEditar(p.ProcesoId)">
+                            Editar
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger"
+                                @onclick="() => ToggleActivo(p)">
+                            @(p.Activo ? "Desactivar" : "Activar")
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Proceso>? lista;
+    private string q = "";
+    private bool soloActivos = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        lista = await Db.Procesos
+            .OrderBy(x => x.Codigo)
+            .ThenBy(x => x.Nombre)
+            .ToListAsync();
+    }
+
+    IEnumerable<Proceso> Filtrados()
+    {
+        if (lista == null) return Enumerable.Empty<Proceso>();
+
+        var query = lista.AsEnumerable();
+
+        if (soloActivos)
+            query = query.Where(x => x.Activo);
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var s = q.Trim();
+            query = query.Where(x =>
+                x.Codigo.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                x.Nombre.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                (x.UnidadNegocio != null && x.UnidadNegocio.Contains(s, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return query;
+    }
+
+    void IrNuevo() => Nav.NavigateTo("procesos/nuevo");
+    void IrEditar(int id) => Nav.NavigateTo($"procesos/{id}/editar");
+
+    async Task ToggleActivo(Proceso p)
+    {
+        p.Activo = !p.Activo;
+        await Db.SaveChangesAsync();
+    }
+}

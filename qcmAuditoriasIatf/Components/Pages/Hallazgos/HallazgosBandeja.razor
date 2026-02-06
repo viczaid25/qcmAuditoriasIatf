@@ -1,0 +1,195 @@
+﻿@page "/auditorias/{auditoriaId:int}/hallazgos"
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.Hallazgos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h2>Hallazgos – Auditoría @auditoriaId</h2>
+@if (!string.IsNullOrWhiteSpace(auditoriaTitulo))
+{
+    <p class="text-muted">@auditoriaTitulo</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger" style="white-space:pre-wrap">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="mb-3">
+        <span class="badge bg-secondary">Total: @total</span>
+        <span class="badge bg-warning text-dark">Abiertos: @abiertos</span>
+        <span class="badge bg-success">Cerrados: @cerrados</span>
+    </div>
+
+    <div class="row g-2 mb-3 align-items-end">
+        <div class="col-md-6">
+            <label class="form-label">Proceso</label>
+            <select class="form-select" @onchange="OnProcesoChange" value="@procesoIdSeleccionado">
+                <option value="0">-- Todos --</option>
+                @foreach (var p in procesosFiltro)
+                {
+                    <option value="@p.ProcesoId">@p.Codigo - @p.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-6 text-end">
+            <button class="btn btn-outline-secondary"
+                    @onclick='() => Nav.NavigateTo(string.Format("auditorias/{0}", auditoriaId))'>
+                Volver a Auditoría
+            </button>
+        </div>
+    </div>
+
+    @if (hallazgos.Count == 0)
+    {
+        <div class="alert alert-secondary">No hay hallazgos para el filtro seleccionado.</div>
+    }
+    else
+    {
+        <table class="table table-bordered table-hover">
+            <thead>
+                <tr>
+                    <th style="width:70px;">#</th>
+                    <th>Proceso</th>
+                    <th style="width:110px;">Cláusula</th>
+                    <th style="width:160px;">Tipo</th>
+                    <th>Descripción</th>
+                    <th style="width:140px;">Responsable</th>
+                    <th style="width:120px;">Compromiso</th>
+                    <th style="width:120px;">Estatus</th>
+                    <th style="width:90px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var h in hallazgos)
+                {
+                    <tr>
+                        <td>@h.HallazgoId</td>
+                        <td>@h.Proceso?.Nombre</td>
+                        <td>@h.Clausula?.Codigo</td>
+                        <td>@h.TipoHallazgo?.Nombre</td>
+                        <td style="max-width:420px; white-space:pre-wrap">@h.Descripcion</td>
+                        <td>@h.ResponsableId</td>
+                        <td>@h.FechaCompromiso.ToString("yyyy-MM-dd")</td>
+                        <td>
+                            @if (h.Estatus == "Cerrado")
+                            {
+                                <span class="badge bg-success">Cerrado</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">@h.Estatus</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary"
+                                    @onclick='() => Nav.NavigateTo(string.Format("auditorias/{0}/hallazgos/{1}", auditoriaId, h.HallazgoId))'>
+                                Ver
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [Parameter] public int auditoriaId { get; set; }
+
+    private bool cargando = true;
+    private string? errorMsg;
+
+    private string? auditoriaTitulo;
+
+    private int procesoIdSeleccionado = 0;
+
+    private int total;
+    private int abiertos;
+    private int cerrados;
+
+    private List<Proceso> procesosFiltro = new();
+    private List<Hallazgo> hallazgos = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await CargarTodo();
+    }
+
+    private async Task CargarTodo()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            var aud = await Db.Auditorias.FirstOrDefaultAsync(a => a.AuditoriaId == auditoriaId);
+            auditoriaTitulo = aud is null
+                ? null
+                : $"{aud.TipoAuditoria} | {aud.FechaInicio:yyyy-MM-dd} a {aud.FechaFin:yyyy-MM-dd}";
+
+            // procesos disponibles en esa auditoría (para el filtro)
+            var procesoIds = await Db.AuditoriaProcesos
+                .Where(ap => ap.AuditoriaId == auditoriaId)
+                .Select(ap => ap.ProcesoId)
+                .Distinct()
+                .ToListAsync();
+
+            procesosFiltro = await Db.Procesos
+                .Where(p => procesoIds.Contains(p.ProcesoId))
+                .OrderBy(p => p.Codigo)
+                .ToListAsync();
+
+            await CargarHallazgos();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarHallazgos()
+    {
+        var q = Db.Hallazgos
+            .Include(h => h.Proceso)
+            .Include(h => h.Clausula)
+            .Include(h => h.TipoHallazgo)
+            .Where(h => h.AuditoriaId == auditoriaId);
+
+        if (procesoIdSeleccionado > 0)
+            q = q.Where(h => h.ProcesoId == procesoIdSeleccionado);
+
+        hallazgos = await q
+            .OrderByDescending(h => h.HallazgoId)
+            .ToListAsync();
+
+        total = hallazgos.Count;
+        cerrados = hallazgos.Count(h => h.Estatus == "Cerrado");
+        abiertos = total - cerrados;
+    }
+
+    private async Task OnProcesoChange(ChangeEventArgs e)
+    {
+        if (e.Value is null) return;
+
+        if (int.TryParse(e.Value.ToString(), out var val))
+        {
+            procesoIdSeleccionado = val;
+            await CargarHallazgos();
+            StateHasChanged();
+        }
+    }
+}

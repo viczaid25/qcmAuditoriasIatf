@@ -1,0 +1,213 @@
+﻿@page "/auditorias/{auditoriaId:int}/hallazgos/{hallazgoId:int}"
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Hallazgos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h3>Hallazgo #@hallazgoId</h3>
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else if (hallazgo is null)
+{
+    <div class="alert alert-warning">No encontrado.</div>
+    <button class="btn btn-outline-secondary" @onclick="VolverAuditoria">Volver</button>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <div><b>Estatus:</b> @hallazgo.Estatus</div>
+            <div><b>Responsable:</b> @hallazgo.ResponsableId</div>
+            <div><b>Compromiso:</b> @hallazgo.FechaCompromiso.ToString("yyyy-MM-dd")</div>
+            <div class="mt-2"><b>Descripción:</b></div>
+            <div style="white-space:pre-wrap">@hallazgo.Descripcion</div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>Agregar seguimiento</h5>
+
+            <EditForm Model="vm" OnValidSubmit="GuardarSeguimiento">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label">Usuario</label>
+                        <InputText class="form-control" @bind-Value="vm.UsuarioId" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Cambiar estatus (opcional)</label>
+                        <InputSelect class="form-select" @bind-Value="vm.EstatusNuevo">
+                            <option value="">-- Sin cambio --</option>
+                            <option value="Abierto">Abierto</option>
+                            <option value="En Proceso">En Proceso</option>
+                            <option value="Cerrado">Cerrado</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Evidencia (opcional)</label>
+                        <InputText class="form-control" @bind-Value="vm.Evidencia" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Comentario</label>
+                        <InputTextArea class="form-control" rows="3" @bind-Value="vm.Comentario" />
+                    </div>
+
+                    <div class="col-12 d-flex gap-2">
+                        <button class="btn btn-primary" type="submit" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Agregar")
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button"
+                                @onclick="VolverAuditoria" disabled="@guardando">
+                            Volver
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h5>Historial</h5>
+
+            @if (seguimientos.Count == 0)
+            {
+                <div class="text-muted">Aún no hay seguimientos.</div>
+            }
+            else
+            {
+                <ul class="list-group">
+                    @foreach (var s in seguimientos)
+                    {
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div><b>@s.UsuarioId</b></div>
+                                <div class="text-muted">@s.FechaRegistro.ToString("yyyy-MM-dd HH:mm")</div>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(s.EstatusNuevo))
+                            {
+                                <div class="mt-1">
+                                    <span class="badge text-bg-info">Estatus: @s.EstatusNuevo</span>
+                                </div>
+                            }
+
+                            <div class="mt-2" style="white-space:pre-wrap">@s.Comentario</div>
+
+                            @if (!string.IsNullOrWhiteSpace(s.Evidencia))
+                            {
+                                <div class="text-muted small mt-1">Evidencia: @s.Evidencia</div>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int auditoriaId { get; set; }   // <- FALTABA (causaba tu error)
+    [Parameter] public int hallazgoId { get; set; }
+
+    private bool cargando = true;
+    private bool guardando;
+    private string? errorMsg;
+
+    private Hallazgo? hallazgo;
+    private List<HallazgoSeguimiento> seguimientos = new();
+
+    private Vm vm = new();
+
+    private class Vm
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? UsuarioId { get; set; } = "sistema";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? Comentario { get; set; }
+
+        public string? Evidencia { get; set; }
+        public string? EstatusNuevo { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        hallazgo = await Db.Hallazgos.FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId);
+
+        seguimientos = await Db.HallazgoSeguimientos
+            .Where(s => s.HallazgoId == hallazgoId)
+            .OrderByDescending(s => s.FechaRegistro)
+            .ToListAsync();
+
+        cargando = false;
+    }
+
+    private async Task GuardarSeguimiento()
+    {
+        if (guardando) return;
+        guardando = true;
+        errorMsg = null;
+
+        try
+        {
+            if (hallazgo is null) return;
+
+            if (string.IsNullOrWhiteSpace(vm.UsuarioId) || string.IsNullOrWhiteSpace(vm.Comentario))
+                return;
+
+            var seg = new HallazgoSeguimiento
+            {
+                HallazgoId = hallazgoId,
+                UsuarioId = vm.UsuarioId.Trim(),
+                Comentario = vm.Comentario.Trim(),
+                Evidencia = string.IsNullOrWhiteSpace(vm.Evidencia) ? null : vm.Evidencia.Trim(),
+                EstatusNuevo = string.IsNullOrWhiteSpace(vm.EstatusNuevo) ? null : vm.EstatusNuevo
+            };
+
+            Db.HallazgoSeguimientos.Add(seg);
+
+            if (!string.IsNullOrWhiteSpace(seg.EstatusNuevo))
+                hallazgo.Estatus = seg.EstatusNuevo!;
+
+            await Db.SaveChangesAsync();
+
+            vm.Comentario = null;
+            vm.Evidencia = null;
+            vm.EstatusNuevo = null;
+
+            seguimientos = await Db.HallazgoSeguimientos
+                .Where(s => s.HallazgoId == hallazgoId)
+                .OrderByDescending(s => s.FechaRegistro)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private void VolverAuditoria() =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos"); // <- usa el parámetro de ruta
+}

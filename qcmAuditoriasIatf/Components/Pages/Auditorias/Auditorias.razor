@@ -1,0 +1,81 @@
+﻿@page "/auditorias"
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h2>Auditorías</h2>
+
+<div class="mb-3">
+    <NavLink class="btn btn-primary" href="auditorias/nueva">Nueva Auditoría</NavLink>
+</div>
+<p>Clicks: @n</p>
+<button type="button" class="btn btn-secondary" @onclick="() => n++">Test click</button>
+
+@code {
+    int n = 0;
+}
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else if (lista.Count == 0)
+{
+    <div class="alert alert-secondary">No hay auditorías.</div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tipo</th>
+                        <th>Inicio</th>
+                        <th>Fin</th>
+                        <th>Estatus</th>
+                        <th style="width:140px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in lista)
+                    {
+                        <tr>
+                            <td>@a.AuditoriaId</td>
+                            <td>@a.TipoAuditoria</td>
+                            <td>@a.FechaInicio.ToString("yyyy-MM-dd")</td>
+                            <td>@a.FechaFin.ToString("yyyy-MM-dd")</td>
+                            <td>@a.Estatus</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="() => IrDetalle(a.AuditoriaId)">
+                                    Detalle
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+}
+
+@code {
+    private bool cargando = true;
+    private List<Auditoria> lista = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        lista = await Db.Auditorias
+            .OrderByDescending(x => x.AuditoriaId)
+            .ToListAsync();
+
+        cargando = false;
+    }
+
+    void IrNueva() => Nav.NavigateTo("/auditorias/nueva");
+    void IrDetalle(int id) => Nav.NavigateTo($"/auditorias/{id}");
+}

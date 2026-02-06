@@ -1,0 +1,298 @@
+﻿@page "/auditorias/{auditoriaId:int}/procesos/{auditoriaProcesoId:int}/checklist"
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.Hallazgos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h2>Checklist del proceso</h2>
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else if (ap is null)
+{
+    <div class="alert alert-danger">No se encontró el proceso de auditoría.</div>
+    <button class="btn btn-outline-secondary" @onclick="Volver">Volver</button>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="fw-semibold">@ap.Proceso?.Codigo - @ap.Proceso?.Nombre</div>
+            <div class="text-muted small">
+                Auditor asignado: <b>@(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Sin asignar" : ap.AuditorAsignadoId)</b>
+                @if (!string.IsNullOrWhiteSpace(ap.LineaNombre))
+                {
+                    <span> | Línea: <b>@ap.LineaNombre</b></span>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (rows.Count == 0)
+    {
+        <div class="alert alert-warning">No hay preguntas activas para este proceso.</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <table class="table table-sm table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width:55px;">#</th>
+                            <th>Pregunta</th>
+                            <th style="width:180px;">Cumple</th>
+                            <th>Evidencia</th>
+                            <th>Comentarios</th>
+                            <th style="width:170px;">Hallazgo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < rows.Count; i++)
+                        {
+                            var row = rows[i];
+
+                            <tr @key="row.PerguntaId">
+                                <td>@(i + 1)</td>
+
+                                <td>
+                                    <div class="fw-semibold">@row.Pregunta</div>
+                                    @if (!string.IsNullOrWhiteSpace(row.Requisito))
+                                    {
+                                        <div class="text-muted small">@row.Requisito</div>
+                                    }
+                                </td>
+
+                                <td>
+                                    <InputSelect class="form-select form-select-sm" @bind-Value="row.Cumple">
+                                        <option value="Pendiente">Pendiente</option>
+                                        <option value="Cumple">Cumple</option>
+                                        <option value="No Cumple">No Cumple</option>
+                                        <option value="No Aplica">No Aplica</option>
+                                    </InputSelect>
+                                </td>
+
+                                <td>
+                                    <InputText class="form-control form-control-sm" @bind-Value="row.Evidencia" />
+                                </td>
+
+                                <td>
+                                    <InputText class="form-control form-control-sm" @bind-Value="row.Comentarios" />
+                                </td>
+
+                                <td>
+                                    @* Si ya existe hallazgo, siempre deja "Ver hallazgo" *@
+                                    @if (row.TieneHallazgo && row.HallazgoId is not null)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-success"
+                                                @onclick="() => IrVerHallazgo(row.HallazgoId.Value)">
+                                            Ver hallazgo
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        @* Si NO hay hallazgo, solo deja crear cuando sea "No Cumple" *@
+                                        if (row.Cumple == "No Cumple")
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => IrNuevoHallazgo(row.PerguntaId)">
+                                                Crear hallazgo
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" @onclick="Guardar" disabled="@guardando">
+                        @(guardando ? "Guardando..." : "Guardar")
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="Volver" disabled="@guardando">
+                        Volver
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public int auditoriaId { get; set; }
+    [Parameter] public int auditoriaProcesoId { get; set; }
+
+    private bool cargando = true;
+    private bool guardando;
+    private string? errorMsg;
+
+    private AuditoriaProceso? ap;
+    private List<RowVm> rows = new();
+
+    private class RowVm
+    {
+        public int PerguntaId { get; set; }
+        public string Pregunta { get; set; } = "";
+        public string? Requisito { get; set; }
+
+        public string Cumple { get; set; } = "Pendiente";
+        public string? Evidencia { get; set; }
+        public string? Comentarios { get; set; }
+
+        public bool TieneHallazgo { get; set; }
+        public int? HallazgoId { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+        rows.Clear();
+
+        ap = await Db.AuditoriaProcesos
+            .Include(x => x.Proceso)
+            .FirstOrDefaultAsync(x => x.AuditoriaProcesoId == auditoriaProcesoId && x.AuditoriaId == auditoriaId);
+
+        if (ap is null)
+        {
+            cargando = false;
+            return;
+        }
+
+        // Preguntas activas del proceso
+        var preguntas = await Db.ChecklistPreguntas
+            .Where(p => p.ProcesoId == ap.ProcesoId && p.Activo)
+            .OrderBy(p => p.PreguntaId)
+            .ToListAsync();
+
+        // Respuestas existentes (por AuditoriaProcesoId)
+        var existentes = await Db.AuditoriaChecklists
+            .Where(x => x.AuditoriaProcesoId == auditoriaProcesoId)
+            .ToListAsync();
+
+        var map = existentes.ToDictionary(x => x.PreguntaId, x => x);
+
+        // Crear faltantes con "Pendiente"
+        var faltantes = preguntas
+            .Where(p => !map.ContainsKey(p.PreguntaId))
+            .Select(p => new AuditoriaChecklist
+            {
+                AuditoriaProcesoId = auditoriaProcesoId,
+                PreguntaId = p.PreguntaId,
+                Cumple = "Pendiente",
+                AuditorId = string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "sistema" : ap.AuditorAsignadoId!,
+                FechaRegistro = DateTime.Now
+            })
+            .ToList();
+
+        if (faltantes.Count > 0)
+        {
+            Db.AuditoriaChecklists.AddRange(faltantes);
+            await Db.SaveChangesAsync();
+
+            existentes = await Db.AuditoriaChecklists
+                .Where(x => x.AuditoriaProcesoId == auditoriaProcesoId)
+                .ToListAsync();
+
+            map = existentes.ToDictionary(x => x.PreguntaId, x => x);
+        }
+
+        // Hallazgos existentes para este proceso auditado (por AuditoriaProcesoId) -> map PreguntaId => HallazgoId
+        var hallazgos = await Db.Hallazgos
+            .Where(h => h.AuditoriaProcesoId == auditoriaProcesoId && h.PreguntaId != null)
+            .Select(h => new { PreguntaId = h.PreguntaId!.Value, h.HallazgoId })
+            .ToListAsync();
+
+        var hallazgoMap = hallazgos
+            .GroupBy(x => x.PreguntaId)
+            .ToDictionary(g => g.Key, g => g.First().HallazgoId);
+
+        foreach (var p in preguntas)
+        {
+            map.TryGetValue(p.PreguntaId, out var r);
+
+            hallazgoMap.TryGetValue(p.PreguntaId, out var hid);
+
+            rows.Add(new RowVm
+            {
+                PerguntaId = p.PreguntaId,
+                Pregunta = p.Pregunta,
+                Requisito = p.Requisito,
+                Cumple = string.IsNullOrWhiteSpace(r?.Cumple) ? "Pendiente" : r!.Cumple,
+                Evidencia = r?.Evidencia,
+                Comentarios = r?.Comentarios,
+                TieneHallazgo = hid > 0,
+                HallazgoId = hid > 0 ? hid : null
+            });
+        }
+
+        cargando = false;
+    }
+
+    private async Task Guardar()
+    {
+        if (guardando) return;
+        guardando = true;
+        errorMsg = null;
+
+        try
+        {
+            var entidades = await Db.AuditoriaChecklists
+                .Where(x => x.AuditoriaProcesoId == auditoriaProcesoId)
+                .ToListAsync();
+
+            var map = entidades.ToDictionary(x => x.PreguntaId, x => x);
+
+            foreach (var row in rows)
+            {
+                if (!map.TryGetValue(row.PerguntaId, out var e))
+                    continue;
+
+                e.Cumple = string.IsNullOrWhiteSpace(row.Cumple) ? "Pendiente" : row.Cumple;
+                e.Evidencia = string.IsNullOrWhiteSpace(row.Evidencia) ? null : row.Evidencia.Trim();
+                e.Comentarios = string.IsNullOrWhiteSpace(row.Comentarios) ? null : row.Comentarios.Trim();
+
+                if (ap is not null && !string.IsNullOrWhiteSpace(ap.AuditorAsignadoId))
+                    e.AuditorId = ap.AuditorAsignadoId!;
+
+                e.FechaRegistro = DateTime.Now;
+            }
+
+            await Db.SaveChangesAsync();
+            Nav.NavigateTo($"auditorias/{auditoriaId}");
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private void IrNuevoHallazgo(int preguntaId) =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/procesos/{auditoriaProcesoId}/checklist/{preguntaId}/hallazgo/nuevo");
+
+    // Ajusta esta ruta cuando crees la página de detalle
+    private void IrVerHallazgo(int hallazgoId) =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}");
+
+    private void Volver() => Nav.NavigateTo($"auditorias/{auditoriaId}");
+}
