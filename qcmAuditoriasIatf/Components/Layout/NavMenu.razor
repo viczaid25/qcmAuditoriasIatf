@@ -1,48 +1,104 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/">Auditorias IATF</a>
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Nav
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid d-flex align-items-center">
+        <img src="images/logo.png" alt="Logo MEAX" height="30" class="me-2" onerror="this.style.display='none'" />
+
+        <a class="navbar-brand text-white fw-bold d-flex flex-column justify-content-center"
+           style="font-size: 0.9rem; line-height: 1.15; letter-spacing: 0.3px;"
+           href="">
+            <span>Auditorías</span>
+            <span>IATF</span>
+        </a>
+
+        <button type="button" title="Navigation menu" class="navbar-toggler ms-auto" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<div class="nav-scrollable @NavMenuCssClass">
+    <div class="nav-shell">
+        <nav class="flex-column">
+            <div class="nav-section-title px-3">Principal</div>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <i class="fas fa-home" aria-hidden="true"></i> Inicio
+                </NavLink>
+            </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="auditorias" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Auditorías
-            </NavLink>
-        </div>
+            <div class="nav-section-title px-3">Auditorías</div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="auditorias/nueva" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Nueva auditoría
-            </NavLink>
-        </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="auditorias" Match="NavLinkMatch.All">
+                    <i class="fas fa-clipboard-list" aria-hidden="true"></i> Ver auditorías
+                </NavLink>
+            </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="procesos" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Procesos
-            </NavLink>
-        </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="auditorias/nueva" Match="NavLinkMatch.All">
+                    <i class="fas fa-plus-circle" aria-hidden="true"></i> Nueva auditoría
+                </NavLink>
+            </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="procesos/nuevo" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Nuevo proceso
-            </NavLink>
-        </div>
+            <div class="nav-section-title px-3">Procesos</div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="procesos" Match="NavLinkMatch.All">
+                    <i class="fas fa-project-diagram" aria-hidden="true"></i> Ver procesos
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="procesos/nuevo" Match="NavLinkMatch.All">
+                    <i class="fas fa-folder-plus" aria-hidden="true"></i> Nuevo proceso
+                </NavLink>
+            </div>
+
+            <div class="nav-section-title px-3">Equipo auditor</div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="auditores" Match="NavLinkMatch.All">
+                    <i class="fas fa-users" aria-hidden="true"></i> Ver auditores
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="auditores/nuevo" Match="NavLinkMatch.All">
+                    <i class="fas fa-user-plus" aria-hidden="true"></i> Alta auditor
+                </NavLink>
+            </div>
+        </nav>
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-user-box">
+                    <div class="nav-user-label">Sesión activa</div>
+                    <div class="nav-user-name">@context.User.Identity?.Name</div>
+
+                    <button type="button" class="nav-logout-btn" @onclick="Salir">
+                        Salir
+                    </button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
 </div>
 
+@code {
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : "show";
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void Salir()
+    {
+        Nav.NavigateTo("Account/Logout", forceLoad: true);
+    }
+}

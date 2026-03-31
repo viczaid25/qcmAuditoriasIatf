@@ -1,10 +1,13 @@
 ﻿@page "/auditorias/{auditoriaId:int}/hallazgos/{hallazgoId:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Hallazgos
+@using System.Security.Claims
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
-<h3>Hallazgo #@hallazgoId</h3>
+@attribute [Authorize]
 
 @if (!string.IsNullOrWhiteSpace(errorMsg))
 {
@@ -13,51 +16,468 @@
 
 @if (cargando)
 {
-    <p>Cargando...</p>
+    <div class="hallazgo-loading">
+        <div class="hallazgo-skeleton hallazgo-skeleton-hero"></div>
+        <div class="hallazgo-grid hallazgo-grid-top">
+            <div class="hallazgo-skeleton hallazgo-skeleton-card"></div>
+            <div class="hallazgo-skeleton hallazgo-skeleton-card"></div>
+        </div>
+        <div class="hallazgo-skeleton hallazgo-skeleton-table"></div>
+    </div>
 }
 else if (hallazgo is null)
 {
-    <div class="alert alert-warning">No encontrado.</div>
-    <button class="btn btn-outline-secondary" @onclick="VolverAuditoria">Volver</button>
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró el hallazgo</div>
+            <div class="empty-text">Verifica el identificador o vuelve a la bandeja de hallazgos.</div>
+
+            <button type="button" class="hero-btn primary mt-3" @onclick="VolverAuditoria">
+                Volver a hallazgos
+            </button>
+        </div>
+    </section>
 }
 else
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <div><b>Estatus:</b> @hallazgo.Estatus</div>
-            <div><b>Responsable:</b> @hallazgo.ResponsableId</div>
-            <div><b>Compromiso:</b> @hallazgo.FechaCompromiso.ToString("yyyy-MM-dd")</div>
-            <div class="mt-2"><b>Descripción:</b></div>
-            <div style="white-space:pre-wrap">@hallazgo.Descripcion</div>
-        </div>
-    </div>
+    <div class="hallazgo-page">
+        <section class="hallazgo-hero">
+            <div>
+                <span class="hallazgo-kicker">Gestión de hallazgo</span>
+                <h1>Hallazgo #@hallazgoId</h1>
 
-    <div class="card mb-3">
-        <div class="card-body">
-            <h5>Agregar seguimiento</h5>
+                <div class="hallazgo-meta">
+                    <span class="status-pill @GetStatusClass(hallazgo.Estatus)">@hallazgo.Estatus</span>
+                    <span class="tipo-pill @GetTipoClass(hallazgo.TipoHallazgo?.Nombre)">
+                        @(hallazgo.TipoHallazgo?.Nombre ?? "Sin tipo")
+                    </span>
+                    <span class="meta-chip">
+                        Compromiso: <strong>@hallazgo.FechaCompromiso.ToString("yyyy-MM-dd")</strong>
+                    </span>
+                    @if (EsNcMenor)
+                    {
+                        <span class="meta-chip">Flujo 5 porqués activo</span>
+                    }
+                </div>
+
+                <p class="hero-text">
+                    Consulta el detalle del hallazgo, registra seguimiento y controla el flujo de análisis, aprobación y cierre.
+                </p>
+            </div>
+
+            <div class="hallazgo-hero-actions">
+                <div class="user-card">
+                    <div class="user-card-label">Usuario actual</div>
+                    <div class="user-card-value">@usuarioActualId</div>
+                    @if (!string.IsNullOrWhiteSpace(usuarioActualNombre) && usuarioActualNombre != usuarioActualId)
+                    {
+                        <div class="user-card-name">@usuarioActualNombre</div>
+                    }
+                </div>
+
+                <button type="button" class="hero-btn primary" @onclick="VolverAuditoria">
+                    Volver a hallazgos
+                </button>
+            </div>
+        </section>
+
+        <section class="hallazgo-grid hallazgo-grid-top">
+            <div class="panel-card panel-wide">
+                <div class="panel-head">
+                    <div>
+                        <h2>Descripción de la no conformidad</h2>
+                        <p class="panel-subtitle">Detalle principal del hallazgo detectado.</p>
+                    </div>
+                </div>
+
+                <div class="content-box">@hallazgo.Descripcion</div>
+
+                @if (!string.IsNullOrWhiteSpace(hallazgo.Evidencia))
+                {
+                    <div class="section-divider"></div>
+
+                    <div class="mini-section">
+                        <div class="mini-section-label">Evidencia inicial</div>
+                        <div class="content-box subtle">@hallazgo.Evidencia</div>
+                    </div>
+                }
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Participantes</h2>
+                        <p class="panel-subtitle">Roles involucrados en el flujo del hallazgo.</p>
+                    </div>
+                </div>
+
+                <div class="summary-stack">
+                    <div class="summary-item">
+                        <span>Responsable</span>
+                        <strong>@hallazgo.ResponsableId</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>Responsable de cierre</span>
+                        <strong>@(string.IsNullOrWhiteSpace(hallazgo.ResponsableCierreId) ? "Sin asignar" : hallazgo.ResponsableCierreId)</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>Auditor principal</span>
+                        <strong>@(string.IsNullOrWhiteSpace(AuditorPrincipalId) ? "Sin asignar" : AuditorPrincipalId)</strong>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(SegundoAuditorId))
+                    {
+                        <div class="summary-item">
+                            <span>Segundo auditor</span>
+                            <strong>@SegundoAuditorId</strong>
+                        </div>
+                    }
+                </div>
+
+                @if (EsNcMenor)
+                {
+                    <div class="notice-box">
+                        Para una NC Menor, primero debe capturarse y aprobarse el análisis de 5 porqués antes de subir la solución y evidencia.
+                    </div>
+                }
+            </div>
+        </section>
+
+        @if (EsNcMenor)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Estado del análisis 5 porqués</h2>
+                        <p class="panel-subtitle">Seguimiento del flujo de análisis y aprobación.</p>
+                    </div>
+
+                    <span class="flow-pill @GetFlowClass(cincoPorQue?.Estatus)">
+                        @(cincoPorQue?.Estatus ?? "Sin captura")
+                    </span>
+                </div>
+
+                <div class="flow-grid">
+                    <div class="flow-status-item">
+                        <span>Captura responsable de cierre</span>
+                        <strong>@(cincoPorQue is null ? "Pendiente" : "Registrada")</strong>
+                    </div>
+
+                    <div class="flow-status-item">
+                        <span>Revisión auditor principal</span>
+                        <strong>@(cincoPorQue is null ? "Pendiente" : TextoDecision(cincoPorQue.AprobacionAuditorAsignado))</strong>
+                    </div>
+
+                    @if (RequiereSegundoAuditor)
+                    {
+                        <div class="flow-status-item">
+                            <span>Revisión segundo auditor</span>
+                            <strong>@(cincoPorQue is null ? "Pendiente" : TextoDecision(cincoPorQue.AprobacionSegundoAuditor))</strong>
+                        </div>
+                    }
+
+                    <div class="flow-status-item">
+                        <span>Solución / evidencia</span>
+                        <strong>@(CincoPorQueAprobado ? "Habilitada" : "Bloqueada")</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="hallazgo-grid hallazgo-grid-top">
+                <div class="panel-card">
+                    <div class="panel-head">
+                        <div>
+                            <h2>5 Porqués</h2>
+                            <p class="panel-subtitle">Captura o actualización del análisis causa raíz.</p>
+                        </div>
+
+                        <span class="flow-pill @GetFlowClass(cincoPorQue?.Estatus)">
+                            @(cincoPorQue?.Estatus ?? "Pendiente")
+                        </span>
+                    </div>
+
+                    @if (cincoPorQue is not null)
+                    {
+                        <div class="why-list">
+                            <div class="why-item"><span>1</span><div>@cincoPorQue.PorQue1</div></div>
+                            <div class="why-item"><span>2</span><div>@cincoPorQue.PorQue2</div></div>
+                            <div class="why-item"><span>3</span><div>@cincoPorQue.PorQue3</div></div>
+                            <div class="why-item"><span>4</span><div>@cincoPorQue.PorQue4</div></div>
+                            <div class="why-item"><span>5</span><div>@cincoPorQue.PorQue5</div></div>
+                        </div>
+                    }
+
+                    @if (!UsuarioActualEsResponsableCierre)
+                    {
+                        <div class="alert alert-warning mt-3">
+                            Solo el responsable de cierre puede capturar o actualizar los 5 porqués.
+                        </div>
+                    }
+
+                    <EditForm Model="vm5" OnValidSubmit="GuardarCincoPorQue">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-6">
+                                <label class="form-label">Usuario actual</label>
+                                <input class="form-control" value="@usuarioActualId" disabled />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">¿Por qué? 1</label>
+                                <InputTextArea class="form-control" rows="2" @bind-Value="vm5.PorQue1"
+                                               disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">¿Por qué? 2</label>
+                                <InputTextArea class="form-control" rows="2" @bind-Value="vm5.PorQue2"
+                                               disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">¿Por qué? 3</label>
+                                <InputTextArea class="form-control" rows="2" @bind-Value="vm5.PorQue3"
+                                               disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">¿Por qué? 4</label>
+                                <InputTextArea class="form-control" rows="2" @bind-Value="vm5.PorQue4"
+                                               disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">¿Por qué? 5</label>
+                                <InputTextArea class="form-control" rows="2" @bind-Value="vm5.PorQue5"
+                                               disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)" />
+                            </div>
+
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-warning" type="submit"
+                                        disabled="@guardando || !UsuarioActualEsResponsableCierre || CincoPorQueAprobado">
+                                    @(guardando ? "Guardando..." : (cincoPorQue is null ? "Guardar 5 porqués" : "Actualizar 5 porqués"))
+                                </button>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Aprobación de 5 porqués</h2>
+                            <p class="panel-subtitle">Revisión por parte del auditor principal y segundo auditor.</p>
+                        </div>
+                    </div>
+
+                    @if (cincoPorQue is null)
+                    {
+                        <div class="empty-state compact">
+                            Primero debe capturarse el análisis de 5 porqués para habilitar la revisión.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="review-summary">
+                            <div class="summary-item">
+                                <span>Auditor principal</span>
+                                <strong>@TextoDecision(cincoPorQue.AprobacionAuditorAsignado)</strong>
+                            </div>
+
+                            @if (RequiereSegundoAuditor)
+                            {
+                                <div class="summary-item">
+                                    <span>Segundo auditor</span>
+                                    <strong>@TextoDecision(cincoPorQue.AprobacionSegundoAuditor)</strong>
+                                </div>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(cincoPorQue.ComentarioAuditorAsignado))
+                        {
+                            <div class="comment-box">
+                                <div class="comment-label">Comentario auditor principal</div>
+                                <div>@cincoPorQue.ComentarioAuditorAsignado</div>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(cincoPorQue.ComentarioSegundoAuditor))
+                        {
+                            <div class="comment-box">
+                                <div class="comment-label">Comentario segundo auditor</div>
+                                <div>@cincoPorQue.ComentarioSegundoAuditor</div>
+                            </div>
+                        }
+
+                        @if (!UsuarioActualPuedeRevisarCincoPorQue)
+                        {
+                            <div class="alert alert-warning mt-3">
+                                Solo el auditor principal o el segundo auditor pueden revisar los 5 porqués.
+                            </div>
+                        }
+
+                        <EditForm Model="vmRevision" OnValidSubmit="RevisarCincoPorQue">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6">
+                                    <label class="form-label">Auditor actual</label>
+                                    <input class="form-control" value="@usuarioActualId" disabled />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Decisión</label>
+                                    <InputSelect class="form-select" @bind-Value="vmRevision.Decision"
+                                                 disabled="@(!UsuarioActualPuedeRevisarCincoPorQue)">
+                                        <option value="">-- Selecciona --</option>
+                                        <option value="Aprobar">Aprobar</option>
+                                        <option value="Rechazar">Rechazar</option>
+                                    </InputSelect>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label">Comentario</label>
+                                    <InputTextArea class="form-control" rows="3" @bind-Value="vmRevision.Comentario"
+                                                   disabled="@(!UsuarioActualPuedeRevisarCincoPorQue)" />
+                                </div>
+
+                                <div class="col-12 d-flex gap-2">
+                                    <button class="btn btn-success" type="submit"
+                                            disabled="@guardando || !UsuarioActualPuedeRevisarCincoPorQue">
+                                        @(guardando ? "Guardando..." : "Registrar revisión")
+                                    </button>
+                                </div>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Solución del hallazgo / evidencia</h2>
+                        <p class="panel-subtitle">Se habilita cuando los 5 porqués ya fueron aprobados.</p>
+                    </div>
+
+                    <span class="flow-pill @(CincoPorQueAprobado ? "approved" : "blocked")">
+                        @(CincoPorQueAprobado ? "Habilitada" : "Bloqueada")
+                    </span>
+                </div>
+
+                @if (!CincoPorQueAprobado)
+                {
+                    <div class="empty-state compact">
+                        La solución y la evidencia se habilitarán cuando el análisis de 5 porqués quede aprobado.
+                    </div>
+                }
+                else
+                {
+                    @if (accionCorrectiva is not null)
+                    {
+                        <div class="solution-card">
+                            <div class="comment-label">Acción definida</div>
+                            <div class="content-box subtle">@accionCorrectiva.AccionDefinida</div>
+
+                            @if (!string.IsNullOrWhiteSpace(accionCorrectiva.EvidenciaImplementacion))
+                            {
+                                <div class="comment-label mt-3">Evidencia de implementación</div>
+                                <div class="content-box subtle">@accionCorrectiva.EvidenciaImplementacion</div>
+                            }
+
+                            <div class="solution-meta">
+                                <span>Responsable: <strong>@accionCorrectiva.ResponsableId</strong></span>
+                                <span>Fecha: <strong>@accionCorrectiva.FechaImplementacion.ToString("yyyy-MM-dd")</strong></span>
+                                <span>Estatus acción: <strong>@accionCorrectiva.Estatus</strong></span>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!UsuarioActualEsResponsableCierre)
+                    {
+                        <div class="alert alert-warning mt-3">
+                            Solo el responsable de cierre puede registrar la solución del hallazgo.
+                        </div>
+                    }
+
+                    <EditForm Model="vmAccion" OnValidSubmit="GuardarAccionCorrectiva">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-6">
+                                <label class="form-label">Usuario actual</label>
+                                <input class="form-control" value="@usuarioActualId" disabled />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha implementación</label>
+                                <InputDate class="form-control" @bind-Value="vmAccion.FechaImplementacion"
+                                           disabled="@(!UsuarioActualEsResponsableCierre)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Acción definida</label>
+                                <InputTextArea class="form-control" rows="3" @bind-Value="vmAccion.AccionDefinida"
+                                               disabled="@(!UsuarioActualEsResponsableCierre)" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Evidencia de implementación</label>
+                                <InputTextArea class="form-control" rows="4" @bind-Value="vmAccion.EvidenciaImplementacion"
+                                               disabled="@(!UsuarioActualEsResponsableCierre)" />
+                            </div>
+
+                            <div class="col-12 d-flex gap-2">
+                                <button class="btn btn-danger" type="submit"
+                                        disabled="@guardando || !UsuarioActualEsResponsableCierre">
+                                    @(guardando ? "Guardando..." : (accionCorrectiva is null ? "Guardar solución" : "Actualizar solución"))
+                                </button>
+                            </div>
+                        </div>
+                    </EditForm>
+                }
+            </section>
+        }
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Agregar seguimiento</h2>
+                    <p class="panel-subtitle">Registra comentarios, evidencia breve o cambio de estatus.</p>
+                </div>
+            </div>
 
             <EditForm Model="vm" OnValidSubmit="GuardarSeguimiento">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
 
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <label class="form-label">Usuario</label>
-                        <InputText class="form-control" @bind-Value="vm.UsuarioId" />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Usuario actual</label>
+                        <input class="form-control" value="@usuarioActualId" disabled />
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label">Cambiar estatus (opcional)</label>
                         <InputSelect class="form-select" @bind-Value="vm.EstatusNuevo">
                             <option value="">-- Sin cambio --</option>
                             <option value="Abierto">Abierto</option>
                             <option value="En Proceso">En Proceso</option>
-                            <option value="Cerrado">Cerrado</option>
+                            @if (!EsNcMenor || CincoPorQueAprobado)
+                            {
+                                <option value="Cerrado">Cerrado</option>
+                            }
                         </InputSelect>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Evidencia (opcional)</label>
+                    <div class="col-md-6">
+                        <label class="form-label">Nota / evidencia breve (opcional)</label>
                         <InputText class="form-control" @bind-Value="vm.Evidencia" />
                     </div>
 
@@ -68,8 +488,9 @@ else
 
                     <div class="col-12 d-flex gap-2">
                         <button class="btn btn-primary" type="submit" disabled="@guardando">
-                            @(guardando ? "Guardando..." : "Agregar")
+                            @(guardando ? "Guardando..." : "Agregar seguimiento")
                         </button>
+
                         <button class="btn btn-outline-secondary" type="button"
                                 @onclick="VolverAuditoria" disabled="@guardando">
                             Volver
@@ -77,67 +498,87 @@ else
                     </div>
                 </div>
             </EditForm>
-        </div>
-    </div>
+        </section>
 
-    <div class="card">
-        <div class="card-body">
-            <h5>Historial</h5>
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Historial</h2>
+                    <p class="panel-subtitle">Registro cronológico de eventos y seguimiento del hallazgo.</p>
+                </div>
+
+                <span class="panel-badge">@seguimientos.Count evento(s)</span>
+            </div>
 
             @if (seguimientos.Count == 0)
             {
-                <div class="text-muted">Aún no hay seguimientos.</div>
+                <div class="empty-state compact">
+                    Aún no hay seguimientos registrados.
+                </div>
             }
             else
             {
-                <ul class="list-group">
+                <div class="history-list">
                     @foreach (var s in seguimientos)
                     {
-                        <li class="list-group-item">
-                            <div class="d-flex justify-content-between">
-                                <div><b>@s.UsuarioId</b></div>
-                                <div class="text-muted">@s.FechaRegistro.ToString("yyyy-MM-dd HH:mm")</div>
+                        <div class="history-item">
+                            <div class="history-head">
+                                <div class="history-user">@s.UsuarioId</div>
+                                <div class="history-date">@s.FechaRegistro.ToString("yyyy-MM-dd HH:mm")</div>
                             </div>
 
                             @if (!string.IsNullOrWhiteSpace(s.EstatusNuevo))
                             {
-                                <div class="mt-1">
-                                    <span class="badge text-bg-info">Estatus: @s.EstatusNuevo</span>
+                                <div class="history-status">
+                                    <span class="status-pill @GetStatusClass(s.EstatusNuevo)">
+                                        @s.EstatusNuevo
+                                    </span>
                                 </div>
                             }
 
-                            <div class="mt-2" style="white-space:pre-wrap">@s.Comentario</div>
+                            <div class="history-comment">@s.Comentario</div>
 
                             @if (!string.IsNullOrWhiteSpace(s.Evidencia))
                             {
-                                <div class="text-muted small mt-1">Evidencia: @s.Evidencia</div>
+                                <div class="history-evidence">
+                                    <div class="comment-label">Evidencia</div>
+                                    <div>@s.Evidencia</div>
+                                </div>
                             }
-                        </li>
+                        </div>
                     }
-                </ul>
+                </div>
             }
-        </div>
+        </section>
     </div>
 }
 
 @code {
-    [Parameter] public int auditoriaId { get; set; }   // <- FALTABA (causaba tu error)
+    [Parameter] public int auditoriaId { get; set; }
     [Parameter] public int hallazgoId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
     private bool cargando = true;
     private bool guardando;
     private string? errorMsg;
 
+    private string usuarioActualId = "sistema";
+    private string usuarioActualNombre = "sistema";
+
     private Hallazgo? hallazgo;
+    private HallazgoCincoPorQue? cincoPorQue;
+    private AccionCorrectiva? accionCorrectiva;
     private List<HallazgoSeguimiento> seguimientos = new();
 
-    private Vm vm = new();
+    private SeguimientoVm vm = new();
+    private CincoPorQueVm vm5 = new();
+    private RevisionVm vmRevision = new();
+    private AccionVm vmAccion = new();
 
-    private class Vm
+    private class SeguimientoVm
     {
-        [System.ComponentModel.DataAnnotations.Required]
-        public string? UsuarioId { get; set; } = "sistema";
-
         [System.ComponentModel.DataAnnotations.Required]
         public string? Comentario { get; set; }
 
@@ -145,19 +586,419 @@ else
         public string? EstatusNuevo { get; set; }
     }
 
+    private class CincoPorQueVm
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? PorQue1 { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? PorQue2 { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? PorQue3 { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? PorQue4 { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? PorQue5 { get; set; }
+    }
+
+    private class RevisionVm
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? Decision { get; set; }
+
+        public string? Comentario { get; set; }
+    }
+
+    private class AccionVm
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? AccionDefinida { get; set; }
+
+        public string? EvidenciaImplementacion { get; set; }
+
+        public DateTime FechaImplementacion { get; set; } = DateTime.Today;
+    }
+
+    private string? AuditorPrincipalId => hallazgo?.AuditoriaProceso?.AuditorAsignadoId?.Trim();
+    private string? SegundoAuditorId => hallazgo?.AuditoriaProceso?.SegundoAuditorId?.Trim();
+
+    private bool EsNcMenor =>
+        string.Equals(hallazgo?.TipoHallazgo?.Nombre, "NC Menor", StringComparison.OrdinalIgnoreCase);
+
+    private bool RequiereSegundoAuditor =>
+        !string.IsNullOrWhiteSpace(SegundoAuditorId) &&
+        !string.Equals(AuditorPrincipalId, SegundoAuditorId, StringComparison.OrdinalIgnoreCase);
+
+    private bool CincoPorQueAprobado =>
+        string.Equals(cincoPorQue?.Estatus, "Aprobado", StringComparison.OrdinalIgnoreCase);
+
+    private bool UsuarioActualEsResponsableCierre =>
+        hallazgo is not null &&
+        !string.IsNullOrWhiteSpace(hallazgo.ResponsableCierreId) &&
+        string.Equals(usuarioActualId, hallazgo.ResponsableCierreId.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private bool UsuarioActualEsAuditorPrincipal =>
+        !string.IsNullOrWhiteSpace(AuditorPrincipalId) &&
+        string.Equals(usuarioActualId, AuditorPrincipalId, StringComparison.OrdinalIgnoreCase);
+
+    private bool UsuarioActualEsSegundoAuditor =>
+        !string.IsNullOrWhiteSpace(SegundoAuditorId) &&
+        string.Equals(usuarioActualId, SegundoAuditorId, StringComparison.OrdinalIgnoreCase);
+
+    private bool UsuarioActualPuedeRevisarCincoPorQue =>
+        UsuarioActualEsAuditorPrincipal || UsuarioActualEsSegundoAuditor;
+
     protected override async Task OnParametersSetAsync()
     {
         cargando = true;
         errorMsg = null;
 
-        hallazgo = await Db.Hallazgos.FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId);
+        await CargarUsuarioActual();
+        await CargarPantalla();
+
+        cargando = false;
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+
+            usuarioActualNombre =
+                user.Identity?.Name
+                ?? user.FindFirst(ClaimTypes.Name)?.Value
+                ?? usuarioActualId;
+        }
+    }
+
+    private async Task CargarPantalla()
+    {
+        hallazgo = await Db.Hallazgos
+            .Include(h => h.TipoHallazgo)
+            .Include(h => h.AuditoriaProceso)
+            .FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId && h.AuditoriaId == auditoriaId);
+
+        cincoPorQue = await Db.HallazgosCincoPorQue
+            .FirstOrDefaultAsync(x => x.HallazgoId == hallazgoId);
+
+        accionCorrectiva = await Db.AccionesCorrectivas
+            .Where(a => a.HallazgoId == hallazgoId)
+            .OrderByDescending(a => a.AccionCorrectivaId)
+            .FirstOrDefaultAsync();
 
         seguimientos = await Db.HallazgoSeguimientos
             .Where(s => s.HallazgoId == hallazgoId)
             .OrderByDescending(s => s.FechaRegistro)
             .ToListAsync();
 
-        cargando = false;
+        if (cincoPorQue is not null)
+        {
+            vm5.PorQue1 = cincoPorQue.PorQue1;
+            vm5.PorQue2 = cincoPorQue.PorQue2;
+            vm5.PorQue3 = cincoPorQue.PorQue3;
+            vm5.PorQue4 = cincoPorQue.PorQue4;
+            vm5.PorQue5 = cincoPorQue.PorQue5;
+        }
+
+        if (accionCorrectiva is not null)
+        {
+            vmAccion.AccionDefinida = accionCorrectiva.AccionDefinida;
+            vmAccion.EvidenciaImplementacion = accionCorrectiva.EvidenciaImplementacion;
+            vmAccion.FechaImplementacion = accionCorrectiva.FechaImplementacion;
+        }
+    }
+
+    private string TextoDecision(bool? valor) =>
+        valor switch
+        {
+            true => "Aprobado",
+            false => "Rechazado",
+            _ => "Pendiente"
+        };
+
+    private void RecalcularEstatusCincoPorQue(HallazgoCincoPorQue entity)
+    {
+        if (entity.AprobacionAuditorAsignado == false ||
+            (RequiereSegundoAuditor && entity.AprobacionSegundoAuditor == false))
+        {
+            entity.Estatus = "Rechazado";
+            return;
+        }
+
+        if (entity.AprobacionAuditorAsignado == true &&
+            (!RequiereSegundoAuditor || entity.AprobacionSegundoAuditor == true))
+        {
+            entity.Estatus = "Aprobado";
+            return;
+        }
+
+        entity.Estatus = "Pendiente";
+    }
+
+    private string ConstruirAnalisisCausa(HallazgoCincoPorQue entity) =>
+        $"1. {entity.PorQue1}\n2. {entity.PorQue2}\n3. {entity.PorQue3}\n4. {entity.PorQue4}\n5. {entity.PorQue5}";
+
+    private async Task GuardarCincoPorQue()
+    {
+        if (guardando) return;
+        guardando = true;
+        errorMsg = null;
+
+        try
+        {
+            if (hallazgo is null || !EsNcMenor)
+                return;
+
+            if (CincoPorQueAprobado)
+            {
+                errorMsg = "Los 5 porqués ya fueron aprobados y ya no se pueden editar.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(hallazgo.ResponsableCierreId))
+            {
+                errorMsg = "El hallazgo no tiene responsable de cierre asignado.";
+                return;
+            }
+
+            if (!UsuarioActualEsResponsableCierre)
+            {
+                errorMsg = "Solo el responsable de cierre puede capturar los 5 porqués.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(vm5.PorQue1) ||
+                string.IsNullOrWhiteSpace(vm5.PorQue2) ||
+                string.IsNullOrWhiteSpace(vm5.PorQue3) ||
+                string.IsNullOrWhiteSpace(vm5.PorQue4) ||
+                string.IsNullOrWhiteSpace(vm5.PorQue5))
+            {
+                errorMsg = "Debes capturar los 5 porqués completos.";
+                return;
+            }
+
+            var esNuevo = cincoPorQue is null;
+
+            if (cincoPorQue is null)
+            {
+                cincoPorQue = new HallazgoCincoPorQue
+                {
+                    HallazgoId = hallazgoId
+                };
+
+                Db.HallazgosCincoPorQue.Add(cincoPorQue);
+            }
+
+            cincoPorQue.UsuarioRegistroId = usuarioActualId;
+            cincoPorQue.FechaRegistro = DateTime.Now;
+            cincoPorQue.PorQue1 = vm5.PorQue1.Trim();
+            cincoPorQue.PorQue2 = vm5.PorQue2.Trim();
+            cincoPorQue.PorQue3 = vm5.PorQue3.Trim();
+            cincoPorQue.PorQue4 = vm5.PorQue4.Trim();
+            cincoPorQue.PorQue5 = vm5.PorQue5.Trim();
+
+            cincoPorQue.Estatus = "Pendiente";
+            cincoPorQue.AprobacionAuditorAsignado = null;
+            cincoPorQue.AprobadoPorAuditorAsignadoId = null;
+            cincoPorQue.FechaAprobacionAuditorAsignado = null;
+            cincoPorQue.ComentarioAuditorAsignado = null;
+
+            cincoPorQue.AprobacionSegundoAuditor = null;
+            cincoPorQue.AprobadoPorSegundoAuditorId = null;
+            cincoPorQue.FechaAprobacionSegundoAuditor = null;
+            cincoPorQue.ComentarioSegundoAuditor = null;
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = hallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = esNuevo
+                    ? "Capturó los 5 porqués."
+                    : "Actualizó los 5 porqués."
+            });
+
+            await Db.SaveChangesAsync();
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task RevisarCincoPorQue()
+    {
+        if (guardando) return;
+        guardando = true;
+        errorMsg = null;
+
+        try
+        {
+            if (hallazgo is null || cincoPorQue is null || !EsNcMenor)
+                return;
+
+            var decision = vmRevision.Decision?.Trim();
+            var comentario = vmRevision.Comentario?.Trim();
+
+            if (!UsuarioActualPuedeRevisarCincoPorQue)
+            {
+                errorMsg = "Solo los auditores asignados pueden aprobar o rechazar los 5 porqués.";
+                return;
+            }
+
+            if (decision != "Aprobar" && decision != "Rechazar")
+            {
+                errorMsg = "Selecciona una decisión.";
+                return;
+            }
+
+            if (decision == "Rechazar" && string.IsNullOrWhiteSpace(comentario))
+            {
+                errorMsg = "Cuando rechazas los 5 porqués debes capturar un comentario.";
+                return;
+            }
+
+            var aprobado = decision == "Aprobar";
+
+            if (UsuarioActualEsAuditorPrincipal)
+            {
+                cincoPorQue.AprobacionAuditorAsignado = aprobado;
+                cincoPorQue.AprobadoPorAuditorAsignadoId = usuarioActualId;
+                cincoPorQue.FechaAprobacionAuditorAsignado = DateTime.Now;
+                cincoPorQue.ComentarioAuditorAsignado = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
+            }
+            else if (UsuarioActualEsSegundoAuditor)
+            {
+                cincoPorQue.AprobacionSegundoAuditor = aprobado;
+                cincoPorQue.AprobadoPorSegundoAuditorId = usuarioActualId;
+                cincoPorQue.FechaAprobacionSegundoAuditor = DateTime.Now;
+                cincoPorQue.ComentarioSegundoAuditor = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
+            }
+
+            RecalcularEstatusCincoPorQue(cincoPorQue);
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = hallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = $"Revisión de 5 porqués: {(aprobado ? "Aprobado" : "Rechazado")}. {(string.IsNullOrWhiteSpace(comentario) ? "" : comentario)}"
+            });
+
+            await Db.SaveChangesAsync();
+
+            vmRevision.Decision = null;
+            vmRevision.Comentario = null;
+
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task GuardarAccionCorrectiva()
+    {
+        if (guardando) return;
+        guardando = true;
+        errorMsg = null;
+
+        try
+        {
+            if (hallazgo is null || !EsNcMenor)
+                return;
+
+            if (cincoPorQue is null || !CincoPorQueAprobado)
+            {
+                errorMsg = "Primero deben aprobarse los 5 porqués.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(hallazgo.ResponsableCierreId))
+            {
+                errorMsg = "El hallazgo no tiene responsable de cierre asignado.";
+                return;
+            }
+
+            if (!UsuarioActualEsResponsableCierre)
+            {
+                errorMsg = "Solo el responsable de cierre puede registrar la solución del hallazgo.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(vmAccion.AccionDefinida))
+            {
+                errorMsg = "La acción definida es obligatoria.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(vmAccion.EvidenciaImplementacion))
+            {
+                errorMsg = "La evidencia de implementación es obligatoria.";
+                return;
+            }
+
+            if (accionCorrectiva is null)
+            {
+                accionCorrectiva = new AccionCorrectiva
+                {
+                    HallazgoId = hallazgoId
+                };
+
+                Db.AccionesCorrectivas.Add(accionCorrectiva);
+            }
+
+            accionCorrectiva.AnalisisCausa = ConstruirAnalisisCausa(cincoPorQue);
+            accionCorrectiva.AccionDefinida = vmAccion.AccionDefinida.Trim();
+            accionCorrectiva.ResponsableId = usuarioActualId;
+            accionCorrectiva.FechaImplementacion = vmAccion.FechaImplementacion;
+            accionCorrectiva.EvidenciaImplementacion = vmAccion.EvidenciaImplementacion.Trim();
+            accionCorrectiva.Estatus = "En Verificación";
+
+            if (string.Equals(hallazgo.Estatus, "Abierto", StringComparison.OrdinalIgnoreCase))
+                hallazgo.Estatus = "En Proceso";
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = hallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = "Registró la solución del hallazgo y la evidencia de implementación.",
+                Evidencia = vmAccion.EvidenciaImplementacion.Trim(),
+                EstatusNuevo = hallazgo.Estatus
+            });
+
+            await Db.SaveChangesAsync();
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
     }
 
     private async Task GuardarSeguimiento()
@@ -170,13 +1011,24 @@ else
         {
             if (hallazgo is null) return;
 
-            if (string.IsNullOrWhiteSpace(vm.UsuarioId) || string.IsNullOrWhiteSpace(vm.Comentario))
+            if (string.IsNullOrWhiteSpace(vm.Comentario))
+            {
+                errorMsg = "El comentario es obligatorio.";
                 return;
+            }
+
+            if (EsNcMenor &&
+                string.Equals(vm.EstatusNuevo, "Cerrado", StringComparison.OrdinalIgnoreCase) &&
+                !CincoPorQueAprobado)
+            {
+                errorMsg = "No puedes cerrar una NC Menor hasta que los 5 porqués estén aprobados.";
+                return;
+            }
 
             var seg = new HallazgoSeguimiento
             {
                 HallazgoId = hallazgoId,
-                UsuarioId = vm.UsuarioId.Trim(),
+                UsuarioId = usuarioActualId,
                 Comentario = vm.Comentario.Trim(),
                 Evidencia = string.IsNullOrWhiteSpace(vm.Evidencia) ? null : vm.Evidencia.Trim(),
                 EstatusNuevo = string.IsNullOrWhiteSpace(vm.EstatusNuevo) ? null : vm.EstatusNuevo
@@ -193,10 +1045,7 @@ else
             vm.Evidencia = null;
             vm.EstatusNuevo = null;
 
-            seguimientos = await Db.HallazgoSeguimientos
-                .Where(s => s.HallazgoId == hallazgoId)
-                .OrderByDescending(s => s.FechaRegistro)
-                .ToListAsync();
+            await CargarPantalla();
         }
         catch (Exception ex)
         {
@@ -208,6 +1057,48 @@ else
         }
     }
 
+    private string GetStatusClass(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor is "cerrado" or "cerrada" or "finalizado" or "finalizada")
+            return "closed";
+
+        if (valor is "en proceso" or "en revisión" or "en revision")
+            return "progress";
+
+        return "open";
+    }
+
+    private string GetTipoClass(string? tipo)
+    {
+        var valor = tipo?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor.Contains("mayor"))
+            return "major";
+
+        if (valor.Contains("menor"))
+            return "minor";
+
+        return "neutral";
+    }
+
+    private string GetFlowClass(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor == "aprobado")
+            return "approved";
+
+        if (valor == "rechazado")
+            return "rejected";
+
+        if (valor == "bloqueada")
+            return "blocked";
+
+        return "pending";
+    }
+
     private void VolverAuditoria() =>
-        Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos"); // <- usa el parámetro de ruta
+        Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos");
 }

@@ -1,71 +1,148 @@
 ﻿@page "/auditorias"
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Auditorias
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
-<h2>Auditorías</h2>
+@attribute [Authorize]
 
-<div class="mb-3">
-    <NavLink class="btn btn-primary" href="auditorias/nueva">Nueva Auditoría</NavLink>
-</div>
-<p>Clicks: @n</p>
-<button type="button" class="btn btn-secondary" @onclick="() => n++">Test click</button>
-
-@code {
-    int n = 0;
-}
-
-@if (cargando)
-{
-    <p>Cargando...</p>
-}
-else if (lista.Count == 0)
-{
-    <div class="alert alert-secondary">No hay auditorías.</div>
-}
-else
-{
-    <div class="card">
-        <div class="card-body">
-            <table class="table table-bordered table-hover">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tipo</th>
-                        <th>Inicio</th>
-                        <th>Fin</th>
-                        <th>Estatus</th>
-                        <th style="width:140px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var a in lista)
-                    {
-                        <tr>
-                            <td>@a.AuditoriaId</td>
-                            <td>@a.TipoAuditoria</td>
-                            <td>@a.FechaInicio.ToString("yyyy-MM-dd")</td>
-                            <td>@a.FechaFin.ToString("yyyy-MM-dd")</td>
-                            <td>@a.Estatus</td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-outline-primary"
-                                        @onclick="() => IrDetalle(a.AuditoriaId)">
-                                    Detalle
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+<div class="auditorias-page">
+    <section class="auditorias-hero">
+        <div>
+            <span class="auditorias-kicker">Gestión de auditorías</span>
+            <h1>Auditorías</h1>
+            <p>
+                Consulta el historial de auditorías registradas, revisa su estatus y entra al detalle de cada una.
+            </p>
         </div>
-    </div>
-    
-}
+
+        <div class="auditorias-hero-actions">
+            <NavLink class="hero-btn primary" href="auditorias/nueva">
+                Nueva auditoría
+            </NavLink>
+        </div>
+    </section>
+
+    @if (cargando)
+    {
+        <div class="auditorias-loading">
+            <div class="auditorias-skeleton auditorias-skeleton-card"></div>
+            <div class="auditorias-skeleton auditorias-skeleton-card"></div>
+            <div class="auditorias-skeleton auditorias-skeleton-table"></div>
+        </div>
+    }
+    else if (lista.Count == 0)
+    {
+        <section class="panel-card">
+            <div class="empty-state">
+                <div class="empty-title">Aún no hay auditorías registradas</div>
+                <div class="empty-text">
+                    Empieza dando de alta la primera auditoría del sistema.
+                </div>
+
+                <NavLink class="hero-btn primary mt-3" href="auditorias/nueva">
+                    Crear auditoría
+                </NavLink>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="auditorias-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Total</div>
+                <div class="metric-value">@totalAuditorias</div>
+                <div class="metric-note">Auditorías registradas</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Vigentes</div>
+                <div class="metric-value">@auditoriasVigentes</div>
+                <div class="metric-note">Con fecha de fin vigente</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Finalizadas</div>
+                <div class="metric-value">@auditoriasFinalizadas</div>
+                <div class="metric-note">Cerradas o vencidas</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Este mes</div>
+                <div class="metric-value">@auditoriasEsteMes</div>
+                <div class="metric-note">Con inicio en el mes actual</div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Listado de auditorías</h2>
+                    <p class="panel-subtitle">Ordenadas de la más reciente a la más antigua.</p>
+                </div>
+
+                <div class="panel-count">@lista.Count registro(s)</div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="auditorias-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tipo</th>
+                            <th>Inicio</th>
+                            <th>Fin</th>
+                            <th>Estatus</th>
+                            <th class="text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var a in lista)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="id-pill">#@a.AuditoriaId</span>
+                                </td>
+                                <td>
+                                    <div class="cell-title">@a.TipoAuditoria</div>
+                                </td>
+                                <td>@a.FechaInicio.ToString("yyyy-MM-dd")</td>
+                                <td>@a.FechaFin.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    <span class="status-pill @GetStatusClass(a.Estatus)">
+                                        @a.Estatus
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <button class="table-btn"
+                                            @onclick="() => IrDetalle(a.AuditoriaId)">
+                                        Ver detalle
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+</div>
 
 @code {
     private bool cargando = true;
     private List<Auditoria> lista = new();
+
+    private int totalAuditorias => lista.Count;
+
+    private int auditoriasVigentes =>
+        lista.Count(a => !EsFinalizada(a.Estatus) && a.FechaFin >= DateTime.Today);
+
+    private int auditoriasFinalizadas =>
+        lista.Count(a => EsFinalizada(a.Estatus) || a.FechaFin < DateTime.Today);
+
+    private int auditoriasEsteMes =>
+        lista.Count(a => a.FechaInicio.Month == DateTime.Today.Month && a.FechaInicio.Year == DateTime.Today.Year);
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,6 +153,25 @@ else
         cargando = false;
     }
 
-    void IrNueva() => Nav.NavigateTo("/auditorias/nueva");
-    void IrDetalle(int id) => Nav.NavigateTo($"/auditorias/{id}");
+    private static bool EsFinalizada(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        return valor is "cerrado" or "cerrada" or "finalizado" or "finalizada";
+    }
+
+    private static string GetStatusClass(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor is "cerrado" or "cerrada" or "finalizado" or "finalizada")
+            return "closed";
+
+        if (valor is "en proceso" or "en revisión" or "en revision")
+            return "progress";
+
+        return "open";
+    }
+
+    private void IrDetalle(int id) => Nav.NavigateTo($"/auditorias/{id}");
 }

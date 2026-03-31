@@ -1,10 +1,11 @@
 ﻿@page "/auditorias/{auditoriaId:int}/procesos/{auditoriaProcesoId:int}"
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Models.Catalogos
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
-<h2>Asignar auditor</h2>
+<h2>Asignar equipo auditor</h2>
 
 @if (!string.IsNullOrWhiteSpace(errorMsg))
 {
@@ -49,10 +50,91 @@ else
         <ValidationSummary />
 
         <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label">Auditor asignado</label>
-                <InputText class="form-control" @bind-Value="vm.AuditorAsignadoId" />
-                <div class="form-text">Por ahora es texto. Luego puede ser UserId (Identity).</div>
+            <div class="col-md-4">
+                <label class="form-label">Auditor principal</label>
+
+                <InputSelect class="form-select" @bind-Value="vm.AuditorAsignadoId">
+                    <option value="">-- Selecciona --</option>
+                    @foreach (var a in auditoresDisponibles)
+                    {
+                        <option value="@GetAuditorKey(a)">
+                            @a.Nombre (@(string.IsNullOrWhiteSpace(a.PcLoginId) ? "sin PC" : a.PcLoginId)) - @a.Tipo
+                        </option>
+                    }
+                </InputSelect>
+
+                <div class="form-text">
+                    Se cargan auditores <b>activos</b> (Auditor / Entrenamiento).
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(vm.AuditorAsignadoId))
+                {
+                    var sel = auditoresDisponibles.FirstOrDefault(x => GetAuditorKey(x) == vm.AuditorAsignadoId);
+                    if (sel is not null)
+                    {
+                        <div class="text-muted small mt-1">
+                            Depto: <b>@sel.Departamento</b> | Función: <b>@sel.Funcion</b> | Email: <b>@sel.Email</b>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Segundo auditor</label>
+
+                <InputSelect class="form-select" @bind-Value="vm.SegundoAuditorId">
+                    <option value="">-- Opcional --</option>
+                    @foreach (var a in auditoresDisponibles)
+                    {
+                        <option value="@GetAuditorKey(a)">
+                            @a.Nombre (@(string.IsNullOrWhiteSpace(a.PcLoginId) ? "sin PC" : a.PcLoginId)) - @a.Tipo
+                        </option>
+                    }
+                </InputSelect>
+
+                <div class="form-text">
+                    Opcional. Usa el mismo catálogo de auditores activos.
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(vm.SegundoAuditorId))
+                {
+                    var sel2 = auditoresDisponibles.FirstOrDefault(x => GetAuditorKey(x) == vm.SegundoAuditorId);
+                    if (sel2 is not null)
+                    {
+                        <div class="text-muted small mt-1">
+                            Depto: <b>@sel2.Departamento</b> | Función: <b>@sel2.Funcion</b> | Email: <b>@sel2.Email</b>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Observador</label>
+
+                <InputSelect class="form-select" @bind-Value="vm.ObservadorId">
+                    <option value="">-- Opcional --</option>
+                    @foreach (var o in observadoresDisponibles)
+                    {
+                        <option value="@GetAuditorKey(o)">
+                            @o.Nombre (@(string.IsNullOrWhiteSpace(o.PcLoginId) ? "sin PC" : o.PcLoginId)) - @o.Tipo
+                        </option>
+                    }
+                </InputSelect>
+
+                <div class="form-text">
+                    Se cargan observadores <b>activos</b>.
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(vm.ObservadorId))
+                {
+                    var obs = observadoresDisponibles.FirstOrDefault(x => GetAuditorKey(x) == vm.ObservadorId);
+                    if (obs is not null)
+                    {
+                        <div class="text-muted small mt-1">
+                            Depto: <b>@obs.Departamento</b> | Función: <b>@obs.Funcion</b> | Email: <b>@obs.Email</b>
+                        </div>
+                    }
+                }
             </div>
 
             <div class="col-md-6">
@@ -69,6 +151,101 @@ else
                     <div class="form-text">Obligatorio para Producción / cuando hay UnidadNegocio.</div>
                 }
             </div>
+
+            @if (auditoresDisponibles.Count > 0)
+            {
+                <div class="col-12">
+                    <details>
+                        <summary class="text-muted">Ver auditores disponibles (@auditoresDisponibles.Count)</summary>
+                        <div class="mt-2">
+                            <table class="table table-sm table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Tipo</th>
+                                        <th>Departamento</th>
+                                        <th>Función</th>
+                                        <th>PC Login</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var a in auditoresDisponibles)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@a.Nombre</div>
+                                                <div class="text-muted small">@a.Email</div>
+                                            </td>
+                                            <td>@a.Tipo</td>
+                                            <td>@a.Departamento</td>
+                                            <td>@a.Funcion</td>
+                                            <td>@a.PcLoginId</td>
+                                            <td class="text-end">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-primary"
+                                                        @onclick="() => SeleccionarAuditorPrincipal(a)">
+                                                    Principal
+                                                </button>
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary ms-1"
+                                                        @onclick="() => SeleccionarSegundoAuditor(a)">
+                                                    Segundo
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+            }
+
+            @if (observadoresDisponibles.Count > 0)
+            {
+                <div class="col-12">
+                    <details>
+                        <summary class="text-muted">Ver observadores disponibles (@observadoresDisponibles.Count)</summary>
+                        <div class="mt-2">
+                            <table class="table table-sm table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Tipo</th>
+                                        <th>Departamento</th>
+                                        <th>Función</th>
+                                        <th>PC Login</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var o in observadoresDisponibles)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">@o.Nombre</div>
+                                                <div class="text-muted small">@o.Email</div>
+                                            </td>
+                                            <td>@o.Tipo</td>
+                                            <td>@o.Departamento</td>
+                                            <td>@o.Funcion</td>
+                                            <td>@o.PcLoginId</td>
+                                            <td class="text-end">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-info"
+                                                        @onclick="() => SeleccionarObservador(o)">
+                                                    Usar
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                </div>
+            }
 
             <div class="col-12 d-flex gap-2">
                 <button type="submit" class="btn btn-primary" disabled="@guardando">
@@ -94,11 +271,16 @@ else
     private AuditoriaProceso? ap;
     private bool requiereLinea;
 
-    private Vm vm = new(); // <- clave: NO NULL
+    private List<Auditor> auditoresDisponibles = new();
+    private List<Auditor> observadoresDisponibles = new();
+
+    private Vm vm = new();
 
     private class Vm
     {
         public string? AuditorAsignadoId { get; set; }
+        public string? SegundoAuditorId { get; set; }
+        public string? ObservadorId { get; set; }
         public string? LineaNombre { get; set; }
     }
 
@@ -112,19 +294,42 @@ else
             .Include(x => x.UnidadNegocio)
             .FirstOrDefaultAsync(x => x.AuditoriaProcesoId == auditoriaProcesoId && x.AuditoriaId == auditoriaId);
 
+        auditoresDisponibles = await Db.Auditores
+            .Where(a => a.Activo && (a.Tipo == "Auditor" || a.Tipo == "Entrenamiento"))
+            .OrderBy(a => a.Nombre)
+            .ToListAsync();
+
+        observadoresDisponibles = await Db.Auditores
+            .Where(a => a.Activo && a.Tipo == "Observador")
+            .OrderBy(a => a.Nombre)
+            .ToListAsync();
+
         if (ap is not null)
         {
             vm.AuditorAsignadoId = ap.AuditorAsignadoId;
+            vm.SegundoAuditorId = ap.SegundoAuditorId;
+            vm.ObservadorId = ap.ObservadorId;
             vm.LineaNombre = ap.LineaNombre;
 
             requiereLinea = ap.UnidadNegocioId is not null;
-
             if (!requiereLinea)
                 vm.LineaNombre = null;
         }
 
         cargando = false;
     }
+
+    private string GetAuditorKey(Auditor a)
+        => string.IsNullOrWhiteSpace(a.PcLoginId) ? a.Nombre : a.PcLoginId;
+
+    private void SeleccionarAuditorPrincipal(Auditor a)
+        => vm.AuditorAsignadoId = GetAuditorKey(a);
+
+    private void SeleccionarSegundoAuditor(Auditor a)
+        => vm.SegundoAuditorId = GetAuditorKey(a);
+
+    private void SeleccionarObservador(Auditor a)
+        => vm.ObservadorId = GetAuditorKey(a);
 
     private async Task Guardar()
     {
@@ -133,13 +338,28 @@ else
 
         if (string.IsNullOrWhiteSpace(vm.AuditorAsignadoId))
         {
-            errorMsg = "El auditor asignado es obligatorio.";
+            errorMsg = "El auditor principal es obligatorio.";
             return;
         }
 
         if (requiereLinea && string.IsNullOrWhiteSpace(vm.LineaNombre))
         {
             errorMsg = "La línea es obligatoria cuando hay Unidad de Negocio.";
+            return;
+        }
+
+        var roles = new[]
+        {
+            vm.AuditorAsignadoId?.Trim(),
+            vm.SegundoAuditorId?.Trim(),
+            vm.ObservadorId?.Trim()
+        }
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .ToList();
+
+        if (roles.Count != roles.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+        {
+            errorMsg = "No puedes asignar la misma persona como auditor principal, segundo auditor u observador.";
             return;
         }
 
@@ -156,7 +376,9 @@ else
                 return;
             }
 
-            entity.AuditorAsignadoId = vm.AuditorAsignadoId.Trim();
+            entity.AuditorAsignadoId = vm.AuditorAsignadoId?.Trim();
+            entity.SegundoAuditorId = string.IsNullOrWhiteSpace(vm.SegundoAuditorId) ? null : vm.SegundoAuditorId.Trim();
+            entity.ObservadorId = string.IsNullOrWhiteSpace(vm.ObservadorId) ? null : vm.ObservadorId.Trim();
 
             if (entity.UnidadNegocioId is null)
                 entity.LineaNombre = null;
@@ -165,16 +387,13 @@ else
 
             await Db.SaveChangesAsync();
 
-            // 1) Traer ProcesoId del AuditoriaProceso (ya lo tienes en entity, pero por seguridad)
             var procesoId = entity.ProcesoId;
 
-            // 2) Preguntas activas del proceso
             var preguntasIds = await Db.ChecklistPreguntas
                 .Where(p => p.ProcesoId == procesoId && p.Activo)
                 .Select(p => p.PreguntaId)
                 .ToListAsync();
 
-            // 3) Ya existentes en checklist para este AuditoriaProceso
             var existentesIds = await Db.AuditoriaChecklists
                 .Where(x => x.AuditoriaProcesoId == auditoriaProcesoId)
                 .Select(x => x.PreguntaId)
@@ -182,7 +401,6 @@ else
 
             var existentesSet = existentesIds.ToHashSet();
 
-            // 4) Insertar faltantes como "Pendiente"
             var auditorId = string.IsNullOrWhiteSpace(entity.AuditorAsignadoId) ? "sistema" : entity.AuditorAsignadoId;
 
             var faltantes = preguntasIds
@@ -202,6 +420,7 @@ else
                 Db.AuditoriaChecklists.AddRange(faltantes);
                 await Db.SaveChangesAsync();
             }
+
             Nav.NavigateTo($"auditorias/{auditoriaId}");
         }
         catch (Exception ex)
@@ -212,8 +431,6 @@ else
         {
             guardando = false;
         }
-
-
     }
 
     private void Volver() => Nav.NavigateTo($"auditorias/{auditoriaId}");

@@ -1,0 +1,327 @@
+﻿@page "/auditores/nuevo"
+@page "/auditores/{auditorId:int}"
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.External
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h3>@(auditorId is null ? "Nuevo auditor" : $"Editar auditor #{auditorId}")</h3>
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6>Precargar desde meax_all_user</h6>
+
+            <EditForm Model="lookupVm" OnValidSubmit="BuscarUsuario">
+                <DataAnnotationsValidator />
+
+                <label class="form-label">Buscar (PC Login ID / Email / Nombre)</label>
+
+                <div class="input-group">
+                    <InputText class="form-control" @bind-Value="lookupVm.Query" />
+                    <button type="submit" class="btn btn-outline-primary" disabled="@buscando">
+                        @(buscando ? "Buscando..." : "Buscar")
+                    </button>
+                </div>
+
+                <div class="form-text">Ej: DM45207, nombre, o correo.</div>
+            </EditForm>
+
+            @if (resultados.Count > 0)
+            {
+                <div class="mt-3">
+                    <div class="text-muted small mb-2">
+                        Resultados: @resultados.Count (muestra máx. 25)
+                    </div>
+
+                    <table class="table table-sm table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>PC Login</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Depto</th>
+                                <th>Puesto</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var u in resultados)
+                            {
+                                <tr>
+                                    <td>@u.pc_login_id</td>
+                                    <td>@u.username</td>
+                                    <td>@u.email</td>
+                                    <td>@(u.department ?? u.dep_2)</td>
+                                    <td>@u.position</td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-success"
+                                                @onclick="() => SeleccionarUsuario(u)">
+                                            Usar
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (meaxUser is not null)
+            {
+                <div class="text-muted small mt-2">
+                    Seleccionado: <b>@meaxUser.username</b> | @(meaxUser.department ?? meaxUser.dep_2) | @meaxUser.position
+                </div>
+            }
+        </div>
+    </div>
+
+    <EditForm Model="vm" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="card">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre</label>
+                        <InputText class="form-control" @bind-Value="vm.Nombre" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo</label>
+                        <InputSelect class="form-select" @bind-Value="vm.Tipo">
+                            <option value="Auditor">Auditor</option>
+                            <option value="Entrenamiento">Auditor en entrenamiento</option>
+                            <option value="Observador">Observador</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Departamento</label>
+                        <InputText class="form-control" @bind-Value="vm.Departamento" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Función</label>
+                        <InputText class="form-control" @bind-Value="vm.Funcion" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <InputText class="form-control" @bind-Value="vm.Email" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">PC Login ID</label>
+                        <InputText class="form-control" @bind-Value="vm.PcLoginId" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-check mt-4">
+                            <InputCheckbox class="form-check-input" @bind-Value="vm.Activo" />
+                            <label class="form-check-label">Activo</label>
+                        </div>
+                    </div>
+
+                    <div class="col-12 d-flex gap-2">
+                        <button class="btn btn-primary" type="submit" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Guardar")
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button"
+                                @onclick='() => Nav.NavigateTo("auditores")' disabled="@guardando">
+                            Volver
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public int? auditorId { get; set; }
+
+    private bool cargando = true;
+    private bool guardando;
+    private bool buscando;
+    private string? errorMsg;
+
+    private MeaxAllUser? meaxUser;
+    private List<MeaxAllUser> resultados = new();
+
+    private LookupVm lookupVm = new();
+    private Vm vm = new();
+
+    private class LookupVm
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string? Query { get; set; }
+    }
+
+    private class Vm
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Nombre { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Tipo { get; set; } = "Auditor";
+
+        public string? Departamento { get; set; }
+        public string? Funcion { get; set; }
+        public string? Email { get; set; }
+        public string? PcLoginId { get; set; }
+        public bool Activo { get; set; } = true;
+
+        public int? MeaxUserId { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        if (auditorId is not null)
+        {
+            var a = await Db.Auditores.FirstOrDefaultAsync(x => x.AuditorId == auditorId.Value);
+            if (a is not null)
+            {
+                vm.Nombre = a.Nombre;
+                vm.Tipo = a.Tipo;
+                vm.Departamento = a.Departamento;
+                vm.Funcion = a.Funcion;
+                vm.Email = a.Email;
+                vm.PcLoginId = a.PcLoginId;
+                vm.Activo = a.Activo;
+                vm.MeaxUserId = a.MeaxUserId;
+
+                // precarga el buscador
+                lookupVm.Query = a.PcLoginId ?? a.Email ?? a.Nombre;
+            }
+        }
+
+        cargando = false;
+    }
+
+    private async Task BuscarUsuario()
+    {
+        if (buscando) return;
+        buscando = true;
+        errorMsg = null;
+        meaxUser = null;
+        resultados.Clear();
+
+        try
+        {
+            var q = (lookupVm.Query ?? "").Trim();
+
+            if (string.IsNullOrWhiteSpace(q))
+            {
+                errorMsg = "Captura PC Login ID, Email o Nombre para buscar.";
+                return;
+            }
+
+            resultados = await Db.MeaxAllUsers
+                .AsNoTracking()
+                .Where(u =>
+                    u.pc_login_id.Contains(q) ||
+                    (u.email != null && u.email.Contains(q)) ||
+                    (u.username != null && u.username.Contains(q)))
+                .OrderBy(u => u.username)
+                .Take(25)
+                .ToListAsync();
+
+            if (resultados.Count == 0)
+            {
+                errorMsg = "No se encontró en meax_all_user.";
+                return;
+            }
+
+            if (resultados.Count == 1)
+            {
+                SeleccionarUsuario(resultados[0]);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.Message;
+        }
+        finally
+        {
+            buscando = false;
+        }
+    }
+
+    private void SeleccionarUsuario(MeaxAllUser u)
+    {
+        meaxUser = u;
+
+        // actualizar texto del buscador
+        lookupVm.Query = u.pc_login_id ?? u.email ?? u.username;
+
+        // Precargar a VM
+        vm.MeaxUserId = u.id;
+        vm.Nombre = u.username ?? vm.Nombre;
+        vm.Email = u.email ?? vm.Email;
+        vm.Departamento = u.department ?? u.dep_2 ?? vm.Departamento;
+        vm.Funcion = u.position ?? vm.Funcion;
+        vm.PcLoginId = u.pc_login_id ?? vm.PcLoginId;
+    }
+
+    private async Task Guardar()
+    {
+        if (guardando) return;
+        guardando = true;
+        errorMsg = null;
+
+        try
+        {
+            Auditor entity;
+
+            if (auditorId is null)
+            {
+                entity = new Auditor();
+                Db.Auditores.Add(entity);
+            }
+            else
+            {
+                entity = await Db.Auditores.FirstOrDefaultAsync(x => x.AuditorId == auditorId.Value)
+                         ?? new Auditor();
+
+                if (entity.AuditorId == 0)
+                    Db.Auditores.Add(entity);
+            }
+
+            entity.Nombre = vm.Nombre.Trim();
+            entity.Tipo = vm.Tipo;
+            entity.Departamento = string.IsNullOrWhiteSpace(vm.Departamento) ? null : vm.Departamento.Trim();
+            entity.Funcion = string.IsNullOrWhiteSpace(vm.Funcion) ? null : vm.Funcion.Trim();
+            entity.Email = string.IsNullOrWhiteSpace(vm.Email) ? null : vm.Email.Trim();
+            entity.PcLoginId = string.IsNullOrWhiteSpace(vm.PcLoginId) ? null : vm.PcLoginId.Trim();
+            entity.MeaxUserId = vm.MeaxUserId;
+            entity.Activo = vm.Activo;
+
+            await Db.SaveChangesAsync();
+            Nav.NavigateTo("auditores");
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+}

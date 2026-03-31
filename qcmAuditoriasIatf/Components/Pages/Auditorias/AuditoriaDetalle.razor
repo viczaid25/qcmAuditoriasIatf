@@ -1,12 +1,12 @@
 ﻿@page "/auditorias/{id:int}"
+@using System.Globalization
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Auditorias
-@using qcmAuditoriasIatf.Models.Catalogos
-@using qcmAuditoriasIatf.Models.Hallazgos
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
-<h2>Auditoría #@id</h2>
+@attribute [Authorize]
 
 @if (!string.IsNullOrWhiteSpace(errorMsg))
 {
@@ -15,191 +15,309 @@
 
 @if (cargando)
 {
-    <p>Cargando...</p>
+    <div class="auditoria-loading">
+        <div class="auditoria-skeleton auditoria-skeleton-hero"></div>
+        <div class="auditoria-metrics">
+            <div class="auditoria-skeleton auditoria-skeleton-card"></div>
+            <div class="auditoria-skeleton auditoria-skeleton-card"></div>
+            <div class="auditoria-skeleton auditoria-skeleton-card"></div>
+            <div class="auditoria-skeleton auditoria-skeleton-card"></div>
+        </div>
+        <div class="auditoria-skeleton auditoria-skeleton-table"></div>
+    </div>
 }
 else if (auditoria is null)
 {
-    <div class="alert alert-danger">No se encontró la auditoría.</div>
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró la auditoría</div>
+            <div class="empty-text">Verifica el identificador o vuelve al listado principal.</div>
+
+            <button type="button" class="hero-btn primary mt-3" @onclick="Volver">
+                Volver a auditorías
+            </button>
+        </div>
+    </section>
 }
 else
 {
-    <div class="row g-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <div class="row g-2">
-                        <div class="col-md-3"><b>Tipo:</b> @auditoria.TipoAuditoria</div>
-                        <div class="col-md-3"><b>Estatus:</b> @auditoria.Estatus</div>
-                        <div class="col-md-3"><b>Inicio:</b> @auditoria.FechaInicio.ToString("yyyy-MM-dd")</div>
-                        <div class="col-md-3"><b>Fin:</b> @auditoria.FechaFin.ToString("yyyy-MM-dd")</div>
-                        <div class="col-12 mt-2"><b>Objetivo:</b> @auditoria.Objetivo</div>
-                        <div class="col-12"><b>Alcance:</b> @auditoria.Alcance</div>
-                    </div>
+    <div class="auditoria-page">
+        <section class="auditoria-hero">
+            <div class="auditoria-hero-copy">
+                <span class="auditoria-kicker">Detalle de auditoría</span>
+                <h1>Auditoría #@id</h1>
+
+                <div class="auditoria-meta">
+                    <span class="meta-chip">
+                        Tipo: <strong>@auditoria.TipoAuditoria</strong>
+                    </span>
+
+                    <span class="status-pill @GetStatusClass(auditoria.Estatus)">
+                        @auditoria.Estatus
+                    </span>
+
+                    <span class="meta-chip">
+                        Inicio: <strong>@auditoria.FechaInicio.ToString("yyyy-MM-dd")</strong>
+                    </span>
+
+                    <span class="meta-chip">
+                        Fin: <strong>@auditoria.FechaFin.ToString("yyyy-MM-dd")</strong>
+                    </span>
                 </div>
-            </div>
-        </div>
 
-        <!-- ✅ NUEVO: Dashboard Checklist + Hallazgos -->
-        <div class="col-12">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">Checklist</h5>
-
-                            <p class="mb-1"><strong>Total respuestas:</strong> @checklistTotal</p>
-
-                            <div class="mb-2">
-                                <div class="d-flex justify-content-between">
-                                    <span>Cumple</span>
-                                    <span>@checklistCumple (@checklistCumplePct%)</span>
-                                </div>
-                                <div class="progress">
-                                    <div class="progress-bar" style="width:@checklistCumplePct%"></div>
-                                </div>
-                            </div>
-
-                            <div class="mb-2">
-                                <div class="d-flex justify-content-between">
-                                    <span>No Cumple</span>
-                                    <span>@checklistNoCumple (@checklistNoCumplePct%)</span>
-                                </div>
-                                <div class="progress">
-                                    <div class="progress-bar" style="width:@checklistNoCumplePct%"></div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div class="d-flex justify-content-between">
-                                    <span>No Aplica</span>
-                                    <span>@checklistNoAplica (@checklistNoAplicaPct%)</span>
-                                </div>
-                                <div class="progress">
-                                    <div class="progress-bar" style="width:@checklistNoAplicaPct%"></div>
-                                </div>
-                            </div>
-
-                            @if (checklistTotal == 0)
-                            {
-                                <div class="alert alert-warning mt-3 mb-0">
-                                    Aún no hay respuestas del checklist para esta auditoría.
-                                </div>
-                            }
+                <div class="auditoria-text-grid">
+                    <div class="text-card">
+                        <div class="text-card-label">Objetivo</div>
+                        <div class="text-card-value">
+                            @(string.IsNullOrWhiteSpace(auditoria.Objetivo) ? "Sin objetivo capturado." : auditoria.Objetivo)
                         </div>
                     </div>
-                </div>
 
-                <div class="col-md-6">
-                    <div class="card h-100">
-                        <div class="card-body d-flex justify-content-between align-items-start flex-wrap gap-2">
-                            <div>
-                                <h5 class="card-title">Hallazgos</h5>
-                                <p class="mb-1"><strong>Total:</strong> @hallazgosTotal</p>
-                                <p class="mb-1"><strong>Abiertos:</strong> @hallazgosAbiertos</p>
-                                <p class="mb-3"><strong>Cerrados:</strong> @hallazgosCerrados</p>
-                            </div>
-
-                            <button class="btn btn-outline-danger"
-                                    @onclick='() => Nav.NavigateTo(string.Format("auditorias/{0}/hallazgos", id))'>
-                                Ver hallazgos
-                            </button>
+                    <div class="text-card">
+                        <div class="text-card-label">Alcance</div>
+                        <div class="text-card-value">
+                            @(string.IsNullOrWhiteSpace(auditoria.Alcance) ? "Sin alcance capturado." : auditoria.Alcance)
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Procesos -->
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">Procesos en auditoría</h4>
-                <button class="btn btn-outline-secondary" @onclick="Volver">Volver</button>
+            <div class="auditoria-hero-actions">
+                <button type="button" class="hero-btn primary" @onclick="IrHallazgos">
+                    Ver hallazgos
+                </button>
+
+                <button type="button" class="hero-btn" @onclick="Volver">
+                    Volver
+                </button>
             </div>
-        </div>
+        </section>
 
-        <div class="col-12">
+        <section class="auditoria-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Procesos</div>
+                <div class="metric-value">@procesos.Count</div>
+                <div class="metric-note">Procesos incluidos en la auditoría</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Asignados</div>
+                <div class="metric-value">@procesosAsignados</div>
+                <div class="metric-note">Con auditor principal asignado</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Hallazgos abiertos</div>
+                <div class="metric-value">@hallazgosAbiertos</div>
+                <div class="metric-note">Pendientes de cierre</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Checklist</div>
+                <div class="metric-value">@checklistTotal</div>
+                <div class="metric-note">Respuestas registradas</div>
+            </div>
+        </section>
+
+        <section class="auditoria-grid">
+            <div class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Avance de checklist</h2>
+                        <p class="panel-subtitle">Distribución de respuestas capturadas.</p>
+                    </div>
+                    <span class="panel-badge">@checklistTotal total</span>
+                </div>
+
+                @if (checklistTotal == 0)
+                {
+                    <div class="empty-state compact">
+                        Aún no hay respuestas del checklist para esta auditoría.
+                    </div>
+                }
+                else
+                {
+                    <div class="progress-list">
+                        <div class="progress-item">
+                            <div class="progress-top">
+                                <span>Cumple</span>
+                                <strong>@checklistCumple (@checklistCumplePct%)</strong>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill success" style="@PctStyle(checklistCumplePct)"></div>
+                            </div>
+                        </div>
+
+                        <div class="progress-item">
+                            <div class="progress-top">
+                                <span>No cumple</span>
+                                <strong>@checklistNoCumple (@checklistNoCumplePct%)</strong>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill danger" style="@PctStyle(checklistNoCumplePct)"></div>
+                            </div>
+                        </div>
+
+                        <div class="progress-item">
+                            <div class="progress-top">
+                                <span>No aplica</span>
+                                <strong>@checklistNoAplica (@checklistNoAplicaPct%)</strong>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill neutral" style="@PctStyle(checklistNoAplicaPct)"></div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Resumen de hallazgos</h2>
+                        <p class="panel-subtitle">Indicadores rápidos del seguimiento.</p>
+                    </div>
+                    <span class="panel-badge">@hallazgosTotal total</span>
+                </div>
+
+                <div class="summary-stack">
+                    <div class="summary-item">
+                        <span>Abiertos</span>
+                        <strong class="text-open">@hallazgosAbiertos</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>Cerrados</span>
+                        <strong class="text-closed">@hallazgosCerrados</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>Con auditor asignado</span>
+                        <strong>@procesosAsignados</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>Pendientes de asignación</span>
+                        <strong>@procesosPendientes</strong>
+                    </div>
+                </div>
+
+                <button type="button" class="hero-btn primary w-100 mt-3" @onclick="IrHallazgos">
+                    Ir a hallazgos
+                </button>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Procesos en auditoría</h2>
+                    <p class="panel-subtitle">Asignación de equipo auditor y acceso al checklist por proceso.</p>
+                </div>
+
+                <span class="panel-badge">@procesos.Count proceso(s)</span>
+            </div>
+
             @if (procesos.Count == 0)
             {
-                <div class="alert alert-warning">No hay procesos asignados a esta auditoría.</div>
+                <div class="empty-state compact">
+                    No hay procesos asignados a esta auditoría.
+                </div>
             }
             else
             {
-                <div class="card">
-                    <div class="card-body">
-                        <table class="table table-hover align-middle">
-                            <thead>
+                <div class="table-wrap">
+                    <table class="procesos-table">
+                        <thead>
+                            <tr>
+                                <th>Proceso</th>
+                                <th>Unidad negocio</th>
+                                <th>Línea</th>
+                                <th>Equipo auditor</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ap in procesos)
+                            {
                                 <tr>
-                                    <th>Proceso</th>
-                                    <th>Unidad negocio</th>
-                                    <th>Línea</th>
-                                    <th>Auditor asignado</th>
-                                    <th style="width:200px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var ap in procesos)
-                                {
-                                    <tr>
-                                        <td>
-                                            <div class="fw-semibold">@ap.Proceso?.Codigo</div>
-                                            <div class="text-muted small">@ap.Proceso?.Nombre</div>
-                                        </td>
-                                        <td>
-                                            @if (ap.UnidadNegocio is null)
-                                            {
-                                                <span class="text-muted">—</span>
-                                            }
-                                            else
-                                            {
-                                                <div class="fw-semibold">@ap.UnidadNegocio.Codigo</div>
-                                                <div class="text-muted small">@ap.UnidadNegocio.Nombre</div>
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (string.IsNullOrWhiteSpace(ap.LineaNombre))
-                                            {
-                                                <span class="badge text-bg-secondary">Pendiente</span>
-                                            }
-                                            else
-                                            {
-                                                @ap.LineaNombre
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (string.IsNullOrWhiteSpace(ap.AuditorAsignadoId))
-                                            {
-                                                <span class="text-muted">Sin asignar</span>
-                                            }
-                                            else
-                                            {
-                                                @ap.AuditorAsignadoId
-                                            }
-                                        </td>
-                                        <td class="text-end">
-                                            <div class="d-inline-flex gap-2">
-                                                <button class="btn btn-sm @(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "btn-primary" : "btn-secondary")"
-                                                        @onclick="() => IrAsignar(ap.AuditoriaProcesoId)">
-                                                    @(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Asignar" : "Editar")
-                                                </button>
+                                    <td>
+                                        <div class="cell-title">@ap.Proceso?.Codigo</div>
+                                        <div class="cell-subtitle">@ap.Proceso?.Nombre</div>
+                                    </td>
 
-                                                <button class="btn btn-sm btn-outline-success"
-                                                        @onclick='() => Nav.NavigateTo(string.Format("auditorias/{0}/procesos/{1}/checklist", id, ap.AuditoriaProcesoId))'>
-                                                    Checklist
-                                                </button>
+                                    <td>
+                                        @if (ap.UnidadNegocio is null)
+                                        {
+                                            <span class="empty-inline">—</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="cell-title">@ap.UnidadNegocio.Codigo</div>
+                                            <div class="cell-subtitle">@ap.UnidadNegocio.Nombre</div>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @if (string.IsNullOrWhiteSpace(ap.LineaNombre))
+                                        {
+                                            <span class="status-pill progress">Pendiente</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="linea-pill">@ap.LineaNombre</span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <div class="team-stack">
+                                            <div>
+                                                <span class="team-label">Principal:</span>
+                                                <span class="team-value">
+                                                    @(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Sin asignar" : ap.AuditorAsignadoId)
+                                                </span>
                                             </div>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
 
-                        <div class="text-muted small">
-                            * “Asignar” será el siguiente paso (capturar AuditorAsignadoId y, si aplica, LineaNombre).
-                        </div>
-                    </div>
+                                            @if (!string.IsNullOrWhiteSpace(ap.SegundoAuditorId))
+                                            {
+                                                <div>
+                                                    <span class="team-label">Segundo:</span>
+                                                    <span class="team-value">@ap.SegundoAuditorId</span>
+                                                </div>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(ap.ObservadorId))
+                                            {
+                                                <div>
+                                                    <span class="team-label">Observador:</span>
+                                                    <span class="team-value">@ap.ObservadorId</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </td>
+
+                                    <td class="text-end">
+                                        <div class="action-stack">
+                                            <button type="button"
+                                                    class="table-btn @(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "table-btn-primary" : "")"
+                                                    @onclick="() => IrAsignar(ap.AuditoriaProcesoId)">
+                                                @(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Asignar" : "Editar")
+                                            </button>
+
+                                            <button type="button"
+                                                    class="table-btn"
+                                                    @onclick='() => Nav.NavigateTo($"auditorias/{id}/procesos/{ap.AuditoriaProcesoId}/checklist")'>
+                                                Checklist
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             }
-        </div>
+        </section>
     </div>
 }
 
@@ -209,15 +327,12 @@ else
     private bool cargando = true;
     private Auditoria? auditoria;
     private List<AuditoriaProceso> procesos = new();
-
     private string? errorMsg;
 
-    // Hallazgos stats
     private int hallazgosTotal;
     private int hallazgosCerrados;
     private int hallazgosAbiertos;
 
-    // Checklist stats
     private int checklistTotal;
     private int checklistCumple;
     private int checklistNoCumple;
@@ -227,6 +342,9 @@ else
     private decimal checklistNoCumplePct;
     private decimal checklistNoAplicaPct;
 
+    private int procesosAsignados => procesos.Count(x => !string.IsNullOrWhiteSpace(x.AuditorAsignadoId));
+    private int procesosPendientes => procesos.Count - procesosAsignados;
+
     protected override async Task OnParametersSetAsync()
     {
         cargando = true;
@@ -234,7 +352,8 @@ else
 
         try
         {
-            auditoria = await Db.Auditorias.FirstOrDefaultAsync(a => a.AuditoriaId == id);
+            auditoria = await Db.Auditorias
+                .FirstOrDefaultAsync(a => a.AuditoriaId == id);
 
             procesos = await Db.AuditoriaProcesos
                 .Where(x => x.AuditoriaId == id)
@@ -244,12 +363,10 @@ else
                 .ThenBy(x => x.UnidadNegocioId)
                 .ToListAsync();
 
-            // ✅ Hallazgos stats
             hallazgosTotal = await Db.Hallazgos.CountAsync(h => h.AuditoriaId == id);
             hallazgosCerrados = await Db.Hallazgos.CountAsync(h => h.AuditoriaId == id && h.Estatus == "Cerrado");
             hallazgosAbiertos = hallazgosTotal - hallazgosCerrados;
 
-            // ✅ Checklist stats (JOIN por AuditoriaProceso -> AuditoriaId)
             var checklistQuery =
                 from c in Db.AuditoriaChecklists
                 join ap in Db.AuditoriaProcesos on c.AuditoriaProcesoId equals ap.AuditoriaProcesoId
@@ -261,7 +378,7 @@ else
             checklistNoCumple = await checklistQuery.CountAsync(x => x == "No Cumple");
             checklistNoAplica = await checklistQuery.CountAsync(x => x == "No Aplica" || x == "N/A");
 
-            decimal pct(int n) => checklistTotal == 0 ? 0 : Math.Round((decimal)n * 100m / (decimal)checklistTotal, 2);
+            decimal pct(int n) => checklistTotal == 0 ? 0 : Math.Round((decimal)n * 100m / checklistTotal, 2);
 
             checklistCumplePct = pct(checklistCumple);
             checklistNoCumplePct = pct(checklistNoCumple);
@@ -277,8 +394,26 @@ else
         }
     }
 
+    private static string GetStatusClass(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor is "cerrado" or "cerrada" or "finalizado" or "finalizada")
+            return "closed";
+
+        if (valor is "en proceso" or "en revisión" or "en revision")
+            return "progress";
+
+        return "open";
+    }
+
+    private static string PctStyle(decimal value) =>
+        $"width:{value.ToString("0.##", CultureInfo.InvariantCulture)}%;";
+
     private void Volver() => Nav.NavigateTo("auditorias");
 
+    private void IrHallazgos() => Nav.NavigateTo($"auditorias/{id}/hallazgos");
+
     private void IrAsignar(int auditoriaProcesoId) =>
-        Nav.NavigateTo(string.Format("auditorias/{0}/procesos/{1}", id, auditoriaProcesoId));
+        Nav.NavigateTo($"auditorias/{id}/procesos/{auditoriaProcesoId}");
 }

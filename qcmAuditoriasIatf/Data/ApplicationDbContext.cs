@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using qcmAuditoriasIatf.Models.External;
 using qcmAuditoriasIatf.Models.Auditorias;
 using qcmAuditoriasIatf.Models.Catalogos;
 using qcmAuditoriasIatf.Models.Evidencias;
@@ -16,6 +17,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<ChecklistPregunta> ChecklistPreguntas => Set<ChecklistPregunta>();
     public DbSet<TipoHallazgo> TiposHallazgo => Set<TipoHallazgo>();
     public DbSet<UnidadNegocio> UnidadesNegocio => Set<UnidadNegocio>();
+    public DbSet<Auditor> Auditores => Set<Auditor>();
+    public DbSet<MeaxAllUser> MeaxAllUsers => Set<MeaxAllUser>();
 
     // Auditoría
     public DbSet<Auditoria> Auditorias => Set<Auditoria>();
@@ -26,6 +29,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Hallazgo> Hallazgos => Set<Hallazgo>();
     public DbSet<AccionCorrectiva> AccionesCorrectivas => Set<AccionCorrectiva>();
     public DbSet<HallazgoSeguimiento> HallazgoSeguimientos => Set<HallazgoSeguimiento>();
+    public DbSet<HallazgoCincoPorQue> HallazgosCincoPorQue => Set<HallazgoCincoPorQue>();
 
 
     // Evidencias / Historial
@@ -139,7 +143,34 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<HallazgoSeguimiento>()
             .HasIndex(s => new { s.HallazgoId, s.FechaRegistro });
 
+        modelBuilder.Entity<MeaxAllUser>(eb =>
+        {
+            eb.HasNoKey();
+            eb.ToView("meax_all_user", "dbo");      // <- evita que EF la migre
+            eb.Metadata.SetIsTableExcludedFromMigrations(true);
+        });
 
+        modelBuilder.Entity<MeaxAllUser>()
+            .HasNoKey()
+            .ToTable("meax_all_user"); // solo lectura
+
+        modelBuilder.Entity<Auditor>()
+            .HasIndex(x => x.MeaxUserId)
+            .HasDatabaseName("IX_qmcAudAuditor_MeaxUserId");
+
+        modelBuilder.Entity<Auditor>()
+            .HasIndex(x => x.PcLoginId)
+            .HasDatabaseName("IX_qmcAudAuditor_PcLoginId");
+
+        modelBuilder.Entity<HallazgoCincoPorQue>()
+            .HasOne(x => x.Hallazgo)
+            .WithOne(h => h.CincoPorQue)
+            .HasForeignKey<HallazgoCincoPorQue>(x => x.HallazgoId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<HallazgoCincoPorQue>()
+            .HasIndex(x => x.HallazgoId)
+            .IsUnique();
 
     }
 }

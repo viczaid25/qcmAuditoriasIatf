@@ -20,6 +20,12 @@ public class AuditoriaProceso
     [StringLength(100)]
     public string? AuditorAsignadoId { get; set; }
 
+    [StringLength(100)]
+    public string? SegundoAuditorId { get; set; }
+
+    [StringLength(100)]
+    public string? ObservadorId { get; set; }
+
     public int? UnidadNegocioId { get; set; }
     public UnidadNegocio? UnidadNegocio { get; set; }
 

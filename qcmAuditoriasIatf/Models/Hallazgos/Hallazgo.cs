@@ -31,6 +31,9 @@ public class Hallazgo
     [Required]
     public string ResponsableId { get; set; } = "sistema";
 
+    [StringLength(100)]
+    public string? ResponsableCierreId { get; set; }
+
     public DateTime FechaCompromiso { get; set; } = DateTime.Today.AddDays(7);
 
     [Required]
@@ -44,5 +47,6 @@ public class Hallazgo
 
     public ICollection<AccionCorrectiva> AccionesCorrectivas { get; set; } = new List<AccionCorrectiva>();
     public ICollection<HallazgoSeguimiento> Seguimientos { get; set; } = new List<HallazgoSeguimiento>();
+    public HallazgoCincoPorQue? CincoPorQue { get; set; }
 
 }

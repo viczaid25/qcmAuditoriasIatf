@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using qcmAuditoriasIatf.Components;
 using qcmAuditoriasIatf.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using qcmAuditoriasIatf.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +13,26 @@ builder.Services.AddRazorComponents()
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.Configure<ActiveDirectoryOptions>(
+    builder.Configuration.GetSection("ActiveDirectory"));
 
+builder.Services.AddScoped<ActiveDirectoryService>();
+
+builder.Services.AddRazorPages();
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Account/Login";
+        options.Cookie.Name = "qcmAuditoriasIatf.Auth";
+        options.Cookie.Path = "/b";
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+    });
+
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.Configure<CircuitOptions>(o =>
 {
@@ -44,9 +65,16 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
+app.MapRazorPages();
+
 app.MapRazorComponents<App>()
-   .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .RequireAuthorization();
 
 app.Run();

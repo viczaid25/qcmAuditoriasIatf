@@ -1,10 +1,16 @@
 ﻿@page "/auditorias/{auditoriaId:int}/procesos/{auditoriaProcesoId:int}/checklist/{preguntaId:int}/hallazgo/nuevo"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Auditorias
 @using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.External
 @using qcmAuditoriasIatf.Models.Hallazgos
+@using System.Security.Claims
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
+
+@attribute [Authorize]
 
 <h2>Nuevo hallazgo</h2>
 
@@ -63,6 +69,17 @@ else
 
         <div class="row g-3">
             <div class="col-md-6">
+                <label class="form-label">Usuario actual</label>
+                <input class="form-control" value="@usuarioActualId" disabled />
+                <div class="form-text">Este usuario quedará registrado como quien crea el hallazgo.</div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Fecha compromiso</label>
+                <InputDate class="form-control" @bind-Value="vm.FechaCompromiso" />
+            </div>
+
+            <div class="col-md-6">
                 <label class="form-label">Tipo de hallazgo</label>
                 <InputSelect class="form-select" @bind-Value="vm.TipoHallazgoId">
                     <option value="0">-- Selecciona --</option>
@@ -74,24 +91,62 @@ else
             </div>
 
             <div class="col-md-6">
-                <label class="form-label">Fecha compromiso</label>
-                <InputDate class="form-control" @bind-Value="vm.FechaCompromiso" />
+                <label class="form-label">Responsable del hallazgo</label>
+                <InputSelect class="form-select" @bind-Value="vm.ResponsableId">
+                    <option value="">-- Selecciona --</option>
+                    @foreach (var u in usuariosDisponibles)
+                    {
+                        <option value="@u.pc_login_id">@GetResponsableTexto(u)</option>
+                    }
+                </InputSelect>
+
+                @if (!string.IsNullOrWhiteSpace(vm.ResponsableId))
+                {
+                    var sel = usuariosDisponibles.FirstOrDefault(x => x.pc_login_id == vm.ResponsableId);
+                    if (sel is not null)
+                    {
+                        <div class="form-text">
+                            Email: <b>@sel.email</b> |
+                            Depto: <b>@sel.department</b> |
+                            Puesto: <b>@sel.position</b>
+                        </div>
+                    }
+                }
             </div>
 
             <div class="col-md-6">
-                <label class="form-label">Responsable (temporal)</label>
-                <InputText class="form-control" @bind-Value="vm.ResponsableId" />
-                <div class="form-text">Por ahora texto. Luego puede venir de Identity.</div>
+                <label class="form-label">Responsable de finalizar el hallazgo</label>
+                <InputSelect class="form-select" @bind-Value="vm.ResponsableCierreId">
+                    <option value="">-- Selecciona --</option>
+                    @foreach (var u in usuariosDisponibles)
+                    {
+                        <option value="@u.pc_login_id">@GetResponsableTexto(u)</option>
+                    }
+                </InputSelect>
+
+                @if (!string.IsNullOrWhiteSpace(vm.ResponsableCierreId))
+                {
+                    var sel = usuariosDisponibles.FirstOrDefault(x => x.pc_login_id == vm.ResponsableCierreId);
+                    if (sel is not null)
+                    {
+                        <div class="form-text">
+                            Email: <b>@sel.email</b> |
+                            Depto: <b>@sel.department</b> |
+                            Puesto: <b>@sel.position</b>
+                        </div>
+                    }
+                }
             </div>
 
             <div class="col-md-6">
-                <label class="form-label">Evidencia (opcional)</label>
-                <InputText class="form-control" @bind-Value="vm.Evidencia" />
+                <label class="form-label">Descripción de la No Conformidad</label>
+                <InputText class="form-control" @bind-Value="vm.DescripcionNoConformidad" />
             </div>
 
             <div class="col-12">
-                <label class="form-label">Descripción del hallazgo</label>
-                <InputTextArea class="form-control" @bind-Value="vm.Descripcion" rows="4" />
+                <label class="form-label">Evidencia</label>
+                <InputTextArea class="form-control" @bind-Value="vm.Evidencia" rows="4" />
+                <div class="form-text">Opcional.</div>
             </div>
 
             <div class="col-12 d-flex gap-2">
@@ -111,13 +166,20 @@ else
     [Parameter] public int auditoriaProcesoId { get; set; }
     [Parameter] public int preguntaId { get; set; }
 
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
     private bool cargando = true;
     private bool guardando;
     private string? errorMsg;
 
+    private string usuarioActualId = "sistema";
+    private string usuarioActualNombre = "sistema";
+
     private AuditoriaProceso? ap;
     private ChecklistPregunta? pregunta;
     private List<TipoHallazgo> tiposHallazgo = new();
+    private List<MeaxAllUser> usuariosDisponibles = new();
 
     private Vm vm = new();
 
@@ -126,14 +188,17 @@ else
         public int TipoHallazgoId { get; set; }
         public DateTime FechaCompromiso { get; set; } = DateTime.Today.AddDays(7);
         public string? ResponsableId { get; set; }
+        public string? ResponsableCierreId { get; set; }
+        public string? DescripcionNoConformidad { get; set; }
         public string? Evidencia { get; set; }
-        public string? Descripcion { get; set; }
     }
 
     protected override async Task OnParametersSetAsync()
     {
         cargando = true;
         errorMsg = null;
+
+        await CargarUsuarioActual();
 
         ap = await Db.AuditoriaProcesos
             .Include(x => x.Proceso)
@@ -144,21 +209,65 @@ else
             .FirstOrDefaultAsync(p => p.PreguntaId == preguntaId);
 
         tiposHallazgo = await Db.TiposHallazgo
-            .OrderBy(x => x.Nombre)
+            .OrderBy(x => x.Severidad)
+            .ThenBy(x => x.Nombre)
             .ToListAsync();
 
-        // Defaults útiles
-        if (ap is not null && string.IsNullOrWhiteSpace(vm.ResponsableId))
+        usuariosDisponibles = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x => !string.IsNullOrWhiteSpace(x.pc_login_id))
+            .OrderBy(x => x.username ?? x.pc_login_id)
+            .ToListAsync();
+
+        if (string.IsNullOrWhiteSpace(vm.ResponsableId) && ExisteUsuarioEnCatalogo(usuarioActualId))
         {
-            vm.ResponsableId = string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "sistema" : ap.AuditorAsignadoId;
+            vm.ResponsableId = usuarioActualId;
         }
 
-        if (pregunta is not null && string.IsNullOrWhiteSpace(vm.Descripcion))
+        if (string.IsNullOrWhiteSpace(vm.ResponsableCierreId) && ExisteUsuarioEnCatalogo(usuarioActualId))
         {
-            vm.Descripcion = $"No cumple: {pregunta.Pregunta}";
+            vm.ResponsableCierreId = usuarioActualId;
+        }
+
+        if (pregunta is not null && string.IsNullOrWhiteSpace(vm.DescripcionNoConformidad))
+        {
+            vm.DescripcionNoConformidad = $"No cumple: {pregunta.Pregunta}";
         }
 
         cargando = false;
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+
+            usuarioActualNombre =
+                user.Identity?.Name
+                ?? user.FindFirst(ClaimTypes.Name)?.Value
+                ?? usuarioActualId;
+        }
+    }
+
+    private bool ExisteUsuarioEnCatalogo(string? loginId) =>
+        !string.IsNullOrWhiteSpace(loginId) &&
+        usuariosDisponibles.Any(x => x.pc_login_id == loginId);
+
+    private string GetResponsableTexto(MeaxAllUser u)
+    {
+        var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username;
+        var depto = string.IsNullOrWhiteSpace(u.department) ? "" : $" - {u.department}";
+        return $"{nombre} ({u.pc_login_id}){depto}";
     }
 
     private async Task Guardar()
@@ -172,21 +281,33 @@ else
             if (ap is null || pregunta is null)
                 return;
 
+            if (string.IsNullOrWhiteSpace(usuarioActualId) || usuarioActualId == "sistema")
+            {
+                errorMsg = "No se pudo identificar el usuario autenticado.";
+                return;
+            }
+
             if (vm.TipoHallazgoId == 0)
             {
                 errorMsg = "Selecciona un tipo de hallazgo.";
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(vm.Descripcion))
+            if (string.IsNullOrWhiteSpace(vm.DescripcionNoConformidad))
             {
-                errorMsg = "La descripción es obligatoria.";
+                errorMsg = "La descripción de la no conformidad es obligatoria.";
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(vm.ResponsableId))
             {
-                errorMsg = "El responsable es obligatorio.";
+                errorMsg = "El responsable del hallazgo es obligatorio.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(vm.ResponsableCierreId))
+            {
+                errorMsg = "El responsable de finalizar el hallazgo es obligatorio.";
                 return;
             }
 
@@ -197,18 +318,30 @@ else
                 ClausulaId = pregunta.ClausulaId,
                 TipoHallazgoId = vm.TipoHallazgoId,
 
-                AuditoriaProcesoId = auditoriaProcesoId, 
-                PreguntaId = preguntaId,                 
+                AuditoriaProcesoId = auditoriaProcesoId,
+                PreguntaId = preguntaId,
 
-                Descripcion = vm.Descripcion.Trim(),
+                Descripcion = vm.DescripcionNoConformidad.Trim(),
                 Evidencia = string.IsNullOrWhiteSpace(vm.Evidencia) ? null : vm.Evidencia.Trim(),
 
                 ResponsableId = vm.ResponsableId.Trim(),
+                ResponsableCierreId = vm.ResponsableCierreId.Trim(),
+
                 FechaCompromiso = vm.FechaCompromiso,
                 Estatus = "Abierto"
             };
 
             Db.Hallazgos.Add(hallazgo);
+            await Db.SaveChangesAsync();
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = hallazgo.HallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = $"Creó el hallazgo. Responsable: {hallazgo.ResponsableId}. Responsable de cierre: {hallazgo.ResponsableCierreId}.",
+                EstatusNuevo = hallazgo.Estatus
+            });
+
             await Db.SaveChangesAsync();
 
             Nav.NavigateTo($"auditorias/{auditoriaId}/procesos/{auditoriaProcesoId}/checklist");

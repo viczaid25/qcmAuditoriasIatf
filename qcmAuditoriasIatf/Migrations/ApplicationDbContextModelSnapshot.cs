@@ -128,8 +128,16 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<string>("LineaNombre")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ObservadorId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<int>("ProcesoId")
                         .HasColumnType("int");
+
+                    b.Property<string>("SegundoAuditorId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("UnidadNegocioId")
                         .HasColumnType("int");
@@ -143,6 +151,57 @@ namespace qcmAuditoriasIatf.Migrations
                     b.HasIndex("UnidadNegocioId");
 
                     b.ToTable("qmcAudAuditoriaProceso");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.Auditor", b =>
+                {
+                    b.Property<int>("AuditorId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AuditorId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Departamento")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Funcion")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("MeaxUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PcLoginId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("AuditorId");
+
+                    b.HasIndex("MeaxUserId")
+                        .HasDatabaseName("IX_qmcAudAuditor_MeaxUserId");
+
+                    b.HasIndex("PcLoginId")
+                        .HasDatabaseName("IX_qmcAudAuditor_PcLoginId");
+
+                    b.ToTable("qmcAudAuditor");
                 });
 
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.ChecklistPregunta", b =>
@@ -366,6 +425,47 @@ namespace qcmAuditoriasIatf.Migrations
                     b.ToTable("qmcAudHistorialCambio");
                 });
 
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.External.MeaxAllUser", b =>
+                {
+                    b.Property<byte>("auth")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("dep_2")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("department")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("email")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("pc_login_id")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("position")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("username")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.ToTable("meax_all_user", null, t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+
+                    b.ToView("meax_all_user", "dbo");
+                });
+
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Hallazgos.AccionCorrectiva", b =>
                 {
                     b.Property<int>("AccionCorrectivaId")
@@ -449,6 +549,10 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<int>("ProcesoId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ResponsableCierreId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("ResponsableId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -473,6 +577,91 @@ namespace qcmAuditoriasIatf.Migrations
                         .HasFilter("[PreguntaId] IS NOT NULL");
 
                     b.ToTable("qmcAudHallazgo");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Hallazgos.HallazgoCincoPorQue", b =>
+                {
+                    b.Property<int>("HallazgoCincoPorQueId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HallazgoCincoPorQueId"));
+
+                    b.Property<bool?>("AprobacionAuditorAsignado")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("AprobacionSegundoAuditor")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("AprobadoPorAuditorAsignadoId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("AprobadoPorSegundoAuditorId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ComentarioAuditorAsignado")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ComentarioSegundoAuditor")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Estatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("FechaAprobacionAuditorAsignado")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaAprobacionSegundoAuditor")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("HallazgoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PorQue1")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("PorQue2")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("PorQue3")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("PorQue4")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("PorQue5")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("UsuarioRegistroId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("HallazgoCincoPorQueId");
+
+                    b.HasIndex("HallazgoId")
+                        .IsUnique();
+
+                    b.ToTable("qmcAudHallazgoCincoPorQue");
                 });
 
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Hallazgos.HallazgoSeguimiento", b =>
@@ -654,6 +843,17 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Navigation("TipoHallazgo");
                 });
 
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Hallazgos.HallazgoCincoPorQue", b =>
+                {
+                    b.HasOne("qcmAuditoriasIatf.Models.Hallazgos.Hallazgo", "Hallazgo")
+                        .WithOne("CincoPorQue")
+                        .HasForeignKey("qcmAuditoriasIatf.Models.Hallazgos.HallazgoCincoPorQue", "HallazgoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hallazgo");
+                });
+
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Hallazgos.HallazgoSeguimiento", b =>
                 {
                     b.HasOne("qcmAuditoriasIatf.Models.Hallazgos.Hallazgo", "Hallazgo")
@@ -697,6 +897,8 @@ namespace qcmAuditoriasIatf.Migrations
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Hallazgos.Hallazgo", b =>
                 {
                     b.Navigation("AccionesCorrectivas");
+
+                    b.Navigation("CincoPorQue");
 
                     b.Navigation("Seguimientos");
                 });

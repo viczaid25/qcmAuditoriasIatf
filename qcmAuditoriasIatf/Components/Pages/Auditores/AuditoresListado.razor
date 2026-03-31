@@ -1,0 +1,66 @@
+﻿@page "/auditores"
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+<h3>Auditores</h3>
+
+<div class="d-flex gap-2 mb-3">
+    <button class="btn btn-primary"
+            @onclick='() => Nav.NavigateTo("auditores/nuevo")'>
+        Nuevo
+    </button>
+</div>
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Departamento</th>
+                <th>Función</th>
+                <th>Activo</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in lista)
+            {
+                <tr>
+                    <td>
+                        <div class="fw-semibold">@a.Nombre</div>
+                        <div class="text-muted small">@a.Email</div>
+                    </td>
+                    <td>@a.Tipo</td>
+                    <td>@a.Departamento</td>
+                    <td>@a.Funcion</td>
+                    <td>@(a.Activo ? "Sí" : "No")</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary"
+                                @onclick='() => Nav.NavigateTo(string.Format("auditores/{0}", a.AuditorId))'>
+                            Editar
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private bool cargando = true;
+    private List<Auditor> lista = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        lista = await Db.Auditores.OrderBy(x => x.Nombre).ToListAsync();
+        cargando = false;
+    }
+}
