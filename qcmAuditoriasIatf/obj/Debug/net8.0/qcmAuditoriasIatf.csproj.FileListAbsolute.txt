@@ -163,3 +163,7 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditorias\AuditoriaDetalle.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Hallazgos\HallazgoDetalle.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Hallazgos\HallazgosBandeja.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditorias\AuditoriaNueva.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditorias\AuditoriaProcesoChecklist.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Hallazgos\HallazgoNuevoDesdeChecklist.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditorias\AuditoriaCalendario.razor.rz.scp.css

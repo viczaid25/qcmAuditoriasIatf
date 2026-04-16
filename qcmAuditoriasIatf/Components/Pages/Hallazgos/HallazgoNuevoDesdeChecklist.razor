@@ -12,8 +12,6 @@
 
 @attribute [Authorize]
 
-<h2>Nuevo hallazgo</h2>
-
 @if (!string.IsNullOrWhiteSpace(errorMsg))
 {
     <div class="alert alert-danger">@errorMsg</div>
@@ -21,144 +19,276 @@
 
 @if (cargando)
 {
-    <p>Cargando...</p>
+    <div class="nuevo-hallazgo-loading">
+        <div class="nuevo-hallazgo-skeleton nuevo-hallazgo-skeleton-hero"></div>
+        <div class="nuevo-hallazgo-grid">
+            <div class="nuevo-hallazgo-skeleton nuevo-hallazgo-skeleton-form"></div>
+            <div class="nuevo-hallazgo-skeleton nuevo-hallazgo-skeleton-side"></div>
+        </div>
+    </div>
 }
 else if (ap is null || pregunta is null)
 {
-    <div class="alert alert-danger">No se encontró el contexto (proceso/pregunta).</div>
-    <button class="btn btn-outline-secondary" @onclick="Volver">Volver</button>
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró el contexto del hallazgo</div>
+            <div class="empty-text">
+                No fue posible cargar el proceso o la pregunta relacionada al checklist.
+            </div>
+
+            <button type="button" class="hero-btn primary mt-3" @onclick="Volver">
+                Volver al checklist
+            </button>
+        </div>
+    </section>
 }
 else
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="fw-semibold">@ap.Proceso?.Codigo - @ap.Proceso?.Nombre</div>
-            <div class="text-muted small">
-                Auditoría: <b>#@auditoriaId</b> |
-                Auditor asignado: <b>@(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Sin asignar" : ap.AuditorAsignadoId)</b>
-                @if (!string.IsNullOrWhiteSpace(ap.LineaNombre))
-                {
-                    <span> | Línea: <b>@ap.LineaNombre</b></span>
-                }
-            </div>
-        </div>
-    </div>
+    <div class="nuevo-hallazgo-page">
+        <section class="nuevo-hallazgo-hero">
+            <div>
+                <span class="nuevo-hallazgo-kicker">Alta de hallazgo</span>
+                <h1>Nuevo hallazgo desde checklist</h1>
 
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="fw-semibold">Pregunta</div>
-            <div>@pregunta.Pregunta</div>
+                <div class="hero-meta">
+                    <span class="meta-chip">
+                        Auditoría:
+                        <strong>#@auditoriaId</strong>
+                    </span>
 
-            @if (!string.IsNullOrWhiteSpace(pregunta.Requisito))
-            {
-                <div class="text-muted small mt-1">@pregunta.Requisito</div>
-            }
+                    <span class="meta-chip">
+                        Proceso:
+                        <strong>@ap.Proceso?.Codigo</strong>
+                    </span>
 
-            @if (pregunta.Clausula is not null)
-            {
-                <div class="text-muted small mt-2">
-                    Cláusula: <b>@pregunta.Clausula.Codigo</b> - @pregunta.Clausula.Descripcion
+                    @if (!string.IsNullOrWhiteSpace(ap.LineaNombre))
+                    {
+                        <span class="meta-chip">
+                            Línea:
+                            <strong>@ap.LineaNombre</strong>
+                        </span>
+                    }
+
+                    <span class="meta-chip">
+                        Auditor asignado:
+                        <strong>@(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Sin asignar" : ap.AuditorAsignadoId)</strong>
+                    </span>
                 </div>
-            }
-        </div>
+
+                <p class="hero-text">
+                    Captura la no conformidad detectada, asigna responsables y registra la evidencia inicial del hallazgo.
+                </p>
+            </div>
+
+            <div class="hero-actions">
+                <button type="button" class="hero-btn" @onclick="Volver" disabled="@guardando">
+                    Volver al checklist
+                </button>
+            </div>
+        </section>
+
+        <EditForm Model="vm" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="nuevo-hallazgo-grid">
+                <section class="panel-card panel-main">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Datos del hallazgo</h2>
+                            <p class="panel-subtitle">Completa la información principal para registrar el hallazgo.</p>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Usuario actual</label>
+                            <input class="form-control" value="@usuarioActualId" disabled />
+                            <div class="field-help">
+                                Este usuario quedará registrado como quien crea el hallazgo.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre del usuario</label>
+                            <input class="form-control" value="@usuarioActualNombre" disabled />
+                            <div class="field-help">
+                                Se toma desde la sesión autenticada.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha compromiso</label>
+                            <InputDate class="form-control" @bind-Value="vm.FechaCompromiso" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo de hallazgo</label>
+                            <InputSelect class="form-select" @bind-Value="vm.TipoHallazgoId">
+                                <option value="0">-- Selecciona --</option>
+                                @foreach (var t in tiposHallazgo)
+                                {
+                                    <option value="@t.TipoHallazgoId">@t.Nombre</option>
+                                }
+                            </InputSelect>
+
+                            @if (TipoSeleccionado is not null)
+                            {
+                                <div class="field-help">
+                                    Severidad: <b>@TipoSeleccionado.Severidad</b>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Responsable del hallazgo</label>
+                            <InputSelect class="form-select" @bind-Value="vm.ResponsableId">
+                                <option value="">-- Selecciona --</option>
+                                @foreach (var u in usuariosDisponibles)
+                                {
+                                    <option value="@u.pc_login_id">@GetResponsableTexto(u)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Responsable de finalizar el hallazgo</label>
+                            <InputSelect class="form-select" @bind-Value="vm.ResponsableCierreId">
+                                <option value="">-- Selecciona --</option>
+                                @foreach (var u in usuariosDisponibles)
+                                {
+                                    <option value="@u.pc_login_id">@GetResponsableTexto(u)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Descripción de la No Conformidad</label>
+                            <InputTextArea class="form-control" @bind-Value="vm.DescripcionNoConformidad" rows="4" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Evidencia</label>
+                            <InputTextArea class="form-control" @bind-Value="vm.Evidencia" rows="4" />
+                            <div class="field-help">Opcional.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel-card panel-side">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Contexto del checklist</h2>
+                            <p class="panel-subtitle">Información de referencia para documentar correctamente el hallazgo.</p>
+                        </div>
+                    </div>
+
+                    <div class="context-card">
+                        <div class="context-label">Proceso</div>
+                        <div class="context-value">@ap.Proceso?.Codigo - @ap.Proceso?.Nombre</div>
+                    </div>
+
+                    <div class="context-card">
+                        <div class="context-label">Pregunta</div>
+                        <div class="context-value">@pregunta.Pregunta</div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(pregunta.Requisito))
+                    {
+                        <div class="context-card">
+                            <div class="context-label">Requisito</div>
+                            <div class="context-value small-text">@pregunta.Requisito</div>
+                        </div>
+                    }
+
+                    @if (pregunta.Clausula is not null)
+                    {
+                        <div class="context-card">
+                            <div class="context-label">Cláusula</div>
+                            <div class="context-value">@pregunta.Clausula.Codigo - @pregunta.Clausula.Descripcion</div>
+                        </div>
+                    }
+
+                    <div class="section-divider"></div>
+
+                    <div class="mini-section-label">Responsables seleccionados</div>
+
+                    @if (ResponsableSeleccionado is not null)
+                    {
+                        <div class="user-summary-card">
+                            <div class="user-summary-role">Responsable del hallazgo</div>
+                            <div class="user-summary-name">@GetNombreUsuario(ResponsableSeleccionado)</div>
+                            <div class="user-summary-login">@ResponsableSeleccionado.pc_login_id</div>
+                            <div class="user-summary-meta">
+                                @ResponsableSeleccionado.department
+                                @if (!string.IsNullOrWhiteSpace(ResponsableSeleccionado.position))
+                                {
+                                    <span> | @ResponsableSeleccionado.position</span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(ResponsableSeleccionado.email))
+                            {
+                                <div class="user-summary-meta">@ResponsableSeleccionado.email</div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state compact">
+                            Aún no se ha seleccionado responsable del hallazgo.
+                        </div>
+                    }
+
+                    @if (ResponsableCierreSeleccionado is not null)
+                    {
+                        <div class="user-summary-card">
+                            <div class="user-summary-role">Responsable de cierre</div>
+                            <div class="user-summary-name">@GetNombreUsuario(ResponsableCierreSeleccionado)</div>
+                            <div class="user-summary-login">@ResponsableCierreSeleccionado.pc_login_id</div>
+                            <div class="user-summary-meta">
+                                @ResponsableCierreSeleccionado.department
+                                @if (!string.IsNullOrWhiteSpace(ResponsableCierreSeleccionado.position))
+                                {
+                                    <span> | @ResponsableCierreSeleccionado.position</span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(ResponsableCierreSeleccionado.email))
+                            {
+                                <div class="user-summary-meta">@ResponsableCierreSeleccionado.email</div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state compact">
+                            Aún no se ha seleccionado responsable de cierre.
+                        </div>
+                    }
+                </section>
+            </div>
+
+            <section class="panel-card action-panel">
+                <div class="action-panel-inner">
+                    <div>
+                        <h2>Confirmación</h2>
+                        <p class="panel-subtitle mb-0">
+                            Al guardar se creará el hallazgo y se registrará el seguimiento inicial.
+                        </p>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-danger btn-lg" type="submit" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Guardar hallazgo")
+                        </button>
+
+                        <button class="btn btn-outline-secondary btn-lg" type="button" @onclick="Volver" disabled="@guardando">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </EditForm>
     </div>
-
-    <EditForm Model="vm" OnValidSubmit="Guardar">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
-
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label">Usuario actual</label>
-                <input class="form-control" value="@usuarioActualId" disabled />
-                <div class="form-text">Este usuario quedará registrado como quien crea el hallazgo.</div>
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Fecha compromiso</label>
-                <InputDate class="form-control" @bind-Value="vm.FechaCompromiso" />
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Tipo de hallazgo</label>
-                <InputSelect class="form-select" @bind-Value="vm.TipoHallazgoId">
-                    <option value="0">-- Selecciona --</option>
-                    @foreach (var t in tiposHallazgo)
-                    {
-                        <option value="@t.TipoHallazgoId">@t.Nombre</option>
-                    }
-                </InputSelect>
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Responsable del hallazgo</label>
-                <InputSelect class="form-select" @bind-Value="vm.ResponsableId">
-                    <option value="">-- Selecciona --</option>
-                    @foreach (var u in usuariosDisponibles)
-                    {
-                        <option value="@u.pc_login_id">@GetResponsableTexto(u)</option>
-                    }
-                </InputSelect>
-
-                @if (!string.IsNullOrWhiteSpace(vm.ResponsableId))
-                {
-                    var sel = usuariosDisponibles.FirstOrDefault(x => x.pc_login_id == vm.ResponsableId);
-                    if (sel is not null)
-                    {
-                        <div class="form-text">
-                            Email: <b>@sel.email</b> |
-                            Depto: <b>@sel.department</b> |
-                            Puesto: <b>@sel.position</b>
-                        </div>
-                    }
-                }
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Responsable de finalizar el hallazgo</label>
-                <InputSelect class="form-select" @bind-Value="vm.ResponsableCierreId">
-                    <option value="">-- Selecciona --</option>
-                    @foreach (var u in usuariosDisponibles)
-                    {
-                        <option value="@u.pc_login_id">@GetResponsableTexto(u)</option>
-                    }
-                </InputSelect>
-
-                @if (!string.IsNullOrWhiteSpace(vm.ResponsableCierreId))
-                {
-                    var sel = usuariosDisponibles.FirstOrDefault(x => x.pc_login_id == vm.ResponsableCierreId);
-                    if (sel is not null)
-                    {
-                        <div class="form-text">
-                            Email: <b>@sel.email</b> |
-                            Depto: <b>@sel.department</b> |
-                            Puesto: <b>@sel.position</b>
-                        </div>
-                    }
-                }
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Descripción de la No Conformidad</label>
-                <InputText class="form-control" @bind-Value="vm.DescripcionNoConformidad" />
-            </div>
-
-            <div class="col-12">
-                <label class="form-label">Evidencia</label>
-                <InputTextArea class="form-control" @bind-Value="vm.Evidencia" rows="4" />
-                <div class="form-text">Opcional.</div>
-            </div>
-
-            <div class="col-12 d-flex gap-2">
-                <button class="btn btn-danger" type="submit" disabled="@guardando">
-                    @(guardando ? "Guardando..." : "Guardar hallazgo")
-                </button>
-                <button class="btn btn-outline-secondary" type="button" @onclick="Volver" disabled="@guardando">
-                    Cancelar
-                </button>
-            </div>
-        </div>
-    </EditForm>
 }
 
 @code {
@@ -182,6 +312,15 @@ else
     private List<MeaxAllUser> usuariosDisponibles = new();
 
     private Vm vm = new();
+
+    private TipoHallazgo? TipoSeleccionado =>
+        tiposHallazgo.FirstOrDefault(x => x.TipoHallazgoId == vm.TipoHallazgoId);
+
+    private MeaxAllUser? ResponsableSeleccionado =>
+        usuariosDisponibles.FirstOrDefault(x => x.pc_login_id == vm.ResponsableId);
+
+    private MeaxAllUser? ResponsableCierreSeleccionado =>
+        usuariosDisponibles.FirstOrDefault(x => x.pc_login_id == vm.ResponsableCierreId);
 
     private class Vm
     {
@@ -270,6 +409,9 @@ else
         return $"{nombre} ({u.pc_login_id}){depto}";
     }
 
+    private static string GetNombreUsuario(MeaxAllUser u) =>
+        string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+
     private async Task Guardar()
     {
         if (guardando) return;
@@ -293,6 +435,12 @@ else
                 return;
             }
 
+            if (vm.FechaCompromiso < DateTime.Today)
+            {
+                errorMsg = "La fecha compromiso no puede ser anterior al día de hoy.";
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(vm.DescripcionNoConformidad))
             {
                 errorMsg = "La descripción de la no conformidad es obligatoria.";
@@ -308,6 +456,18 @@ else
             if (string.IsNullOrWhiteSpace(vm.ResponsableCierreId))
             {
                 errorMsg = "El responsable de finalizar el hallazgo es obligatorio.";
+                return;
+            }
+
+            var existente = await Db.Hallazgos
+                .AsNoTracking()
+                .FirstOrDefaultAsync(h =>
+                    h.AuditoriaProcesoId == auditoriaProcesoId &&
+                    h.PreguntaId == preguntaId);
+
+            if (existente is not null)
+            {
+                Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{existente.HallazgoId}");
                 return;
             }
 

@@ -1,0 +1,330 @@
+﻿.nuevo-hallazgo-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.nuevo-hallazgo-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.6rem 1.75rem;
+    border-radius: 28px;
+    background: linear-gradient(135deg, rgba(6,11,41,0.97) 0%, rgba(58,6,71,0.97) 100%);
+    color: #fff;
+    box-shadow: 0 24px 45px rgba(15,23,42,0.16);
+}
+
+.nuevo-hallazgo-kicker {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.38rem 0.78rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.86);
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 0.9rem;
+}
+
+.nuevo-hallazgo-hero h1 {
+    margin: 0 0 0.45rem;
+    font-size: clamp(1.9rem, 3vw, 2.7rem);
+    line-height: 1.05;
+    font-weight: 800;
+}
+
+.hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-bottom: 0.9rem;
+}
+
+.meta-chip {
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.86);
+    font-size: 0.88rem;
+}
+
+.hero-text {
+    margin: 0;
+    max-width: 760px;
+    color: rgba(255,255,255,0.78);
+    font-size: 1rem;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.hero-btn {
+    min-height: 46px;
+    padding: 0.78rem 1.15rem;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.10);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: all 0.18s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .hero-btn:hover {
+        background: rgba(255,255,255,0.16);
+        color: #fff;
+    }
+
+    .hero-btn.primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border-color: transparent;
+        box-shadow: 0 12px 24px rgba(59,130,246,0.25);
+    }
+
+.nuevo-hallazgo-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.9fr);
+    gap: 1rem;
+}
+
+.panel-card {
+    padding: 1.25rem;
+    border-radius: 24px;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid rgba(226,232,240,0.95);
+    box-shadow: 0 14px 30px rgba(15,23,42,0.06);
+}
+
+.panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+    .panel-head h2 {
+        margin: 0;
+        font-size: 1.08rem;
+        color: #0f172a;
+        font-weight: 800;
+    }
+
+.panel-subtitle {
+    margin: 0.3rem 0 0;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.form-label {
+    font-weight: 700;
+    color: #334155;
+}
+
+.form-control,
+.form-select {
+    min-height: 48px;
+    border-radius: 14px;
+    border: 1px solid #dbe3ee;
+    background: #fff;
+    box-shadow: none;
+}
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 0.18rem rgba(59,130,246,0.14);
+    }
+
+.field-help {
+    margin-top: 0.35rem;
+    color: #64748b;
+    font-size: 0.84rem;
+}
+
+.context-card {
+    padding: 1rem;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+    .context-card + .context-card {
+        margin-top: 0.8rem;
+    }
+
+.context-label,
+.mini-section-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 0.45rem;
+    font-weight: 700;
+}
+
+.context-value {
+    color: #0f172a;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+    .context-value.small-text {
+        font-weight: 500;
+        color: #334155;
+    }
+
+.section-divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 1rem 0;
+}
+
+.user-summary-card {
+    padding: 1rem;
+    border-radius: 18px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    margin-top: 0.8rem;
+}
+
+.user-summary-role {
+    color: #1d4ed8;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.35rem;
+}
+
+.user-summary-name {
+    color: #0f172a;
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.user-summary-login {
+    color: #1d4ed8;
+    font-weight: 700;
+    margin-top: 0.2rem;
+}
+
+.user-summary-meta {
+    margin-top: 0.25rem;
+    color: #475569;
+    font-size: 0.88rem;
+}
+
+.action-panel-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.empty-state {
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+    .empty-state.compact {
+        padding: 1rem;
+        border-radius: 18px;
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        color: #64748b;
+        margin-top: 0.8rem;
+    }
+
+.empty-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.45rem;
+}
+
+.empty-text {
+    color: #64748b;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+.nuevo-hallazgo-loading {
+    display: grid;
+    gap: 1rem;
+}
+
+.nuevo-hallazgo-skeleton {
+    border-radius: 24px;
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 37%, #e5e7eb 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+}
+
+.nuevo-hallazgo-skeleton-hero {
+    height: 220px;
+}
+
+.nuevo-hallazgo-skeleton-form {
+    height: 560px;
+}
+
+.nuevo-hallazgo-skeleton-side {
+    height: 560px;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: 0 0;
+    }
+}
+
+@media (max-width: 1100px) {
+    .nuevo-hallazgo-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nuevo-hallazgo-hero {
+        flex-direction: column;
+    }
+
+    .action-panel-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .nuevo-hallazgo-hero,
+    .panel-card {
+        padding: 1rem;
+    }
+
+    .hero-actions,
+    .action-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .hero-btn {
+        width: 100%;
+    }
+}

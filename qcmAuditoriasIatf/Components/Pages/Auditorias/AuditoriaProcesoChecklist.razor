@@ -1,4 +1,5 @@
 ﻿@page "/auditorias/{auditoriaId:int}/procesos/{auditoriaProcesoId:int}/checklist"
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Auditorias
 @using qcmAuditoriasIatf.Models.Catalogos
@@ -6,7 +7,7 @@
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
-<h2>Checklist del proceso</h2>
+@attribute [Authorize]
 
 @if (!string.IsNullOrWhiteSpace(errorMsg))
 {
@@ -15,123 +16,249 @@
 
 @if (cargando)
 {
-    <p>Cargando...</p>
+    <div class="checklist-loading">
+        <div class="checklist-skeleton checklist-skeleton-hero"></div>
+        <div class="checklist-metrics">
+            <div class="checklist-skeleton checklist-skeleton-card"></div>
+            <div class="checklist-skeleton checklist-skeleton-card"></div>
+            <div class="checklist-skeleton checklist-skeleton-card"></div>
+            <div class="checklist-skeleton checklist-skeleton-card"></div>
+        </div>
+        <div class="checklist-skeleton checklist-skeleton-table"></div>
+    </div>
 }
 else if (ap is null)
 {
-    <div class="alert alert-danger">No se encontró el proceso de auditoría.</div>
-    <button class="btn btn-outline-secondary" @onclick="Volver">Volver</button>
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró el proceso de auditoría</div>
+            <div class="empty-text">Verifica el proceso seleccionado o vuelve al detalle de la auditoría.</div>
+
+            <button type="button" class="hero-btn primary mt-3" @onclick="Volver">
+                Volver
+            </button>
+        </div>
+    </section>
 }
 else
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="fw-semibold">@ap.Proceso?.Codigo - @ap.Proceso?.Nombre</div>
-            <div class="text-muted small">
-                Auditor asignado: <b>@(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Sin asignar" : ap.AuditorAsignadoId)</b>
-                @if (!string.IsNullOrWhiteSpace(ap.LineaNombre))
-                {
-                    <span> | Línea: <b>@ap.LineaNombre</b></span>
-                }
+    <div class="checklist-page">
+        <section class="checklist-hero">
+            <div>
+                <span class="checklist-kicker">Checklist de proceso</span>
+                <h1>@ap.Proceso?.Codigo - @ap.Proceso?.Nombre</h1>
+
+                <div class="checklist-meta">
+                    <span class="meta-chip">
+                        Auditor asignado:
+                        <strong>@(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Sin asignar" : ap.AuditorAsignadoId)</strong>
+                    </span>
+
+                    @if (!string.IsNullOrWhiteSpace(ap.LineaNombre))
+                    {
+                        <span class="meta-chip">
+                            Línea:
+                            <strong>@ap.LineaNombre</strong>
+                        </span>
+                    }
+
+                    <span class="meta-chip">
+                        Preguntas:
+                        <strong>@rows.Count</strong>
+                    </span>
+                </div>
+
+                <p class="hero-text">
+                    Registra el resultado del checklist, evidencia, comentarios y genera hallazgos cuando una respuesta sea “No Cumple”.
+                </p>
             </div>
-        </div>
-    </div>
 
-    @if (rows.Count == 0)
-    {
-        <div class="alert alert-warning">No hay preguntas activas para este proceso.</div>
-    }
-    else
-    {
-        <div class="card">
-            <div class="card-body">
-                <table class="table table-sm table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th style="width:55px;">#</th>
-                            <th>Pregunta</th>
-                            <th style="width:180px;">Cumple</th>
-                            <th>Evidencia</th>
-                            <th>Comentarios</th>
-                            <th style="width:170px;">Hallazgo</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (int i = 0; i < rows.Count; i++)
-                        {
-                            var row = rows[i];
+            <div class="checklist-hero-actions">
+                <button type="button" class="hero-btn primary" @onclick="Guardar" disabled="@guardando">
+                    @(guardando ? "Guardando..." : "Guardar checklist")
+                </button>
 
-                            <tr @key="row.PerguntaId">
-                                <td>@(i + 1)</td>
+                <button type="button" class="hero-btn" @onclick="Volver" disabled="@guardando">
+                    Volver
+                </button>
+            </div>
+        </section>
 
-                                <td>
-                                    <div class="fw-semibold">@row.Pregunta</div>
-                                    @if (!string.IsNullOrWhiteSpace(row.Requisito))
-                                    {
-                                        <div class="text-muted small">@row.Requisito</div>
-                                    }
-                                </td>
+        <section class="checklist-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Total</div>
+                <div class="metric-value">@rows.Count</div>
+                <div class="metric-note">Preguntas activas del proceso</div>
+            </div>
 
-                                <td>
-                                    <InputSelect class="form-select form-select-sm" @bind-Value="row.Cumple">
-                                        <option value="Pendiente">Pendiente</option>
-                                        <option value="Cumple">Cumple</option>
-                                        <option value="No Cumple">No Cumple</option>
-                                        <option value="No Aplica">No Aplica</option>
-                                    </InputSelect>
-                                </td>
+            <div class="metric-card">
+                <div class="metric-label">Cumple</div>
+                <div class="metric-value">@TotalCumple</div>
+                <div class="metric-note">Respuestas conformes</div>
+            </div>
 
-                                <td>
-                                    <InputText class="form-control form-control-sm" @bind-Value="row.Evidencia" />
-                                </td>
+            <div class="metric-card">
+                <div class="metric-label">No cumple</div>
+                <div class="metric-value">@TotalNoCumple</div>
+                <div class="metric-note">Requieren atención</div>
+            </div>
 
-                                <td>
-                                    <InputText class="form-control form-control-sm" @bind-Value="row.Comentarios" />
-                                </td>
+            <div class="metric-card">
+                <div class="metric-label">Hallazgos</div>
+                <div class="metric-value">@TotalHallazgos</div>
+                <div class="metric-note">Ya generados desde checklist</div>
+            </div>
+        </section>
 
-                                <td>
-                                    @* Si ya existe hallazgo, siempre deja "Ver hallazgo" *@
-                                    @if (row.TieneHallazgo && row.HallazgoId is not null)
-                                    {
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-success"
-                                                @onclick="() => IrVerHallazgo(row.HallazgoId.Value)">
-                                            Ver hallazgo
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        @* Si NO hay hallazgo, solo deja crear cuando sea "No Cumple" *@
-                                        if (row.Cumple == "No Cumple")
+        @if (rows.Count == 0)
+        {
+            <section class="panel-card">
+                <div class="empty-state compact">
+                    No hay preguntas activas para este proceso.
+                </div>
+            </section>
+        }
+        else
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Preguntas del checklist</h2>
+                        <p class="panel-subtitle">Actualiza la evaluación, evidencia y comentarios por cada pregunta.</p>
+                    </div>
+
+                    <span class="panel-badge">@rows.Count registro(s)</span>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="checklist-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Pregunta</th>
+                                <th>Resultado</th>
+                                <th>Evidencia</th>
+                                <th>Comentarios</th>
+                                <th class="text-end">Hallazgo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < rows.Count; i++)
+                            {
+                                var row = rows[i];
+
+                                <tr @key="row.PreguntaId">
+                                    <td>
+                                        <span class="index-pill">@(i + 1)</span>
+                                    </td>
+
+                                    <td>
+                                        <div class="question-title">@row.Pregunta</div>
+                                        @if (!string.IsNullOrWhiteSpace(row.Requisito))
+                                        {
+                                            <div class="question-subtitle">@row.Requisito</div>
+                                        }
+                                    </td>
+
+                                    <td class="result-column">
+                                        <div class="result-chip-group">
+                                            <button type="button"
+                                                    class='@GetResultadoButtonClass(row.Cumple, "Pendiente")'
+                                                    @onclick='() => SetResultado(row, "Pendiente")'
+                                                    disabled="@guardando">
+                                                Pendiente
+                                            </button>
+
+                                            <button type="button"
+                                                    class='@GetResultadoButtonClass(row.Cumple, "Cumple")'
+                                                    @onclick='() => SetResultado(row, "Cumple")'
+                                                    disabled="@guardando">
+                                                Cumple
+                                            </button>
+
+                                            <button type="button"
+                                                    class='@GetResultadoButtonClass(row.Cumple, "No Cumple")'
+                                                    @onclick='() => SetResultado(row, "No Cumple")'
+                                                    disabled="@guardando">
+                                                No Cumple
+                                            </button>
+
+                                            <button type="button"
+                                                    class='@GetResultadoButtonClass(row.Cumple, "No Aplica")'
+                                                    @onclick='() => SetResultado(row, "No Aplica")'
+                                                    disabled="@guardando">
+                                                No Aplica
+                                            </button>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <InputTextArea class="form-control form-control-sm table-textarea"
+                                                       rows="3"
+                                                       @bind-Value="row.Evidencia"
+                                                       disabled="@guardando" />
+                                    </td>
+
+                                    <td>
+                                        <InputTextArea class="form-control form-control-sm table-textarea"
+                                                       rows="3"
+                                                       @bind-Value="row.Comentarios"
+                                                       disabled="@guardando" />
+                                    </td>
+
+                                    <td class="text-end">
+                                        @if (row.TieneHallazgo && row.HallazgoId is not null)
                                         {
                                             <button type="button"
-                                                    class="btn btn-sm btn-outline-danger"
-                                                    @onclick="() => IrNuevoHallazgo(row.PerguntaId)">
+                                                    class="table-btn"
+                                                    @onclick="() => IrVerHallazgo(row.HallazgoId.Value)"
+                                                    disabled="@guardando">
+                                                Ver hallazgo
+                                            </button>
+                                        }
+                                        else if (row.Cumple == "No Cumple")
+                                        {
+                                            <button type="button"
+                                                    class="table-btn table-btn-danger"
+                                                    @onclick="() => IrNuevoHallazgo(row.PreguntaId)"
+                                                    disabled="@guardando">
                                                 Crear hallazgo
                                             </button>
                                         }
                                         else
                                         {
-                                            <span class="text-muted">—</span>
+                                            <span class="empty-inline">—</span>
                                         }
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-
-                <div class="d-flex gap-2">
-                    <button class="btn btn-primary" @onclick="Guardar" disabled="@guardando">
-                        @(guardando ? "Guardando..." : "Guardar")
-                    </button>
-                    <button class="btn btn-outline-secondary" @onclick="Volver" disabled="@guardando">
-                        Volver
-                    </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-        </div>
-    }
+            </section>
+
+            <section class="panel-card action-panel">
+                <div class="action-panel-inner">
+                    <div>
+                        <h2>Acciones</h2>
+                        <p class="panel-subtitle mb-0">
+                            Guarda el checklist para conservar cambios en resultados, evidencia y comentarios.
+                        </p>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="button" class="btn btn-primary btn-lg" @onclick="Guardar" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Guardar checklist")
+                        </button>
+
+                        <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="Volver" disabled="@guardando">
+                            Volver
+                        </button>
+                    </div>
+                </div>
+            </section>
+        }
+    </div>
 }
 
 @code {
@@ -145,9 +272,13 @@ else
     private AuditoriaProceso? ap;
     private List<RowVm> rows = new();
 
+    private int TotalCumple => rows.Count(x => x.Cumple == "Cumple");
+    private int TotalNoCumple => rows.Count(x => x.Cumple == "No Cumple");
+    private int TotalHallazgos => rows.Count(x => x.TieneHallazgo);
+
     private class RowVm
     {
-        public int PerguntaId { get; set; }
+        public int PreguntaId { get; set; }
         public string Pregunta { get; set; } = "";
         public string? Requisito { get; set; }
 
@@ -175,20 +306,17 @@ else
             return;
         }
 
-        // Preguntas activas del proceso
         var preguntas = await Db.ChecklistPreguntas
             .Where(p => p.ProcesoId == ap.ProcesoId && p.Activo)
             .OrderBy(p => p.PreguntaId)
             .ToListAsync();
 
-        // Respuestas existentes (por AuditoriaProcesoId)
         var existentes = await Db.AuditoriaChecklists
             .Where(x => x.AuditoriaProcesoId == auditoriaProcesoId)
             .ToListAsync();
 
         var map = existentes.ToDictionary(x => x.PreguntaId, x => x);
 
-        // Crear faltantes con "Pendiente"
         var faltantes = preguntas
             .Where(p => !map.ContainsKey(p.PreguntaId))
             .Select(p => new AuditoriaChecklist
@@ -213,7 +341,6 @@ else
             map = existentes.ToDictionary(x => x.PreguntaId, x => x);
         }
 
-        // Hallazgos existentes para este proceso auditado (por AuditoriaProcesoId) -> map PreguntaId => HallazgoId
         var hallazgos = await Db.Hallazgos
             .Where(h => h.AuditoriaProcesoId == auditoriaProcesoId && h.PreguntaId != null)
             .Select(h => new { PreguntaId = h.PreguntaId!.Value, h.HallazgoId })
@@ -226,12 +353,11 @@ else
         foreach (var p in preguntas)
         {
             map.TryGetValue(p.PreguntaId, out var r);
-
             hallazgoMap.TryGetValue(p.PreguntaId, out var hid);
 
             rows.Add(new RowVm
             {
-                PerguntaId = p.PreguntaId,
+                PreguntaId = p.PreguntaId,
                 Pregunta = p.Pregunta,
                 Requisito = p.Requisito,
                 Cumple = string.IsNullOrWhiteSpace(r?.Cumple) ? "Pendiente" : r!.Cumple,
@@ -261,7 +387,7 @@ else
 
             foreach (var row in rows)
             {
-                if (!map.TryGetValue(row.PerguntaId, out var e))
+                if (!map.TryGetValue(row.PreguntaId, out var e))
                     continue;
 
                 e.Cumple = string.IsNullOrWhiteSpace(row.Cumple) ? "Pendiente" : row.Cumple;
@@ -287,10 +413,37 @@ else
         }
     }
 
+    private void SetResultado(RowVm row, string valor)
+    {
+        row.Cumple = valor;
+    }
+
+    private static string GetResultadoButtonClass(string? actual, string opcion)
+    {
+        var estado = GetCumpleClass(opcion);
+        var activo = string.Equals(actual, opcion, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+        return $"result-chip {estado} {activo}".Trim();
+    }
+
+    private static string GetCumpleClass(string? valor)
+    {
+        var v = valor?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (v == "cumple")
+            return "success";
+
+        if (v == "no cumple")
+            return "danger";
+
+        if (v == "no aplica" || v == "n/a")
+            return "neutral";
+
+        return "pending";
+    }
+
     private void IrNuevoHallazgo(int preguntaId) =>
         Nav.NavigateTo($"auditorias/{auditoriaId}/procesos/{auditoriaProcesoId}/checklist/{preguntaId}/hallazgo/nuevo");
 
-    // Ajusta esta ruta cuando crees la página de detalle
     private void IrVerHallazgo(int hallazgoId) =>
         Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}");
 

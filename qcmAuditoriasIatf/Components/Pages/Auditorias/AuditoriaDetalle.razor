@@ -87,6 +87,11 @@ else
                     Ver hallazgos
                 </button>
 
+                <button type="button" class="hero-btn" @onclick="IrCalendario">
+                    Calendario
+                </button>
+
+
                 <button type="button" class="hero-btn" @onclick="Volver">
                     Volver
                 </button>
@@ -113,9 +118,9 @@ else
             </div>
 
             <div class="metric-card">
-                <div class="metric-label">Checklist</div>
-                <div class="metric-value">@checklistTotal</div>
-                <div class="metric-note">Respuestas registradas</div>
+                <div class="metric-label">Procesos programados</div>
+                <div class="metric-value">@procesosConFecha</div>
+                <div class="metric-note">Con fecha asignada dentro del rango</div>
             </div>
         </section>
 
@@ -200,6 +205,16 @@ else
                         <span>Pendientes de asignación</span>
                         <strong>@procesosPendientes</strong>
                     </div>
+
+                    <div class="summary-item">
+                        <span>Con fecha programada</span>
+                        <strong>@procesosConFecha</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>Sin fecha programada</span>
+                        <strong>@procesosSinFecha</strong>
+                    </div>
                 </div>
 
                 <button type="button" class="hero-btn primary w-100 mt-3" @onclick="IrHallazgos">
@@ -232,6 +247,7 @@ else
                             <tr>
                                 <th>Proceso</th>
                                 <th>Unidad negocio</th>
+                                <th>Fecha programada</th>
                                 <th>Línea</th>
                                 <th>Equipo auditor</th>
                                 <th class="text-end">Acciones</th>
@@ -255,6 +271,17 @@ else
                                         {
                                             <div class="cell-title">@ap.UnidadNegocio.Codigo</div>
                                             <div class="cell-subtitle">@ap.UnidadNegocio.Nombre</div>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @if (ap.FechaProgramada.HasValue)
+                                        {
+                                            <span class="linea-pill">@ap.FechaProgramada.Value.ToString("yyyy-MM-dd")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="status-pill progress">Pendiente</span>
                                         }
                                     </td>
 
@@ -344,6 +371,8 @@ else
 
     private int procesosAsignados => procesos.Count(x => !string.IsNullOrWhiteSpace(x.AuditorAsignadoId));
     private int procesosPendientes => procesos.Count - procesosAsignados;
+    private int procesosConFecha => procesos.Count(x => x.FechaProgramada.HasValue);
+    private int procesosSinFecha => procesos.Count(x => !x.FechaProgramada.HasValue);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -411,6 +440,8 @@ else
         $"width:{value.ToString("0.##", CultureInfo.InvariantCulture)}%;";
 
     private void Volver() => Nav.NavigateTo("auditorias");
+
+    private void IrCalendario() => Nav.NavigateTo($"auditorias/{id}/calendario");
 
     private void IrHallazgos() => Nav.NavigateTo($"auditorias/{id}/hallazgos");
 

@@ -32,20 +32,8 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yZXNcQXVkaXRvcmVzTGlzdGFkby5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaNueva.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYU51ZXZhLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaProcesoAsignar.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYVByb2Nlc29Bc2lnbmFyLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaProcesoChecklist.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYVByb2Nlc29DaGVja2xpc3QucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/Inicio.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEluaWNpby5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Counter.razor]
@@ -54,10 +42,6 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Error.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFcnJvci5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Hallazgos/HallazgoNuevoDesdeChecklist.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIYWxsYXpnb3NcSGFsbGF6Z29OdWV2b0Rlc2RlQ2hlY2tsaXN0LnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Procesos/ProcesoEditar.razor]
@@ -96,6 +80,14 @@ build_metadata.AdditionalFiles.CssScope = b-n2jfz1bskr
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYURldGFsbGUucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-ef5s3tv012
 
+[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaNueva.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYU51ZXZhLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-a9hm7vmasi
+
+[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaProcesoChecklist.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYVByb2Nlc29DaGVja2xpc3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-apczmvjvss
+
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/Auditorias.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYXMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-sc00kwlzym
@@ -103,6 +95,10 @@ build_metadata.AdditionalFiles.CssScope = b-sc00kwlzym
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Hallazgos/HallazgoDetalle.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIYWxsYXpnb3NcSGFsbGF6Z29EZXRhbGxlLnJhem9y
 build_metadata.AdditionalFiles.CssScope = b-632mtvfssd
+
+[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Hallazgos/HallazgoNuevoDesdeChecklist.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIYWxsYXpnb3NcSGFsbGF6Z29OdWV2b0Rlc2RlQ2hlY2tsaXN0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-t8j6nevnhg
 
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Hallazgos/HallazgosBandeja.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIYWxsYXpnb3NcSGFsbGF6Z29zQmFuZGVqYS5yYXpvcg==

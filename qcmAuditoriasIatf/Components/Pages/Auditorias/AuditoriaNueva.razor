@@ -1,90 +1,195 @@
 ﻿@page "/auditorias/nueva"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Auditorias
-@using qcmAuditoriasIatf.Models.Catalogos
+@using System.Security.Claims
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
-<h2>Nueva Auditoría</h2>
+@attribute [Authorize]
 
-<EditForm Model="model" OnValidSubmit="Guardar">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-
-    <div class="row g-3">
-        <div class="col-md-3">
-            <label class="form-label">Fecha inicio</label>
-            <InputDate class="form-control" @bind-Value="model.FechaInicio" />
+<div class="nueva-auditoria-page">
+    <section class="nueva-auditoria-hero">
+        <div>
+            <span class="nueva-auditoria-kicker">Alta de auditoría</span>
+            <h1>Nueva auditoría</h1>
+            <p>
+                Captura la información principal y el sistema generará automáticamente los procesos que formarán parte de la auditoría.
+            </p>
         </div>
 
-        <div class="col-md-3">
-            <label class="form-label">Fecha fin</label>
-            <InputDate class="form-control" @bind-Value="model.FechaFin" />
+        <div class="hero-actions">
+            <button type="button" class="hero-btn" @onclick="Cancelar" disabled="@guardando">
+                Volver
+            </button>
         </div>
+    </section>
 
-        <div class="col-md-3">
-            <label class="form-label">Tipo</label>
-            <InputSelect class="form-select" @bind-Value="model.TipoAuditoria">
-                <option value="Interna">Interna</option>
-                <option value="Externa">Externa</option>
-                <option value="Cliente">Cliente</option>
-            </InputSelect>
-        </div>
+    @if (!string.IsNullOrWhiteSpace(errorMsg))
+    {
+        <div class="alert alert-danger">@errorMsg</div>
+    }
 
-        <div class="col-md-3">
-            <label class="form-label">Estatus</label>
-            <InputSelect class="form-select" @bind-Value="model.Estatus">
-                <option value="Planeada">Planeada</option>
-                <option value="En Proceso">En Proceso</option>
-                <option value="Cerrada">Cerrada</option>
-            </InputSelect>
-        </div>
-
-        <div class="col-12">
-            <label class="form-label">Objetivo</label>
-            <InputText class="form-control" @bind-Value="model.Objetivo" />
-        </div>
-
-        <div class="col-12">
-            <label class="form-label">Alcance</label>
-            <InputText class="form-control" @bind-Value="model.Alcance" />
-        </div>
-
-        <div class="col-md-4">
-            <label class="form-label">Auditor líder (temporal)</label>
-            <InputText class="form-control" @bind-Value="model.AuditorLiderId" />
-        </div>
-
-        <div class="col-md-8">
-            <div class="alert alert-info mb-0">
-                <div><b>Se crearán procesos automáticamente</b> al guardar.</div>
-                @if (previewLoaded)
-                {
-                    <div class="small mt-1">
-                        Procesos activos: <b>@previewProcesos</b> |
-                        Producción (unidades activas): <b>@previewUnidadesProd</b>
-                    </div>
-                }
-                else
-                {
-                    <div class="small mt-1">Cargando preview...</div>
-                }
+    @if (cargando)
+    {
+        <div class="nueva-auditoria-loading">
+            <div class="nueva-auditoria-skeleton nueva-auditoria-skeleton-hero"></div>
+            <div class="nueva-auditoria-grid">
+                <div class="nueva-auditoria-skeleton nueva-auditoria-skeleton-form"></div>
+                <div class="nueva-auditoria-skeleton nueva-auditoria-skeleton-side"></div>
             </div>
         </div>
+    }
+    else
+    {
+        <EditForm Model="model" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
 
-        <div class="col-12 d-flex gap-2 mt-2">
-            <button type="submit" class="btn btn-success" disabled="@guardando">
-                @(guardando ? "Guardando..." : "Guardar")
-            </button>
+            <div class="nueva-auditoria-grid">
+                <section class="panel-card panel-form">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Datos generales</h2>
+                            <p class="panel-subtitle">Información base para crear la auditoría.</p>
+                        </div>
+                    </div>
 
-            <button type="button" class="btn btn-outline-secondary" @onclick="Cancelar" disabled="@guardando">
-                Cancelar
-            </button>
-        </div>
-    </div>
-</EditForm>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha inicio</label>
+                            <InputDate class="form-control" @bind-Value="model.FechaInicio" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha fin</label>
+                            <InputDate class="form-control" @bind-Value="model.FechaFin" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo</label>
+                            <InputSelect class="form-select" @bind-Value="model.TipoAuditoria">
+                                <option value="Interna">Interna</option>
+                                <option value="Externa">Externa</option>
+                                <option value="Cliente">Cliente</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Estatus</label>
+                            <InputSelect class="form-select" @bind-Value="model.Estatus">
+                                <option value="Planeada">Planeada</option>
+                                <option value="En Proceso">En Proceso</option>
+                                <option value="Cerrada">Cerrada</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Objetivo</label>
+                            <InputTextArea class="form-control" @bind-Value="model.Objetivo" rows="3" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Alcance</label>
+                            <InputTextArea class="form-control" @bind-Value="model.Alcance" rows="3" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Auditor líder</label>
+                            <input class="form-control" value="@usuarioActualId" disabled />
+                            <div class="field-help">
+                                Se toma automáticamente del usuario autenticado.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Usuario</label>
+                            <input class="form-control" value="@usuarioActualNombre" disabled />
+                            <div class="field-help">
+                                Quedará registrado como líder temporal de la auditoría.
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel-card panel-side">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Preview de creación</h2>
+                            <p class="panel-subtitle">Lo que generará el sistema al guardar.</p>
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="mini-metric">
+                            <div class="mini-metric-label">Procesos activos</div>
+                            <div class="mini-metric-value">@previewProcesosActivos</div>
+                        </div>
+
+                        <div class="mini-metric">
+                            <div class="mini-metric-label">Unidades producción</div>
+                            <div class="mini-metric-value">@previewUnidadesProd</div>
+                        </div>
+
+                        <div class="mini-metric">
+                            <div class="mini-metric-label">Procesos no producción</div>
+                            <div class="mini-metric-value">@previewProcesosNoProd</div>
+                        </div>
+
+                        <div class="mini-metric">
+                            <div class="mini-metric-label">Registros a crear</div>
+                            <div class="mini-metric-value">@previewTotalAuditoriaProcesos</div>
+                        </div>
+                    </div>
+
+                    <div class="info-box">
+                        <div class="info-title">Qué hará el sistema</div>
+                        <ul class="info-list">
+                            <li>Guardará la auditoría principal.</li>
+                            <li>Insertará procesos activos automáticamente.</li>
+                            <li>Para Producción, creará un registro por cada unidad de negocio activa.</li>
+                            <li>Te enviará al detalle de la auditoría al finalizar.</li>
+                        </ul>
+                    </div>
+
+                    @if (!previewProcesoProdEncontrado)
+                    {
+                        <div class="warning-box">
+                            No se encontró el proceso de producción base <b>MX-7000-D1</b>. Solo se crearán registros por procesos activos normales.
+                        </div>
+                    }
+                </section>
+            </div>
+
+            <section class="panel-card action-panel">
+                <div class="action-panel-inner">
+                    <div>
+                        <h2>Confirmación</h2>
+                        <p class="panel-subtitle mb-0">
+                            Revisa la información antes de generar la auditoría y sus procesos relacionados.
+                        </p>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-success btn-lg" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Guardar auditoría")
+                        </button>
+
+                        <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="Cancelar" disabled="@guardando">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </EditForm>
+    }
+</div>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
     private Auditoria model = new()
     {
         FechaInicio = DateTime.Today,
@@ -96,96 +201,183 @@
         Alcance = ""
     };
 
+    private bool cargando = true;
     private bool guardando;
+    private string? errorMsg;
 
-    // preview
-    private bool previewLoaded;
-    private int previewProcesos;
+    private string usuarioActualId = "sistema";
+    private string usuarioActualNombre = "sistema";
+
+    private int previewProcesosActivos;
     private int previewUnidadesProd;
+    private int previewProcesosNoProd;
+    private int previewTotalAuditoriaProcesos;
+    private bool previewProcesoProdEncontrado;
 
     protected override async Task OnInitializedAsync()
     {
-        var procesos = await Db.Procesos.Where(p => p.Activo).ToListAsync();
-        previewProcesos = procesos.Count;
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            await CargarUsuarioActual();
+            model.AuditorLiderId = usuarioActualId;
+            await CargarPreview();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+
+            usuarioActualNombre =
+                user.Identity?.Name
+                ?? user.FindFirst(ClaimTypes.Name)?.Value
+                ?? usuarioActualId;
+        }
+    }
+
+    private async Task CargarPreview()
+    {
+        var procesos = await Db.Procesos
+            .AsNoTracking()
+            .Where(p => p.Activo)
+            .ToListAsync();
+
+        previewProcesosActivos = procesos.Count;
 
         var prod = procesos.FirstOrDefault(p => p.Codigo == "MX-7000-D1");
-        if (prod != null)
+        previewProcesoProdEncontrado = prod is not null;
+
+        previewUnidadesProd = 0;
+
+        if (prod is not null)
         {
             previewUnidadesProd = await Db.UnidadesNegocio
+                .AsNoTracking()
                 .Where(u => u.ProcesoId == prod.ProcesoId && u.Activo)
                 .CountAsync();
         }
 
-        previewLoaded = true;
+        previewProcesosNoProd = prod is null
+            ? previewProcesosActivos
+            : procesos.Count(p => p.ProcesoId != prod.ProcesoId);
+
+        previewTotalAuditoriaProcesos = previewProcesosNoProd + previewUnidadesProd;
     }
 
     private async Task Guardar()
     {
         if (guardando) return;
         guardando = true;
+        errorMsg = null;
 
-        // 1) Guardar auditoría
-        Db.Auditorias.Add(model);
-        await Db.SaveChangesAsync();
-        var auditoriaId = model.AuditoriaId;
-
-        // 2) Cargar procesos activos
-        var procesos = await Db.Procesos
-            .Where(p => p.Activo)
-            .OrderBy(p => p.Codigo)
-            .ToListAsync();
-
-        var prod = procesos.FirstOrDefault(p => p.Codigo == "MX-7000-D1");
-
-        // 3) Crear AuditoriaProceso para NO Producción
-        var auditoriaProcesos = new List<AuditoriaProceso>();
-
-        foreach (var p in procesos)
+        try
         {
-            if (prod != null && p.ProcesoId == prod.ProcesoId)
-                continue;
-
-            auditoriaProcesos.Add(new AuditoriaProceso
+            if (model.FechaFin < model.FechaInicio)
             {
-                AuditoriaId = auditoriaId,
-                ProcesoId = p.ProcesoId,
-                AuditorAsignadoId = "",
-                UnidadNegocioId = null,
-                LineaNombre = null
-            });
-        }
+                errorMsg = "La fecha fin no puede ser menor que la fecha inicio.";
+                return;
+            }
 
-        // 4) Crear AuditoriaProceso para Producción por UnidadNegocio
-        if (prod != null)
-        {
-            var unidades = await Db.UnidadesNegocio
-                .Where(u => u.ProcesoId == prod.ProcesoId && u.Activo)
-                .OrderBy(u => u.Codigo)
+            model.AuditorLiderId = usuarioActualId;
+
+            await using var tx = await Db.Database.BeginTransactionAsync();
+
+            Db.Auditorias.Add(model);
+            await Db.SaveChangesAsync();
+
+            var auditoriaId = model.AuditoriaId;
+
+            var procesos = await Db.Procesos
+                .Where(p => p.Activo)
+                .OrderBy(p => p.Codigo)
                 .ToListAsync();
 
-            foreach (var u in unidades)
+            var prod = procesos.FirstOrDefault(p => p.Codigo == "MX-7000-D1");
+
+            var auditoriaProcesos = new List<AuditoriaProceso>();
+
+            foreach (var p in procesos)
             {
+                if (prod is not null && p.ProcesoId == prod.ProcesoId)
+                    continue;
+
                 auditoriaProcesos.Add(new AuditoriaProceso
                 {
                     AuditoriaId = auditoriaId,
-                    ProcesoId = prod.ProcesoId,
-                    UnidadNegocioId = u.UnidadNegocioId,
+                    ProcesoId = p.ProcesoId,
                     AuditorAsignadoId = "",
-                    LineaNombre = "" // pendiente por capturar
+                    SegundoAuditorId = null,
+                    ObservadorId = null,
+                    UnidadNegocioId = null,
+                    LineaNombre = null
                 });
             }
-        }
 
-        // 5) Guardar AuditoriaProcesos (con protección para no duplicar si reintentan)
-        var yaTiene = await Db.AuditoriaProcesos.AnyAsync(x => x.AuditoriaId == auditoriaId);
-        if (!yaTiene && auditoriaProcesos.Count > 0)
+            if (prod is not null)
+            {
+                var unidades = await Db.UnidadesNegocio
+                    .Where(u => u.ProcesoId == prod.ProcesoId && u.Activo)
+                    .OrderBy(u => u.Codigo)
+                    .ToListAsync();
+
+                foreach (var u in unidades)
+                {
+                    auditoriaProcesos.Add(new AuditoriaProceso
+                    {
+                        AuditoriaId = auditoriaId,
+                        ProcesoId = prod.ProcesoId,
+                        UnidadNegocioId = u.UnidadNegocioId,
+                        AuditorAsignadoId = "",
+                        SegundoAuditorId = null,
+                        ObservadorId = null,
+                        LineaNombre = ""
+                    });
+                }
+            }
+
+            var yaTiene = await Db.AuditoriaProcesos
+                .AnyAsync(x => x.AuditoriaId == auditoriaId);
+
+            if (!yaTiene && auditoriaProcesos.Count > 0)
+            {
+                Db.AuditoriaProcesos.AddRange(auditoriaProcesos);
+                await Db.SaveChangesAsync();
+            }
+
+            await tx.CommitAsync();
+
+            Nav.NavigateTo($"auditorias/{auditoriaId}");
+        }
+        catch (Exception ex)
         {
-            Db.AuditoriaProcesos.AddRange(auditoriaProcesos);
-            await Db.SaveChangesAsync();
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
         }
-
-        // 6) Navegar al detalle
-        Nav.NavigateTo($"auditorias/{auditoriaId}");
+        finally
+        {
+            guardando = false;
+        }
     }
 
     private void Cancelar() => Nav.NavigateTo("auditorias");

@@ -1,0 +1,460 @@
+﻿@page "/auditorias/{id:int}/calendario"
+@using System.Globalization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger" style="white-space:pre-wrap">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="calendario-loading">
+        <div class="calendario-skeleton calendario-skeleton-hero"></div>
+        <div class="calendario-skeleton calendario-skeleton-toolbar"></div>
+        <div class="calendario-skeleton calendario-skeleton-calendar"></div>
+    </div>
+}
+else if (auditoria is null)
+{
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró la auditoría</div>
+            <div class="empty-text">Verifica el identificador o vuelve al detalle.</div>
+
+            <button type="button" class="hero-btn primary mt-3" @onclick="VolverAuditoria">
+                Volver
+            </button>
+        </div>
+    </section>
+}
+else
+{
+    <div class="calendario-page">
+        <section class="calendario-hero">
+            <div>
+                <span class="calendario-kicker">Agenda de auditoría</span>
+                <h1>Calendario de auditoría #@id</h1>
+
+                <div class="calendario-meta">
+                    <span class="meta-chip">
+                        Tipo: <strong>@auditoria.TipoAuditoria</strong>
+                    </span>
+
+                    <span class="meta-chip">
+                        Inicio: <strong>@auditoria.FechaInicio.ToString("yyyy-MM-dd")</strong>
+                    </span>
+
+                    <span class="meta-chip">
+                        Fin: <strong>@auditoria.FechaFin.ToString("yyyy-MM-dd")</strong>
+                    </span>
+
+                    <span class="meta-chip">
+                        Programados: <strong>@totalProgramados</strong>
+                    </span>
+                </div>
+
+                <p class="hero-text">
+                    Visualiza por mes las fechas programadas de los procesos de la auditoría y detecta fácilmente los pendientes sin fecha.
+                </p>
+            </div>
+
+            <div class="hero-actions">
+                <button type="button" class="hero-btn primary" @onclick="VolverAuditoria">
+                    Volver al detalle
+                </button>
+            </div>
+        </section>
+
+        <section class="calendario-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Procesos</div>
+                <div class="metric-value">@procesos.Count</div>
+                <div class="metric-note">Total de procesos de la auditoría</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Programados</div>
+                <div class="metric-value">@totalProgramados</div>
+                <div class="metric-note">Con fecha asignada</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Sin fecha</div>
+                <div class="metric-value">@procesosSinFecha.Count</div>
+                <div class="metric-note">Pendientes por programar</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Este mes</div>
+                <div class="metric-value">@procesosMesActual</div>
+                <div class="metric-note">Procesos en @TituloMes</div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="toolbar-inner">
+                <div class="month-nav">
+                    <button type="button"
+                            class="month-nav-btn"
+                            @onclick="MesAnterior"
+                            disabled="@(!CanGoPrevMonth)">
+                        ‹
+                    </button>
+
+                    <div class="month-title">@TituloMes</div>
+
+                    <button type="button"
+                            class="month-nav-btn"
+                            @onclick="MesSiguiente"
+                            disabled="@(!CanGoNextMonth)">
+                        ›
+                    </button>
+                </div>
+
+                <div class="toolbar-stats">
+                    <span class="toolbar-chip">Procesos este mes: @procesosMesActual</span>
+                    <span class="toolbar-chip">Días con actividad: @diasConActividadMes</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Calendario mensual</h2>
+                    <p class="panel-subtitle">Da clic en un proceso para abrir su asignación y edición.</p>
+                </div>
+
+                <span class="panel-badge">@TituloMes</span>
+            </div>
+
+            <div class="calendar-scroll">
+                <div class="calendar-shell">
+                    <div class="weekdays">
+                        <div class="weekday-cell">Lun</div>
+                        <div class="weekday-cell">Mar</div>
+                        <div class="weekday-cell">Mié</div>
+                        <div class="weekday-cell">Jue</div>
+                        <div class="weekday-cell">Vie</div>
+                        <div class="weekday-cell">Sáb</div>
+                        <div class="weekday-cell">Dom</div>
+                    </div>
+
+                    <div class="calendar-grid">
+                        @foreach (var dia in diasCalendario)
+                        {
+                            <div class="calendar-day @(dia.EsMesActual ? "current" : "outside") @(dia.EsHoy ? "today" : "") @(dia.EnRangoAuditoria ? "" : "out-of-range")">
+                                <div class="calendar-day-head">
+                                    <span class="day-number">@dia.Fecha.Day</span>
+
+                                    @if (dia.Eventos.Count > 0)
+                                    {
+                                        <span class="day-count">@dia.Eventos.Count</span>
+                                    }
+                                </div>
+
+                                <div class="day-events">
+                                    @if (dia.Eventos.Count == 0)
+                                    {
+                                        @if (dia.EsMesActual && dia.EnRangoAuditoria)
+                                        {
+                                            <div class="day-empty">Sin procesos</div>
+                                        }
+                                        else if (dia.EsMesActual && !dia.EnRangoAuditoria)
+                                        {
+                                            <div class="day-empty muted">Fuera del rango</div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        @foreach (var ev in dia.Eventos)
+                                        {
+                                            <button type="button"
+                                                    class="event-card"
+                                                    @onclick="() => IrProceso(ev.AuditoriaProcesoId)">
+                                                <div class="event-code">@ev.ProcesoCodigo</div>
+                                                <div class="event-name">@ev.ProcesoNombre</div>
+
+                                                @if (!string.IsNullOrWhiteSpace(ev.UnidadTexto))
+                                                {
+                                                    <div class="event-meta">@ev.UnidadTexto</div>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(ev.LineaNombre))
+                                                {
+                                                    <div class="event-meta">Línea: @ev.LineaNombre</div>
+                                                }
+
+                                                <div class="event-meta">
+                                                    Auditor: @(string.IsNullOrWhiteSpace(ev.AuditorAsignadoId) ? "Pendiente" : ev.AuditorAsignadoId)
+                                                </div>
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        @if (procesosSinFecha.Count > 0)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Procesos pendientes por programar</h2>
+                        <p class="panel-subtitle">Estos procesos aún no tienen fecha asignada.</p>
+                    </div>
+
+                    <span class="panel-badge warning">@procesosSinFecha.Count pendiente(s)</span>
+                </div>
+
+                <div class="pending-list">
+                    @foreach (var p in procesosSinFecha)
+                    {
+                        <div class="pending-item">
+                            <div class="pending-copy">
+                                <div class="pending-title">@p.Proceso?.Codigo - @p.Proceso?.Nombre</div>
+
+                                @if (p.UnidadNegocio is not null)
+                                {
+                                    <div class="pending-subtitle">
+                                        Unidad: @p.UnidadNegocio.Codigo - @p.UnidadNegocio.Nombre
+                                    </div>
+                                }
+
+                                <div class="pending-subtitle">
+                                    Auditor principal:
+                                    @(string.IsNullOrWhiteSpace(p.AuditorAsignadoId) ? "Sin asignar" : p.AuditorAsignadoId)
+                                </div>
+                            </div>
+
+                            <button type="button"
+                                    class="table-btn table-btn-primary"
+                                    @onclick="() => IrProceso(p.AuditoriaProcesoId)">
+                                Programar
+                            </button>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int id { get; set; }
+
+    private static readonly CultureInfo CulturaEs = CultureInfo.GetCultureInfo("es-MX");
+
+    private bool cargando = true;
+    private string? errorMsg;
+
+    private Auditoria? auditoria;
+    private List<AuditoriaProceso> procesos = new();
+    private List<AuditoriaProceso> procesosSinFecha = new();
+    private List<DiaCalendarioVm> diasCalendario = new();
+
+    private DateTime mesActual;
+    private bool mesInicializado;
+    private int? auditoriaCargadaId;
+
+    private int totalProgramados => procesos.Count(x => x.FechaProgramada.HasValue);
+
+    private int procesosMesActual =>
+        procesos.Count(x =>
+            x.FechaProgramada.HasValue &&
+            x.FechaProgramada.Value.Year == mesActual.Year &&
+            x.FechaProgramada.Value.Month == mesActual.Month);
+
+    private int diasConActividadMes =>
+        procesos.Where(x =>
+                x.FechaProgramada.HasValue &&
+                x.FechaProgramada.Value.Year == mesActual.Year &&
+                x.FechaProgramada.Value.Month == mesActual.Month)
+            .Select(x => x.FechaProgramada!.Value.Date)
+            .Distinct()
+            .Count();
+
+    private string TituloMes => CapitalizarMes(mesActual.ToString("MMMM yyyy", CulturaEs));
+
+    private bool CanGoPrevMonth =>
+        auditoria is not null &&
+        PrimerDiaMes(mesActual) > PrimerDiaMes(auditoria.FechaInicio);
+
+    private bool CanGoNextMonth =>
+        auditoria is not null &&
+        PrimerDiaMes(mesActual) < PrimerDiaMes(auditoria.FechaFin);
+
+    private class DiaCalendarioVm
+    {
+        public DateTime Fecha { get; set; }
+        public bool EsMesActual { get; set; }
+        public bool EsHoy { get; set; }
+        public bool EnRangoAuditoria { get; set; }
+        public List<EventoCalendarioVm> Eventos { get; set; } = new();
+    }
+
+    private class EventoCalendarioVm
+    {
+        public int AuditoriaProcesoId { get; set; }
+        public string ProcesoCodigo { get; set; } = "";
+        public string ProcesoNombre { get; set; } = "";
+        public string? UnidadTexto { get; set; }
+        public string? LineaNombre { get; set; }
+        public string? AuditorAsignadoId { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            auditoria = await Db.Auditorias
+                .FirstOrDefaultAsync(a => a.AuditoriaId == id);
+
+            procesos = await Db.AuditoriaProcesos
+                .Where(x => x.AuditoriaId == id)
+                .Include(x => x.Proceso)
+                .Include(x => x.UnidadNegocio)
+                .OrderBy(x => x.FechaProgramada)
+                .ThenBy(x => x.Proceso!.Codigo)
+                .ThenBy(x => x.UnidadNegocioId)
+                .ToListAsync();
+
+            procesosSinFecha = procesos
+                .Where(x => !x.FechaProgramada.HasValue)
+                .OrderBy(x => x.Proceso?.Codigo)
+                .ThenBy(x => x.UnidadNegocioId)
+                .ToList();
+
+            if (auditoria is not null)
+            {
+                if (!mesInicializado || auditoriaCargadaId != id)
+                {
+                    var baseDate = DateTime.Today.Date >= auditoria.FechaInicio.Date &&
+                                   DateTime.Today.Date <= auditoria.FechaFin.Date
+                        ? DateTime.Today
+                        : auditoria.FechaInicio;
+
+                    mesActual = PrimerDiaMes(baseDate);
+                    auditoriaCargadaId = id;
+                    mesInicializado = true;
+                }
+
+                mesActual = AjustarMesAlRango(mesActual);
+                ConstruirCalendario();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void ConstruirCalendario()
+    {
+        diasCalendario.Clear();
+
+        if (auditoria is null)
+            return;
+
+        var eventosPorFecha = procesos
+            .Where(x => x.FechaProgramada.HasValue)
+            .GroupBy(x => x.FechaProgramada!.Value.Date)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(x => new EventoCalendarioVm
+                {
+                    AuditoriaProcesoId = x.AuditoriaProcesoId,
+                    ProcesoCodigo = x.Proceso?.Codigo ?? "Sin código",
+                    ProcesoNombre = x.Proceso?.Nombre ?? "Proceso",
+                    UnidadTexto = x.UnidadNegocio is null ? null : $"{x.UnidadNegocio.Codigo} - {x.UnidadNegocio.Nombre}",
+                    LineaNombre = x.LineaNombre,
+                    AuditorAsignadoId = x.AuditorAsignadoId
+                })
+                .OrderBy(x => x.ProcesoCodigo)
+                .ThenBy(x => x.UnidadTexto)
+                .ToList());
+
+        var primerDiaMes = PrimerDiaMes(mesActual);
+        var offset = ((int)primerDiaMes.DayOfWeek + 6) % 7; // lunes = 0
+        var inicioGrid = primerDiaMes.AddDays(-offset);
+
+        for (int i = 0; i < 42; i++)
+        {
+            var fecha = inicioGrid.AddDays(i);
+
+            eventosPorFecha.TryGetValue(fecha.Date, out var eventosDia);
+
+            diasCalendario.Add(new DiaCalendarioVm
+            {
+                Fecha = fecha,
+                EsMesActual = fecha.Month == mesActual.Month && fecha.Year == mesActual.Year,
+                EsHoy = fecha.Date == DateTime.Today,
+                EnRangoAuditoria = fecha.Date >= auditoria.FechaInicio.Date && fecha.Date <= auditoria.FechaFin.Date,
+                Eventos = eventosDia ?? new List<EventoCalendarioVm>()
+            });
+        }
+    }
+
+    private void MesAnterior()
+    {
+        if (!CanGoPrevMonth) return;
+        mesActual = PrimerDiaMes(mesActual.AddMonths(-1));
+        ConstruirCalendario();
+    }
+
+    private void MesSiguiente()
+    {
+        if (!CanGoNextMonth) return;
+        mesActual = PrimerDiaMes(mesActual.AddMonths(1));
+        ConstruirCalendario();
+    }
+
+    private static DateTime PrimerDiaMes(DateTime fecha) =>
+        new(fecha.Year, fecha.Month, 1);
+
+    private DateTime AjustarMesAlRango(DateTime fecha)
+    {
+        if (auditoria is null) return PrimerDiaMes(fecha);
+
+        var mes = PrimerDiaMes(fecha);
+        var min = PrimerDiaMes(auditoria.FechaInicio);
+        var max = PrimerDiaMes(auditoria.FechaFin);
+
+        if (mes < min) return min;
+        if (mes > max) return max;
+
+        return mes;
+    }
+
+    private static string CapitalizarMes(string texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto))
+            return texto;
+
+        return char.ToUpper(texto[0], CulturaEs) + texto[1..];
+    }
+
+    private void IrProceso(int auditoriaProcesoId) =>
+        Nav.NavigateTo($"auditorias/{id}/procesos/{auditoriaProcesoId}");
+
+    private void VolverAuditoria() =>
+        Nav.NavigateTo($"auditorias/{id}");
+}

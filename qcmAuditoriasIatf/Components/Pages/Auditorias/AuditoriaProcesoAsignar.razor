@@ -16,9 +16,9 @@
 {
     <p>Cargando...</p>
 }
-else if (ap is null)
+else if (ap is null || auditoria is null)
 {
-    <div class="alert alert-danger">No se encontró el proceso de auditoría.</div>
+    <div class="alert alert-danger">No se encontró el proceso de auditoría o la auditoría.</div>
     <button class="btn btn-outline-secondary" @onclick="Volver">Volver</button>
 }
 else
@@ -26,9 +26,18 @@ else
     <div class="card mb-3">
         <div class="card-body">
             <div class="row g-2">
-                <div class="col-md-3"><b>Auditoría:</b> #@auditoriaId</div>
+                <div class="col-md-3">
+                    <b>Auditoría:</b> #@auditoriaId
+                </div>
 
-                <div class="col-md-9">
+                <div class="col-md-4">
+                    <b>Rango auditoría:</b>
+                    @auditoria.FechaInicio.ToString("yyyy-MM-dd")
+                    a
+                    @auditoria.FechaFin.ToString("yyyy-MM-dd")
+                </div>
+
+                <div class="col-md-5">
                     <div class="fw-semibold">@ap.Proceso?.Codigo - @ap.Proceso?.Nombre</div>
                     @if (ap.UnidadNegocio is not null)
                     {
@@ -135,6 +144,19 @@ else
                         </div>
                     }
                 }
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Fecha programada del proceso</label>
+                <InputDate class="form-control"
+                           @bind-Value="vm.FechaProgramada"
+                           min="@FechaMin"
+                           max="@FechaMax" />
+
+                <div class="form-text">
+                    Debe estar dentro del rango de la auditoría:
+                    <b>@FechaMin</b> a <b>@FechaMax</b>.
+                </div>
             </div>
 
             <div class="col-md-6">
@@ -268,6 +290,7 @@ else
     private bool guardando;
     private string? errorMsg;
 
+    private Auditoria? auditoria;
     private AuditoriaProceso? ap;
     private bool requiereLinea;
 
@@ -276,18 +299,25 @@ else
 
     private Vm vm = new();
 
+    private string FechaMin => auditoria?.FechaInicio.ToString("yyyy-MM-dd") ?? "";
+    private string FechaMax => auditoria?.FechaFin.ToString("yyyy-MM-dd") ?? "";
+
     private class Vm
     {
         public string? AuditorAsignadoId { get; set; }
         public string? SegundoAuditorId { get; set; }
         public string? ObservadorId { get; set; }
         public string? LineaNombre { get; set; }
+        public DateTime? FechaProgramada { get; set; }
     }
 
     protected override async Task OnParametersSetAsync()
     {
         cargando = true;
         errorMsg = null;
+
+        auditoria = await Db.Auditorias
+            .FirstOrDefaultAsync(a => a.AuditoriaId == auditoriaId);
 
         ap = await Db.AuditoriaProcesos
             .Include(x => x.Proceso)
@@ -310,6 +340,7 @@ else
             vm.SegundoAuditorId = ap.SegundoAuditorId;
             vm.ObservadorId = ap.ObservadorId;
             vm.LineaNombre = ap.LineaNombre;
+            vm.FechaProgramada = ap.FechaProgramada ?? auditoria?.FechaInicio;
 
             requiereLinea = ap.UnidadNegocioId is not null;
             if (!requiereLinea)
@@ -339,6 +370,20 @@ else
         if (string.IsNullOrWhiteSpace(vm.AuditorAsignadoId))
         {
             errorMsg = "El auditor principal es obligatorio.";
+            return;
+        }
+
+        if (!vm.FechaProgramada.HasValue)
+        {
+            errorMsg = "La fecha programada del proceso es obligatoria.";
+            return;
+        }
+
+        if (auditoria is not null &&
+            (vm.FechaProgramada.Value.Date < auditoria.FechaInicio.Date ||
+             vm.FechaProgramada.Value.Date > auditoria.FechaFin.Date))
+        {
+            errorMsg = "La fecha programada del proceso debe estar dentro del rango de la auditoría.";
             return;
         }
 
@@ -379,6 +424,7 @@ else
             entity.AuditorAsignadoId = vm.AuditorAsignadoId?.Trim();
             entity.SegundoAuditorId = string.IsNullOrWhiteSpace(vm.SegundoAuditorId) ? null : vm.SegundoAuditorId.Trim();
             entity.ObservadorId = string.IsNullOrWhiteSpace(vm.ObservadorId) ? null : vm.ObservadorId.Trim();
+            entity.FechaProgramada = vm.FechaProgramada.Value.Date;
 
             if (entity.UnidadNegocioId is null)
                 entity.LineaNombre = null;

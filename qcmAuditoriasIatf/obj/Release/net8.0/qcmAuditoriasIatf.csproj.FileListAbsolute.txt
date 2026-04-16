@@ -163,3 +163,6 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\ne
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Auditorias\Auditorias.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Hallazgos\HallazgoDetalle.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Hallazgos\HallazgosBandeja.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Auditorias\AuditoriaNueva.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Auditorias\AuditoriaProcesoChecklist.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Hallazgos\HallazgoNuevoDesdeChecklist.razor.rz.scp.css
