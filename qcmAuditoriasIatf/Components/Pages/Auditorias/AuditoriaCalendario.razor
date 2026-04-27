@@ -193,7 +193,7 @@ else
                                                 }
 
                                                 <div class="event-meta">
-                                                    Auditor: @(string.IsNullOrWhiteSpace(ev.AuditorAsignadoId) ? "Pendiente" : ev.AuditorAsignadoId)
+                                                    Auditor: @MostrarPersona(ev.AuditorAsignadoId, "Pendiente")
                                                 </div>
                                             </button>
                                         }
@@ -234,7 +234,7 @@ else
 
                                 <div class="pending-subtitle">
                                     Auditor principal:
-                                    @(string.IsNullOrWhiteSpace(p.AuditorAsignadoId) ? "Sin asignar" : p.AuditorAsignadoId)
+                                    @MostrarPersona(p.AuditorAsignadoId, "Sin asignar")
                                 </div>
                             </div>
 
@@ -253,6 +253,8 @@ else
 
 @code {
     [Parameter] public int id { get; set; }
+
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly CultureInfo CulturaEs = CultureInfo.GetCultureInfo("es-MX");
 
@@ -338,6 +340,14 @@ else
                 .OrderBy(x => x.Proceso?.Codigo)
                 .ThenBy(x => x.UnidadNegocioId)
                 .ToList();
+
+            await CargarPersonasDisplay(
+                procesos.SelectMany(x => new string?[]
+                {
+                    x.AuditorAsignadoId,
+                    x.SegundoAuditorId,
+                    x.ObservadorId
+                }));
 
             if (auditoria is not null)
             {
@@ -457,4 +467,82 @@ else
 
     private void VolverAuditoria() =>
         Nav.NavigateTo($"auditorias/{id}");
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        personasDisplay.Clear();
+
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids
+            .Where(x => !personasDisplay.ContainsKey(x))
+            .ToList();
+
+        if (faltantes.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor, string fallback = "Pendiente")
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return fallback;
+
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
 }

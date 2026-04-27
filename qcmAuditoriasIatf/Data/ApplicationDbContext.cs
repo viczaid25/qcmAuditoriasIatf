@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using qcmAuditoriasIatf.Models.External;
 using qcmAuditoriasIatf.Models.Auditorias;
 using qcmAuditoriasIatf.Models.Catalogos;
 using qcmAuditoriasIatf.Models.Evidencias;
+using qcmAuditoriasIatf.Models.External;
 using qcmAuditoriasIatf.Models.Hallazgos;
+using qcmAuditoriasIatf.Models.Seguridad;
 
 namespace qcmAuditoriasIatf.Data;
 
@@ -35,6 +36,9 @@ public class ApplicationDbContext : DbContext
     // Evidencias / Historial
     public DbSet<Evidencia> Evidencias => Set<Evidencia>();
     public DbSet<HistorialCambio> HistorialCambios => Set<HistorialCambio>();
+
+    // Seguridad
+    public DbSet<UsuarioPerfil> UsuariosPerfil => Set<UsuarioPerfil>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -170,6 +174,10 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<HallazgoCincoPorQue>()
             .HasIndex(x => x.HallazgoId)
+            .IsUnique();
+
+        modelBuilder.Entity<UsuarioPerfil>()
+            .HasIndex(x => new { x.PcLoginId, x.Perfil })
             .IsUnique();
 
     }

@@ -48,5 +48,21 @@ public class Hallazgo
     public ICollection<AccionCorrectiva> AccionesCorrectivas { get; set; } = new List<AccionCorrectiva>();
     public ICollection<HallazgoSeguimiento> Seguimientos { get; set; } = new List<HallazgoSeguimiento>();
     public HallazgoCincoPorQue? CincoPorQue { get; set; }
+    [StringLength(100)]
+    public string? CreadoPorId { get; set; }
+
+    public DateTime FechaCreacion { get; set; } = DateTime.Now;
+
+    [Required, StringLength(50)]
+    public string EstatusValidacionSgc { get; set; } = "Pendiente";
+    // Pendiente / Aprobado / Rechazado
+
+    [StringLength(100)]
+    public string? RevisadoPorSgcId { get; set; }
+
+    public DateTime? FechaRevisionSgc { get; set; }
+
+    [StringLength(2000)]
+    public string? ComentarioRevisionSgc { get; set; }
 
 }

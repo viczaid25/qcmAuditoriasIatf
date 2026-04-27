@@ -71,12 +71,12 @@ else
 
                     <span class="meta-chip">
                         Auditor asignado:
-                        <strong>@(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Sin asignar" : ap.AuditorAsignadoId)</strong>
+                        <strong>@(string.IsNullOrWhiteSpace(ResponsableHallazgoId) ? "Sin asignar" : ResponsableHallazgoId)</strong>
                     </span>
                 </div>
 
                 <p class="hero-text">
-                    Captura la no conformidad detectada, asigna responsables y registra la evidencia inicial del hallazgo.
+                    Captura la no conformidad detectada, asigna responsable de cierre y envía el hallazgo a validación del equipo SGC.
                 </p>
             </div>
 
@@ -86,6 +86,14 @@ else
                 </button>
             </div>
         </section>
+
+        @if (!PuedeCrearHallazgo)
+        {
+            <div class="alert alert-warning mb-0">
+                No puedes crear este hallazgo todavía porque el proceso no tiene auditor principal asignado.
+                Primero asigna el equipo auditor del proceso.
+            </div>
+        }
 
         <EditForm Model="vm" OnValidSubmit="Guardar">
             <DataAnnotationsValidator />
@@ -142,13 +150,12 @@ else
 
                         <div class="col-md-6">
                             <label class="form-label">Responsable del hallazgo</label>
-                            <InputSelect class="form-select" @bind-Value="vm.ResponsableId">
-                                <option value="">-- Selecciona --</option>
-                                @foreach (var u in usuariosDisponibles)
-                                {
-                                    <option value="@u.pc_login_id">@GetResponsableTexto(u)</option>
-                                }
-                            </InputSelect>
+                            <input class="form-control"
+                                   value="@(string.IsNullOrWhiteSpace(ResponsableHallazgoId) ? "Sin auditor asignado" : ResponsableHallazgoId)"
+                                   disabled />
+                            <div class="field-help">
+                                Se toma automáticamente del auditor principal asignado al proceso.
+                            </div>
                         </div>
 
                         <div class="col-md-6">
@@ -211,31 +218,41 @@ else
 
                     <div class="section-divider"></div>
 
-                    <div class="mini-section-label">Responsables seleccionados</div>
+                    <div class="alert alert-info mb-3">
+                        Al guardar, el hallazgo quedará en <b>Pendiente SGC</b> hasta que sea revisado y aprobado por el equipo SGC.
+                    </div>
 
-                    @if (ResponsableSeleccionado is not null)
+                    <div class="mini-section-label">Responsables</div>
+
+                    @if (ResponsableHallazgoUsuario is not null)
                     {
                         <div class="user-summary-card">
                             <div class="user-summary-role">Responsable del hallazgo</div>
-                            <div class="user-summary-name">@GetNombreUsuario(ResponsableSeleccionado)</div>
-                            <div class="user-summary-login">@ResponsableSeleccionado.pc_login_id</div>
+                            <div class="user-summary-name">@GetNombreUsuario(ResponsableHallazgoUsuario)</div>
+                            <div class="user-summary-login">@ResponsableHallazgoUsuario.pc_login_id</div>
                             <div class="user-summary-meta">
-                                @ResponsableSeleccionado.department
-                                @if (!string.IsNullOrWhiteSpace(ResponsableSeleccionado.position))
+                                @ResponsableHallazgoUsuario.department
+                                @if (!string.IsNullOrWhiteSpace(ResponsableHallazgoUsuario.position))
                                 {
-                                    <span> | @ResponsableSeleccionado.position</span>
+                                    <span> | @ResponsableHallazgoUsuario.position</span>
                                 }
                             </div>
-                            @if (!string.IsNullOrWhiteSpace(ResponsableSeleccionado.email))
+                            @if (!string.IsNullOrWhiteSpace(ResponsableHallazgoUsuario.email))
                             {
-                                <div class="user-summary-meta">@ResponsableSeleccionado.email</div>
+                                <div class="user-summary-meta">@ResponsableHallazgoUsuario.email</div>
                             }
                         </div>
                     }
                     else
                     {
-                        <div class="empty-state compact">
-                            Aún no se ha seleccionado responsable del hallazgo.
+                        <div class="user-summary-card">
+                            <div class="user-summary-role">Responsable del hallazgo</div>
+                            <div class="user-summary-name">
+                                @(string.IsNullOrWhiteSpace(ResponsableHallazgoId) ? "Sin auditor asignado" : ResponsableHallazgoId)
+                            </div>
+                            <div class="user-summary-meta">
+                                Se toma automáticamente del auditor principal del proceso.
+                            </div>
                         </div>
                     }
 
@@ -272,16 +289,21 @@ else
                     <div>
                         <h2>Confirmación</h2>
                         <p class="panel-subtitle mb-0">
-                            Al guardar se creará el hallazgo y se registrará el seguimiento inicial.
+                            Al guardar se creará el hallazgo y se enviará a validación del equipo SGC.
                         </p>
                     </div>
 
                     <div class="action-buttons">
-                        <button class="btn btn-danger btn-lg" type="submit" disabled="@guardando">
+                        <button class="btn btn-danger btn-lg"
+                                type="submit"
+                                disabled="@guardando || !PuedeCrearHallazgo">
                             @(guardando ? "Guardando..." : "Guardar hallazgo")
                         </button>
 
-                        <button class="btn btn-outline-secondary btn-lg" type="button" @onclick="Volver" disabled="@guardando">
+                        <button class="btn btn-outline-secondary btn-lg"
+                                type="button"
+                                @onclick="Volver"
+                                disabled="@guardando">
                             Cancelar
                         </button>
                     </div>
@@ -316,17 +338,26 @@ else
     private TipoHallazgo? TipoSeleccionado =>
         tiposHallazgo.FirstOrDefault(x => x.TipoHallazgoId == vm.TipoHallazgoId);
 
-    private MeaxAllUser? ResponsableSeleccionado =>
-        usuariosDisponibles.FirstOrDefault(x => x.pc_login_id == vm.ResponsableId);
+    private string? ResponsableHallazgoId =>
+        ap?.AuditorAsignadoId?.Trim();
+
+    private bool PuedeCrearHallazgo =>
+        !string.IsNullOrWhiteSpace(ResponsableHallazgoId);
+
+    private MeaxAllUser? ResponsableHallazgoUsuario =>
+        string.IsNullOrWhiteSpace(ResponsableHallazgoId)
+            ? null
+            : usuariosDisponibles.FirstOrDefault(x =>
+                string.Equals(x.pc_login_id, ResponsableHallazgoId, StringComparison.OrdinalIgnoreCase));
 
     private MeaxAllUser? ResponsableCierreSeleccionado =>
-        usuariosDisponibles.FirstOrDefault(x => x.pc_login_id == vm.ResponsableCierreId);
+        usuariosDisponibles.FirstOrDefault(x =>
+            string.Equals(x.pc_login_id, vm.ResponsableCierreId, StringComparison.OrdinalIgnoreCase));
 
     private class Vm
     {
         public int TipoHallazgoId { get; set; }
         public DateTime FechaCompromiso { get; set; } = DateTime.Today.AddDays(7);
-        public string? ResponsableId { get; set; }
         public string? ResponsableCierreId { get; set; }
         public string? DescripcionNoConformidad { get; set; }
         public string? Evidencia { get; set; }
@@ -357,11 +388,6 @@ else
             .Where(x => !string.IsNullOrWhiteSpace(x.pc_login_id))
             .OrderBy(x => x.username ?? x.pc_login_id)
             .ToListAsync();
-
-        if (string.IsNullOrWhiteSpace(vm.ResponsableId) && ExisteUsuarioEnCatalogo(usuarioActualId))
-        {
-            vm.ResponsableId = usuarioActualId;
-        }
 
         if (string.IsNullOrWhiteSpace(vm.ResponsableCierreId) && ExisteUsuarioEnCatalogo(usuarioActualId))
         {
@@ -429,6 +455,12 @@ else
                 return;
             }
 
+            if (!PuedeCrearHallazgo)
+            {
+                errorMsg = "No se puede crear el hallazgo porque el proceso no tiene auditor principal asignado.";
+                return;
+            }
+
             if (vm.TipoHallazgoId == 0)
             {
                 errorMsg = "Selecciona un tipo de hallazgo.";
@@ -444,12 +476,6 @@ else
             if (string.IsNullOrWhiteSpace(vm.DescripcionNoConformidad))
             {
                 errorMsg = "La descripción de la no conformidad es obligatoria.";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(vm.ResponsableId))
-            {
-                errorMsg = "El responsable del hallazgo es obligatorio.";
                 return;
             }
 
@@ -484,11 +510,15 @@ else
                 Descripcion = vm.DescripcionNoConformidad.Trim(),
                 Evidencia = string.IsNullOrWhiteSpace(vm.Evidencia) ? null : vm.Evidencia.Trim(),
 
-                ResponsableId = vm.ResponsableId.Trim(),
+                ResponsableId = ResponsableHallazgoId!,
                 ResponsableCierreId = vm.ResponsableCierreId.Trim(),
 
-                FechaCompromiso = vm.FechaCompromiso,
-                Estatus = "Abierto"
+                CreadoPorId = usuarioActualId,
+                FechaCreacion = DateTime.Now,
+                EstatusValidacionSgc = "Pendiente",
+                Estatus = "Pendiente SGC",
+
+                FechaCompromiso = vm.FechaCompromiso
             };
 
             Db.Hallazgos.Add(hallazgo);
@@ -498,7 +528,7 @@ else
             {
                 HallazgoId = hallazgo.HallazgoId,
                 UsuarioId = usuarioActualId,
-                Comentario = $"Creó el hallazgo. Responsable: {hallazgo.ResponsableId}. Responsable de cierre: {hallazgo.ResponsableCierreId}.",
+                Comentario = $"Creó el hallazgo y lo envió a validación SGC. Responsable: {hallazgo.ResponsableId}. Responsable de cierre: {hallazgo.ResponsableCierreId}.",
                 EstatusNuevo = hallazgo.Estatus
             });
 

@@ -1,0 +1,574 @@
+﻿@page "/interfaces/sgc/hallazgos"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.Hallazgos
+@using System.Security.Claims
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="interfaces-loading">
+        <div class="interfaces-skeleton interfaces-skeleton-hero"></div>
+        <div class="interfaces-metrics">
+            <div class="interfaces-skeleton interfaces-skeleton-card"></div>
+            <div class="interfaces-skeleton interfaces-skeleton-card"></div>
+            <div class="interfaces-skeleton interfaces-skeleton-card"></div>
+            <div class="interfaces-skeleton interfaces-skeleton-card"></div>
+        </div>
+        <div class="interfaces-skeleton interfaces-skeleton-table"></div>
+    </div>
+}
+else if (!usuarioEsSgc)
+{
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">Acceso restringido</div>
+            <div class="empty-text">
+                Esta bandeja es exclusiva para usuarios del equipo SGC.
+            </div>
+
+            <button type="button" class="hero-btn primary mt-3" @onclick="IrInicio">
+                Volver al inicio
+            </button>
+        </div>
+    </section>
+}
+else
+{
+    <div class="interfaces-page">
+        <section class="interfaces-hero">
+            <div>
+                <span class="interfaces-kicker">Interfaces · Validación SGC</span>
+                <h1>Validación SGC de hallazgos</h1>
+
+                <div class="interfaces-meta">
+                    <span class="meta-chip">
+                        Usuario:
+                        <strong>@usuarioActualId</strong>
+                    </span>
+
+                    @if (!string.IsNullOrWhiteSpace(usuarioActualNombre) && usuarioActualNombre != usuarioActualId)
+                    {
+                        <span class="meta-chip">
+                            Nombre:
+                            <strong>@usuarioActualNombre</strong>
+                        </span>
+                    }
+
+                    <span class="meta-chip">
+                        Pendientes:
+                        <strong>@pendientes.Count</strong>
+                    </span>
+                </div>
+
+                <p class="hero-text">
+                    Revisa los hallazgos generados desde checklist antes de que entren al flujo normal del responsable del hallazgo.
+                </p>
+            </div>
+
+            <div class="hero-actions">
+                <button type="button" class="hero-btn" @onclick="IrInicio">
+                    Volver
+                </button>
+            </div>
+        </section>
+
+        <section class="interfaces-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Pendientes SGC</div>
+                <div class="metric-value">@pendientes.Count</div>
+                <div class="metric-note">Esperando revisión del equipo SGC</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Aprobados</div>
+                <div class="metric-value">@totalAprobados</div>
+                <div class="metric-note">Ya liberados al flujo operativo</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Rechazados</div>
+                <div class="metric-value">@totalRechazados</div>
+                <div class="metric-note">Con observaciones de SGC</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Recientes</div>
+                <div class="metric-value">@revisados.Count</div>
+                <div class="metric-note">Últimos revisados por SGC</div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Hallazgos pendientes de validación</h2>
+                    <p class="panel-subtitle">Aprobación o rechazo previo a la liberación del hallazgo.</p>
+                </div>
+
+                <span class="panel-badge">@pendientes.Count pendiente(s)</span>
+            </div>
+
+            @if (pendientes.Count == 0)
+            {
+                <div class="empty-state compact">
+                    No hay hallazgos pendientes de validación SGC.
+                </div>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="sgc-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Auditoría</th>
+                                <th>Proceso</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                                <th>Responsables</th>
+                                <th>Creación</th>
+                                <th>Revisión SGC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in pendientes)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="id-pill">#@row.HallazgoId</span>
+                                    </td>
+
+                                    <td>
+                                        <div class="cell-title">#@row.AuditoriaId</div>
+                                        <div class="cell-subtitle">@row.ClausulaTexto</div>
+                                    </td>
+
+                                    <td>
+                                        <div class="cell-title">@row.ProcesoTexto</div>
+                                    </td>
+
+                                    <td>
+                                        <span class="tipo-pill @GetTipoClass(row.TipoHallazgoNombre)">
+                                            @row.TipoHallazgoNombre
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <div class="desc-cell">@row.Descripcion</div>
+
+                                        @if (!string.IsNullOrWhiteSpace(row.Evidencia))
+                                        {
+                                            <div class="evidencia-box">
+                                                <div class="mini-label">Evidencia inicial</div>
+                                                <div>@row.Evidencia</div>
+                                            </div>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <div class="team-stack">
+                                            <div>
+                                                <span class="team-label">Responsable:</span>
+                                                <span class="team-value">@row.ResponsableId</span>
+                                            </div>
+                                            <div>
+                                                <span class="team-label">Cierre:</span>
+                                                <span class="team-value">@row.ResponsableCierreId</span>
+                                            </div>
+                                            <div>
+                                                <span class="team-label">Creado por:</span>
+                                                <span class="team-value">@row.CreadoPorId</span>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="cell-title">@row.FechaCreacion.ToString("yyyy-MM-dd")</div>
+                                        <div class="cell-subtitle">@row.FechaCreacion.ToString("HH:mm")</div>
+                                        <div class="cell-subtitle">Compromiso: @row.FechaCompromiso.ToString("yyyy-MM-dd")</div>
+                                    </td>
+
+                                    <td>
+                                        <div class="review-box">
+                                            <label class="form-label small-label">Comentario SGC</label>
+                                            <InputTextArea class="form-control review-textarea"
+                                                           @bind-Value="row.ComentarioSgc"
+                                                           rows="3"
+                                                           disabled="@(guardandoHallazgoId == row.HallazgoId)" />
+
+                                            <div class="review-actions">
+                                                <button type="button"
+                                                        class="table-btn"
+                                                        @onclick="() => VerDetalle(row)"
+                                                        disabled="@(guardandoHallazgoId == row.HallazgoId)">
+                                                    Ver detalle
+                                                </button>
+
+                                                <button type="button"
+                                                        class="table-btn table-btn-success"
+                                                        @onclick="() => ResolverHallazgo(row.HallazgoId, true)"
+                                                        disabled="@(guardandoHallazgoId == row.HallazgoId)">
+                                                    @(guardandoHallazgoId == row.HallazgoId ? "Guardando..." : "Aprobar")
+                                                </button>
+
+                                                <button type="button"
+                                                        class="table-btn table-btn-danger"
+                                                        @onclick="() => ResolverHallazgo(row.HallazgoId, false)"
+                                                        disabled="@(guardandoHallazgoId == row.HallazgoId)">
+                                                    @(guardandoHallazgoId == row.HallazgoId ? "Guardando..." : "Rechazar")
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Últimos hallazgos revisados</h2>
+                    <p class="panel-subtitle">Historial reciente de aprobaciones y rechazos SGC.</p>
+                </div>
+
+                <span class="panel-badge">@revisados.Count reciente(s)</span>
+            </div>
+
+            @if (revisados.Count == 0)
+            {
+                <div class="empty-state compact">
+                    Aún no hay hallazgos revisados por SGC.
+                </div>
+            }
+            else
+            {
+                <div class="reviewed-list">
+                    @foreach (var row in revisados)
+                    {
+                        <div class="reviewed-item">
+                            <div class="reviewed-head">
+                                <div>
+                                    <div class="reviewed-title">Hallazgo #@row.HallazgoId · Auditoría #@row.AuditoriaId</div>
+                                    <div class="reviewed-subtitle">@row.ProcesoTexto · @row.TipoHallazgoNombre</div>
+                                </div>
+
+                                <span class="validacion-pill @GetValidacionClass(row.EstatusValidacionSgc)">
+                                    @row.EstatusValidacionSgc
+                                </span>
+                            </div>
+
+                            <div class="reviewed-body">
+                                <div class="reviewed-text">@row.Descripcion</div>
+
+                                <div class="reviewed-meta">
+                                    <span>Responsable: <strong>@row.ResponsableId</strong></span>
+                                    <span>Revisó: <strong>@(string.IsNullOrWhiteSpace(row.RevisadoPorSgcId) ? "—" : row.RevisadoPorSgcId)</strong></span>
+                                    @if (row.FechaRevisionSgc.HasValue)
+                                    {
+                                        <span>Fecha: <strong>@row.FechaRevisionSgc.Value.ToString("yyyy-MM-dd HH:mm")</strong></span>
+                                    }
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(row.ComentarioRevisionSgc))
+                                {
+                                    <div class="comment-box">
+                                        <div class="mini-label">Comentario SGC</div>
+                                        <div>@row.ComentarioRevisionSgc</div>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="reviewed-actions">
+                                <button type="button" class="table-btn" @onclick="() => VerDetalle(row)">
+                                    Ver detalle
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private bool cargando = true;
+    private string? errorMsg;
+    private int? guardandoHallazgoId;
+
+    private string usuarioActualId = "sistema";
+    private string usuarioActualNombre = "sistema";
+    private bool usuarioEsSgc;
+
+    private int totalAprobados;
+    private int totalRechazados;
+
+    private List<HallazgoRowVm> pendientes = new();
+    private List<HallazgoRowVm> revisados = new();
+
+    private class HallazgoRowVm
+    {
+        public int HallazgoId { get; set; }
+        public int AuditoriaId { get; set; }
+        public string ProcesoTexto { get; set; } = "";
+        public string ClausulaTexto { get; set; } = "";
+        public string TipoHallazgoNombre { get; set; } = "";
+        public string Descripcion { get; set; } = "";
+        public string? Evidencia { get; set; }
+        public string ResponsableId { get; set; } = "";
+        public string? ResponsableCierreId { get; set; }
+        public string? CreadoPorId { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public DateTime FechaCompromiso { get; set; }
+        public string Estatus { get; set; } = "";
+        public string EstatusValidacionSgc { get; set; } = "";
+        public string? RevisadoPorSgcId { get; set; }
+        public DateTime? FechaRevisionSgc { get; set; }
+        public string? ComentarioRevisionSgc { get; set; }
+        public string? ComentarioSgc { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            await CargarUsuarioActual();
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+
+            usuarioActualNombre =
+                user.Identity?.Name
+                ?? user.FindFirst(ClaimTypes.Name)?.Value
+                ?? usuarioActualId;
+        }
+
+        var loginNormalizado = (usuarioActualId ?? "").Trim().ToUpper();
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == loginNormalizado &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
+    }
+
+    private async Task CargarPantalla()
+    {
+        pendientes.Clear();
+        revisados.Clear();
+
+        if (!usuarioEsSgc)
+            return;
+
+        totalAprobados = await Db.Hallazgos.CountAsync(h => h.EstatusValidacionSgc == "Aprobado");
+        totalRechazados = await Db.Hallazgos.CountAsync(h => h.EstatusValidacionSgc == "Rechazado");
+
+        var pendientesEntity = await Db.Hallazgos
+            .AsNoTracking()
+            .Include(h => h.Proceso)
+            .Include(h => h.Clausula)
+            .Include(h => h.TipoHallazgo)
+            .Where(h => h.EstatusValidacionSgc == "Pendiente")
+            .OrderBy(h => h.FechaCreacion)
+            .ThenBy(h => h.HallazgoId)
+            .ToListAsync();
+
+        pendientes = pendientesEntity
+            .Select(MapRow)
+            .ToList();
+
+        var revisadosEntity = await Db.Hallazgos
+            .AsNoTracking()
+            .Include(h => h.Proceso)
+            .Include(h => h.Clausula)
+            .Include(h => h.TipoHallazgo)
+            .Where(h => h.EstatusValidacionSgc == "Aprobado" || h.EstatusValidacionSgc == "Rechazado")
+            .OrderByDescending(h => h.FechaRevisionSgc ?? h.FechaCreacion)
+            .ThenByDescending(h => h.HallazgoId)
+            .Take(12)
+            .ToListAsync();
+
+        revisados = revisadosEntity
+            .Select(MapRow)
+            .ToList();
+    }
+
+    private static HallazgoRowVm MapRow(Hallazgo h) => new()
+    {
+        HallazgoId = h.HallazgoId,
+        AuditoriaId = h.AuditoriaId,
+        ProcesoTexto = $"{h.Proceso?.Codigo} - {h.Proceso?.Nombre}",
+        ClausulaTexto = h.Clausula is null ? "Sin cláusula" : $"{h.Clausula.Codigo} - {h.Clausula.Descripcion}",
+        TipoHallazgoNombre = h.TipoHallazgo?.Nombre ?? "Sin tipo",
+        Descripcion = h.Descripcion,
+        Evidencia = h.Evidencia,
+        ResponsableId = h.ResponsableId,
+        ResponsableCierreId = h.ResponsableCierreId,
+        CreadoPorId = h.CreadoPorId,
+        FechaCreacion = h.FechaCreacion,
+        FechaCompromiso = h.FechaCompromiso,
+        Estatus = h.Estatus,
+        EstatusValidacionSgc = h.EstatusValidacionSgc,
+        RevisadoPorSgcId = h.RevisadoPorSgcId,
+        FechaRevisionSgc = h.FechaRevisionSgc,
+        ComentarioRevisionSgc = h.ComentarioRevisionSgc
+    };
+
+    private async Task ResolverHallazgo(int hallazgoId, bool aprobado)
+    {
+        if (guardandoHallazgoId.HasValue) return;
+        errorMsg = null;
+
+        if (!usuarioEsSgc)
+        {
+            errorMsg = "No tienes permisos para revisar hallazgos de SGC.";
+            return;
+        }
+
+        var row = pendientes.FirstOrDefault(x => x.HallazgoId == hallazgoId);
+        if (row is null)
+        {
+            errorMsg = "No se encontró el hallazgo pendiente.";
+            return;
+        }
+
+        var comentario = row.ComentarioSgc?.Trim();
+
+        if (!aprobado && string.IsNullOrWhiteSpace(comentario))
+        {
+            errorMsg = "Debes capturar un comentario cuando rechazas un hallazgo.";
+            return;
+        }
+
+        guardandoHallazgoId = hallazgoId;
+
+        try
+        {
+            var entity = await Db.Hallazgos
+                .FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId);
+
+            if (entity is null)
+            {
+                errorMsg = "No se encontró el hallazgo a revisar.";
+                return;
+            }
+
+            if (!string.Equals(entity.EstatusValidacionSgc, "Pendiente", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMsg = "Este hallazgo ya no está pendiente de validación.";
+                return;
+            }
+
+            entity.EstatusValidacionSgc = aprobado ? "Aprobado" : "Rechazado";
+            entity.RevisadoPorSgcId = usuarioActualId;
+            entity.FechaRevisionSgc = DateTime.Now;
+            entity.ComentarioRevisionSgc = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
+
+            if (aprobado)
+            {
+                entity.Estatus = "Abierto";
+            }
+            else
+            {
+                entity.Estatus = "Pendiente SGC";
+            }
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = entity.HallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = aprobado
+                    ? $"SGC aprobó el hallazgo.{(string.IsNullOrWhiteSpace(comentario) ? "" : $" Comentario: {comentario}")}"
+                    : $"SGC rechazó el hallazgo. Motivo: {comentario}",
+                EstatusNuevo = entity.Estatus
+            });
+
+            await Db.SaveChangesAsync();
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardandoHallazgoId = null;
+        }
+    }
+
+    private static string GetTipoClass(string? tipo)
+    {
+        var valor = tipo?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor.Contains("mayor"))
+            return "major";
+
+        if (valor.Contains("menor"))
+            return "minor";
+
+        return "neutral";
+    }
+
+    private static string GetValidacionClass(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor == "aprobado")
+            return "approved";
+
+        if (valor == "rechazado")
+            return "rejected";
+
+        return "pending";
+    }
+
+    private void VerDetalle(HallazgoRowVm row) =>
+        Nav.NavigateTo($"auditorias/{row.AuditoriaId}/hallazgos/{row.HallazgoId}");
+
+    private void IrInicio() => Nav.NavigateTo("");
+}

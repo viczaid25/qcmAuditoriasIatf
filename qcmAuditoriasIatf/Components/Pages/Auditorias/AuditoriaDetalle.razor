@@ -3,6 +3,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Models.Catalogos
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
@@ -300,16 +301,14 @@ else
                                         <div class="team-stack">
                                             <div>
                                                 <span class="team-label">Principal:</span>
-                                                <span class="team-value">
-                                                    @(string.IsNullOrWhiteSpace(ap.AuditorAsignadoId) ? "Sin asignar" : ap.AuditorAsignadoId)
-                                                </span>
+                                                <span class="team-value">@MostrarPersona(ap.AuditorAsignadoId)</span>
                                             </div>
 
                                             @if (!string.IsNullOrWhiteSpace(ap.SegundoAuditorId))
                                             {
                                                 <div>
                                                     <span class="team-label">Segundo:</span>
-                                                    <span class="team-value">@ap.SegundoAuditorId</span>
+                                                    <span class="team-value">@MostrarPersona(ap.SegundoAuditorId)</span>
                                                 </div>
                                             }
 
@@ -317,7 +316,7 @@ else
                                             {
                                                 <div>
                                                     <span class="team-label">Observador:</span>
-                                                    <span class="team-value">@ap.ObservadorId</span>
+                                                    <span class="team-value">@MostrarPersona(ap.ObservadorId)</span>
                                                 </div>
                                             }
                                         </div>
@@ -351,10 +350,14 @@ else
 @code {
     [Parameter] public int id { get; set; }
 
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
+
     private bool cargando = true;
     private Auditoria? auditoria;
     private List<AuditoriaProceso> procesos = new();
     private string? errorMsg;
+
+    private List<Auditor> personasAuditoria = new();
 
     private int hallazgosTotal;
     private int hallazgosCerrados;
@@ -390,6 +393,19 @@ else
                 .Include(x => x.UnidadNegocio)
                 .OrderBy(x => x.Proceso!.Codigo)
                 .ThenBy(x => x.UnidadNegocioId)
+                .ToListAsync();
+
+            await CargarPersonasDisplay(
+                procesos.SelectMany(x => new string?[]
+                {
+                    x.AuditorAsignadoId,
+                    x.SegundoAuditorId,
+                    x.ObservadorId
+                }));
+
+            personasAuditoria = await Db.Auditores
+                .AsNoTracking()
+                .OrderBy(x => x.Nombre)
                 .ToListAsync();
 
             hallazgosTotal = await Db.Hallazgos.CountAsync(h => h.AuditoriaId == id);
@@ -439,6 +455,31 @@ else
     private static string PctStyle(decimal value) =>
         $"width:{value.ToString("0.##", CultureInfo.InvariantCulture)}%;";
 
+    private string FormatearPersona(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return "Sin asignar";
+
+        var clave = valor.Trim();
+
+        var persona = personasAuditoria.FirstOrDefault(x =>
+            (!string.IsNullOrWhiteSpace(x.PcLoginId) &&
+             string.Equals(x.PcLoginId.Trim(), clave, StringComparison.OrdinalIgnoreCase))
+            ||
+            string.Equals(x.Nombre.Trim(), clave, StringComparison.OrdinalIgnoreCase));
+
+        if (persona is null)
+            return clave;
+
+        if (!string.IsNullOrWhiteSpace(persona.PcLoginId) &&
+            !string.Equals(persona.Nombre.Trim(), persona.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{persona.Nombre} ({persona.PcLoginId})";
+        }
+
+        return persona.Nombre;
+    }
+
     private void Volver() => Nav.NavigateTo("auditorias");
 
     private void IrCalendario() => Nav.NavigateTo($"auditorias/{id}/calendario");
@@ -447,4 +488,82 @@ else
 
     private void IrAsignar(int auditoriaProcesoId) =>
         Nav.NavigateTo($"auditorias/{id}/procesos/{auditoriaProcesoId}");
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        personasDisplay.Clear();
+
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids
+            .Where(x => !personasDisplay.ContainsKey(x))
+            .ToList();
+
+        if (faltantes.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor, string fallback = "Sin asignar")
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return fallback;
+
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
 }

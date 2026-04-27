@@ -1,11 +1,13 @@
 ﻿@page "/auditorias/{auditoriaId:int}/procesos/{auditoriaProcesoId:int}"
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Auditorias
 @using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.External
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
-<h2>Asignar equipo auditor</h2>
+@attribute [Authorize]
 
 @if (!string.IsNullOrWhiteSpace(errorMsg))
 {
@@ -14,181 +16,289 @@
 
 @if (cargando)
 {
-    <p>Cargando...</p>
+    <div class="asignacion-loading">
+        <div class="asignacion-skeleton asignacion-skeleton-hero"></div>
+        <div class="asignacion-grid">
+            <div class="asignacion-skeleton asignacion-skeleton-form"></div>
+            <div class="asignacion-skeleton asignacion-skeleton-side"></div>
+        </div>
+        <div class="asignacion-skeleton asignacion-skeleton-pickers"></div>
+    </div>
 }
 else if (ap is null || auditoria is null)
 {
-    <div class="alert alert-danger">No se encontró el proceso de auditoría o la auditoría.</div>
-    <button class="btn btn-outline-secondary" @onclick="Volver">Volver</button>
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró el proceso de auditoría</div>
+            <div class="empty-text">
+                Verifica el proceso seleccionado o vuelve al detalle de la auditoría.
+            </div>
+
+            <button type="button" class="hero-btn primary mt-3" @onclick="Volver">
+                Volver
+            </button>
+        </div>
+    </section>
 }
 else
 {
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="row g-2">
-                <div class="col-md-3">
-                    <b>Auditoría:</b> #@auditoriaId
-                </div>
+    <div class="asignacion-page">
+        <section class="asignacion-hero">
+            <div>
+                <span class="asignacion-kicker">Planeación de proceso</span>
+                <h1>Asignar equipo auditor</h1>
 
-                <div class="col-md-4">
-                    <b>Rango auditoría:</b>
-                    @auditoria.FechaInicio.ToString("yyyy-MM-dd")
-                    a
-                    @auditoria.FechaFin.ToString("yyyy-MM-dd")
-                </div>
+                <div class="hero-meta">
+                    <span class="meta-chip">
+                        Auditoría:
+                        <strong>#@auditoriaId</strong>
+                    </span>
 
-                <div class="col-md-5">
-                    <div class="fw-semibold">@ap.Proceso?.Codigo - @ap.Proceso?.Nombre</div>
+                    <span class="meta-chip">
+                        Rango:
+                        <strong>@TextoRangoAuditoria</strong>
+                    </span>
+
+                    <span class="meta-chip">
+                        Proceso:
+                        <strong>@(ap.Proceso?.Codigo ?? "Sin código")</strong>
+                    </span>
+
                     @if (ap.UnidadNegocio is not null)
                     {
-                        <div class="text-muted small">
-                            Unidad: @ap.UnidadNegocio.Codigo - @ap.UnidadNegocio.Nombre
-                        </div>
+                        <span class="meta-chip">
+                            Unidad:
+                            <strong>@ap.UnidadNegocio.Codigo</strong>
+                        </span>
                     }
                     else
                     {
-                        <div class="text-muted small">Sin unidad de negocio (no requiere línea).</div>
+                        <span class="meta-chip">Sin unidad de negocio</span>
                     }
                 </div>
+
+                <p class="hero-text">
+                    Define el equipo auditor, la fecha programada del proceso y la línea aplicable dentro del rango de la auditoría.
+                </p>
             </div>
-        </div>
-    </div>
 
-    <EditForm Model="vm" OnValidSubmit="Guardar">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
+            <div class="hero-actions">
+                <button type="button" class="hero-btn primary" @onclick="Volver">
+                    Volver al detalle
+                </button>
+            </div>
+        </section>
 
-        <div class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label">Auditor principal</label>
+        <EditForm Model="vm" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
 
-                <InputSelect class="form-select" @bind-Value="vm.AuditorAsignadoId">
-                    <option value="">-- Selecciona --</option>
-                    @foreach (var a in auditoresDisponibles)
-                    {
-                        <option value="@GetAuditorKey(a)">
-                            @a.Nombre (@(string.IsNullOrWhiteSpace(a.PcLoginId) ? "sin PC" : a.PcLoginId)) - @a.Tipo
-                        </option>
-                    }
-                </InputSelect>
-
-                <div class="form-text">
-                    Se cargan auditores <b>activos</b> (Auditor / Entrenamiento).
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(vm.AuditorAsignadoId))
-                {
-                    var sel = auditoresDisponibles.FirstOrDefault(x => GetAuditorKey(x) == vm.AuditorAsignadoId);
-                    if (sel is not null)
-                    {
-                        <div class="text-muted small mt-1">
-                            Depto: <b>@sel.Departamento</b> | Función: <b>@sel.Funcion</b> | Email: <b>@sel.Email</b>
+            <div class="asignacion-grid">
+                <section class="panel-card panel-main">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Equipo auditor y programación</h2>
+                            <p class="panel-subtitle">Completa los responsables y la fecha en que se ejecutará este proceso.</p>
                         </div>
-                    }
-                }
-            </div>
+                    </div>
 
-            <div class="col-md-4">
-                <label class="form-label">Segundo auditor</label>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Auditor principal</label>
 
-                <InputSelect class="form-select" @bind-Value="vm.SegundoAuditorId">
-                    <option value="">-- Opcional --</option>
-                    @foreach (var a in auditoresDisponibles)
-                    {
-                        <option value="@GetAuditorKey(a)">
-                            @a.Nombre (@(string.IsNullOrWhiteSpace(a.PcLoginId) ? "sin PC" : a.PcLoginId)) - @a.Tipo
-                        </option>
-                    }
-                </InputSelect>
+                            <InputSelect class="form-select" @bind-Value="vm.AuditorAsignadoId">
+                                <option value="">-- Selecciona --</option>
+                                @foreach (var a in auditoresDisponibles)
+                                {
+                                    <option value="@GetAuditorKey(a)">
+                                        @GetAuditorDisplay(a)
+                                    </option>
+                                }
+                            </InputSelect>
 
-                <div class="form-text">
-                    Opcional. Usa el mismo catálogo de auditores activos.
-                </div>
+                            <div class="field-help">
+                                Se cargan auditores <b>activos</b> de tipo Auditor o Entrenamiento.
+                            </div>
 
-                @if (!string.IsNullOrWhiteSpace(vm.SegundoAuditorId))
-                {
-                    var sel2 = auditoresDisponibles.FirstOrDefault(x => GetAuditorKey(x) == vm.SegundoAuditorId);
-                    if (sel2 is not null)
-                    {
-                        <div class="text-muted small mt-1">
-                            Depto: <b>@sel2.Departamento</b> | Función: <b>@sel2.Funcion</b> | Email: <b>@sel2.Email</b>
+                            @if (AuditorPrincipalSeleccionado is not null)
+                            {
+                                <div class="selection-note">
+                                    @GetAuditorMeta(AuditorPrincipalSeleccionado)
+                                </div>
+                            }
                         </div>
-                    }
-                }
-            </div>
 
-            <div class="col-md-4">
-                <label class="form-label">Observador</label>
+                        <div class="col-md-4">
+                            <label class="form-label">Segundo auditor</label>
 
-                <InputSelect class="form-select" @bind-Value="vm.ObservadorId">
-                    <option value="">-- Opcional --</option>
-                    @foreach (var o in observadoresDisponibles)
-                    {
-                        <option value="@GetAuditorKey(o)">
-                            @o.Nombre (@(string.IsNullOrWhiteSpace(o.PcLoginId) ? "sin PC" : o.PcLoginId)) - @o.Tipo
-                        </option>
-                    }
-                </InputSelect>
+                            <InputSelect class="form-select" @bind-Value="vm.SegundoAuditorId">
+                                <option value="">-- Opcional --</option>
+                                @foreach (var a in auditoresDisponibles)
+                                {
+                                    <option value="@GetAuditorKey(a)">
+                                        @GetAuditorDisplay(a)
+                                    </option>
+                                }
+                            </InputSelect>
 
-                <div class="form-text">
-                    Se cargan observadores <b>activos</b>.
-                </div>
+                            <div class="field-help">
+                                Opcional. Usa el mismo catálogo de auditores activos.
+                            </div>
 
-                @if (!string.IsNullOrWhiteSpace(vm.ObservadorId))
-                {
-                    var obs = observadoresDisponibles.FirstOrDefault(x => GetAuditorKey(x) == vm.ObservadorId);
-                    if (obs is not null)
-                    {
-                        <div class="text-muted small mt-1">
-                            Depto: <b>@obs.Departamento</b> | Función: <b>@obs.Funcion</b> | Email: <b>@obs.Email</b>
+                            @if (SegundoAuditorSeleccionado is not null)
+                            {
+                                <div class="selection-note">
+                                    @GetAuditorMeta(SegundoAuditorSeleccionado)
+                                </div>
+                            }
                         </div>
-                    }
-                }
+
+                        <div class="col-md-4">
+                            <label class="form-label">Observador</label>
+
+                            <InputSelect class="form-select" @bind-Value="vm.ObservadorId">
+                                <option value="">-- Opcional --</option>
+                                @foreach (var o in observadoresDisponibles)
+                                {
+                                    <option value="@GetAuditorKey(o)">
+                                        @GetAuditorDisplay(o)
+                                    </option>
+                                }
+                            </InputSelect>
+
+                            <div class="field-help">
+                                Se cargan observadores <b>activos</b>.
+                            </div>
+
+                            @if (ObservadorSeleccionado is not null)
+                            {
+                                <div class="selection-note">
+                                    @GetAuditorMeta(ObservadorSeleccionado)
+                                </div>
+                            }
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha programada del proceso</label>
+                            <InputDate class="form-control"
+                                       @bind-Value="vm.FechaProgramada"
+                                       min="@FechaMin"
+                                       max="@FechaMax" />
+
+                            <div class="field-help">
+                                Debe estar dentro del rango de la auditoría:
+                                <b>@FechaMin</b> a <b>@FechaMax</b>.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Línea</label>
+                            <InputText class="form-control"
+                                       @bind-Value="vm.LineaNombre"
+                                       disabled="@(!requiereLinea)" />
+
+                            @if (!requiereLinea)
+                            {
+                                <div class="field-help">No aplica para este proceso porque no tiene unidad de negocio.</div>
+                            }
+                            else
+                            {
+                                <div class="field-help">Obligatorio cuando el proceso requiere unidad de negocio.</div>
+                            }
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel-card panel-side">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Resumen actual</h2>
+                            <p class="panel-subtitle">Vista rápida de la planeación del proceso.</p>
+                        </div>
+                    </div>
+
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span>Proceso</span>
+                            <strong>@TextoProceso</strong>
+                        </div>
+
+                        <div class="summary-item">
+                            <span>Unidad</span>
+                            <strong>@TextoUnidad</strong>
+                        </div>
+
+                        <div class="summary-item">
+                            <span>Fecha programada</span>
+                            <strong>@TextoFechaProgramada</strong>
+                        </div>
+
+                        <div class="summary-item">
+                            <span>Línea</span>
+                            <strong>@TextoLinea</strong>
+                        </div>
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <div class="mini-label">Equipo seleccionado</div>
+
+                    <div class="person-card @(string.IsNullOrWhiteSpace(vm.AuditorAsignadoId) ? "empty" : "")">
+                        <div class="person-role">Auditor principal</div>
+                        <div class="person-name">@GetPersonaResumen(vm.AuditorAsignadoId, AuditorPrincipalSeleccionado)</div>
+                        @if (AuditorPrincipalSeleccionado is not null)
+                        {
+                            <div class="person-meta">@GetAuditorMeta(AuditorPrincipalSeleccionado)</div>
+                        }
+                    </div>
+
+                    <div class="person-card @(string.IsNullOrWhiteSpace(vm.SegundoAuditorId) ? "empty" : "")">
+                        <div class="person-role">Segundo auditor</div>
+                        <div class="person-name">@GetPersonaResumen(vm.SegundoAuditorId, SegundoAuditorSeleccionado, "No asignado")</div>
+                        @if (SegundoAuditorSeleccionado is not null)
+                        {
+                            <div class="person-meta">@GetAuditorMeta(SegundoAuditorSeleccionado)</div>
+                        }
+                    </div>
+
+                    <div class="person-card @(string.IsNullOrWhiteSpace(vm.ObservadorId) ? "empty" : "")">
+                        <div class="person-role">Observador</div>
+                        <div class="person-name">@GetPersonaResumen(vm.ObservadorId, ObservadorSeleccionado, "No asignado")</div>
+                        @if (ObservadorSeleccionado is not null)
+                        {
+                            <div class="person-meta">@GetAuditorMeta(ObservadorSeleccionado)</div>
+                        }
+                    </div>
+
+                    <div class="notice-box">
+                        Una misma persona no puede ocupar más de un rol dentro del mismo proceso.
+                    </div>
+                </section>
             </div>
 
-            <div class="col-md-6">
-                <label class="form-label">Fecha programada del proceso</label>
-                <InputDate class="form-control"
-                           @bind-Value="vm.FechaProgramada"
-                           min="@FechaMin"
-                           max="@FechaMax" />
-
-                <div class="form-text">
-                    Debe estar dentro del rango de la auditoría:
-                    <b>@FechaMin</b> a <b>@FechaMax</b>.
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Línea</label>
-                <InputText class="form-control"
-                           @bind-Value="vm.LineaNombre"
-                           disabled="@(!requiereLinea)" />
-                @if (!requiereLinea)
+            <div class="picker-grid">
+                @if (auditoresDisponibles.Count > 0)
                 {
-                    <div class="form-text">No aplica para este proceso (no hay UnidadNegocio).</div>
-                }
-                else
-                {
-                    <div class="form-text">Obligatorio para Producción / cuando hay UnidadNegocio.</div>
-                }
-            </div>
+                    <section class="panel-card">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Auditores disponibles</h2>
+                                <p class="panel-subtitle">Selección rápida para auditor principal o segundo auditor.</p>
+                            </div>
 
-            @if (auditoresDisponibles.Count > 0)
-            {
-                <div class="col-12">
-                    <details>
-                        <summary class="text-muted">Ver auditores disponibles (@auditoresDisponibles.Count)</summary>
-                        <div class="mt-2">
-                            <table class="table table-sm table-hover align-middle">
+                            <span class="panel-badge">@auditoresDisponibles.Count auditor(es)</span>
+                        </div>
+
+                        <div class="table-wrap">
+                            <table class="picker-table">
                                 <thead>
                                     <tr>
                                         <th>Nombre</th>
                                         <th>Tipo</th>
                                         <th>Departamento</th>
                                         <th>Función</th>
-                                        <th>PC Login</th>
-                                        <th></th>
+                                        <th>Login</th>
+                                        <th class="text-end">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -196,49 +306,58 @@ else
                                     {
                                         <tr>
                                             <td>
-                                                <div class="fw-semibold">@a.Nombre</div>
-                                                <div class="text-muted small">@a.Email</div>
+                                                <div class="cell-title">@GetNombrePreferido(a)</div>
+                                                <div class="cell-subtitle">@GetCorreoPreferido(a)</div>
                                             </td>
                                             <td>@a.Tipo</td>
-                                            <td>@a.Departamento</td>
-                                            <td>@a.Funcion</td>
-                                            <td>@a.PcLoginId</td>
+                                            <td>@GetDepartamentoPreferido(a)</td>
+                                            <td>@GetFuncionPreferida(a)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(a.PcLoginId) ? "—" : a.PcLoginId)</td>
                                             <td class="text-end">
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-primary"
-                                                        @onclick="() => SeleccionarAuditorPrincipal(a)">
-                                                    Principal
-                                                </button>
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-secondary ms-1"
-                                                        @onclick="() => SeleccionarSegundoAuditor(a)">
-                                                    Segundo
-                                                </button>
+                                                <div class="picker-actions">
+                                                    <button type="button"
+                                                            class="table-btn table-btn-primary"
+                                                            @onclick="() => SeleccionarAuditorPrincipal(a)">
+                                                        Principal
+                                                    </button>
+
+                                                    <button type="button"
+                                                            class="table-btn"
+                                                            @onclick="() => SeleccionarSegundoAuditor(a)">
+                                                        Segundo
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
                         </div>
-                    </details>
-                </div>
-            }
+                    </section>
+                }
 
-            @if (observadoresDisponibles.Count > 0)
-            {
-                <div class="col-12">
-                    <details>
-                        <summary class="text-muted">Ver observadores disponibles (@observadoresDisponibles.Count)</summary>
-                        <div class="mt-2">
-                            <table class="table table-sm table-hover align-middle">
+                @if (observadoresDisponibles.Count > 0)
+                {
+                    <section class="panel-card">
+                        <div class="panel-head">
+                            <div>
+                                <h2>Observadores disponibles</h2>
+                                <p class="panel-subtitle">Selección rápida del observador del proceso.</p>
+                            </div>
+
+                            <span class="panel-badge">@observadoresDisponibles.Count observador(es)</span>
+                        </div>
+
+                        <div class="table-wrap">
+                            <table class="picker-table">
                                 <thead>
                                     <tr>
                                         <th>Nombre</th>
                                         <th>Tipo</th>
                                         <th>Departamento</th>
                                         <th>Función</th>
-                                        <th>PC Login</th>
-                                        <th></th>
+                                        <th>Login</th>
+                                        <th class="text-end">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -246,16 +365,16 @@ else
                                     {
                                         <tr>
                                             <td>
-                                                <div class="fw-semibold">@o.Nombre</div>
-                                                <div class="text-muted small">@o.Email</div>
+                                                <div class="cell-title">@GetNombrePreferido(o)</div>
+                                                <div class="cell-subtitle">@GetCorreoPreferido(o)</div>
                                             </td>
                                             <td>@o.Tipo</td>
-                                            <td>@o.Departamento</td>
-                                            <td>@o.Funcion</td>
-                                            <td>@o.PcLoginId</td>
+                                            <td>@GetDepartamentoPreferido(o)</td>
+                                            <td>@GetFuncionPreferida(o)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(o.PcLoginId) ? "—" : o.PcLoginId)</td>
                                             <td class="text-end">
                                                 <button type="button"
-                                                        class="btn btn-sm btn-outline-info"
+                                                        class="table-btn table-btn-info"
                                                         @onclick="() => SeleccionarObservador(o)">
                                                     Usar
                                                 </button>
@@ -265,21 +384,32 @@ else
                                 </tbody>
                             </table>
                         </div>
-                    </details>
-                </div>
-            }
-
-            <div class="col-12 d-flex gap-2">
-                <button type="submit" class="btn btn-primary" disabled="@guardando">
-                    @(guardando ? "Guardando..." : "Guardar")
-                </button>
-
-                <button type="button" class="btn btn-outline-secondary" @onclick="Volver" disabled="@guardando">
-                    Cancelar
-                </button>
+                    </section>
+                }
             </div>
-        </div>
-    </EditForm>
+
+            <section class="panel-card action-panel">
+                <div class="action-panel-inner">
+                    <div>
+                        <h2>Guardar cambios</h2>
+                        <p class="panel-subtitle mb-0">
+                            Al guardar se actualizará el equipo auditor, la fecha programada y, si aplica, la línea del proceso.
+                        </p>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="submit" class="btn btn-primary btn-lg" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Guardar")
+                        </button>
+
+                        <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="Volver" disabled="@guardando">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </EditForm>
+    </div>
 }
 
 @code {
@@ -296,11 +426,44 @@ else
 
     private List<Auditor> auditoresDisponibles = new();
     private List<Auditor> observadoresDisponibles = new();
+    private readonly Dictionary<string, MeaxAllUser> usuariosDirectorio = new(StringComparer.OrdinalIgnoreCase);
 
     private Vm vm = new();
 
     private string FechaMin => auditoria?.FechaInicio.ToString("yyyy-MM-dd") ?? "";
     private string FechaMax => auditoria?.FechaFin.ToString("yyyy-MM-dd") ?? "";
+
+    private Auditor? AuditorPrincipalSeleccionado =>
+        auditoresDisponibles.FirstOrDefault(x => GetAuditorKey(x) == vm.AuditorAsignadoId);
+
+    private Auditor? SegundoAuditorSeleccionado =>
+        auditoresDisponibles.FirstOrDefault(x => GetAuditorKey(x) == vm.SegundoAuditorId);
+
+    private Auditor? ObservadorSeleccionado =>
+        observadoresDisponibles.FirstOrDefault(x => GetAuditorKey(x) == vm.ObservadorId);
+
+    private string TextoRangoAuditoria =>
+        auditoria is null
+            ? "Sin rango"
+            : $"{auditoria.FechaInicio:yyyy-MM-dd} a {auditoria.FechaFin:yyyy-MM-dd}";
+
+    private string TextoProceso =>
+        ap?.Proceso is null
+            ? "Sin proceso"
+            : $"{ap.Proceso.Codigo} - {ap.Proceso.Nombre}";
+
+    private string TextoUnidad =>
+        ap?.UnidadNegocio is null
+            ? "No aplica"
+            : $"{ap.UnidadNegocio.Codigo} - {ap.UnidadNegocio.Nombre}";
+
+    private string TextoFechaProgramada =>
+        vm.FechaProgramada.HasValue ? vm.FechaProgramada.Value.ToString("yyyy-MM-dd") : "Pendiente";
+
+    private string TextoLinea =>
+        !requiereLinea
+            ? "No aplica"
+            : string.IsNullOrWhiteSpace(vm.LineaNombre) ? "Pendiente" : vm.LineaNombre!;
 
     private class Vm
     {
@@ -334,6 +497,8 @@ else
             .OrderBy(a => a.Nombre)
             .ToListAsync();
 
+        await CargarUsuariosDirectorio();
+
         if (ap is not null)
         {
             vm.AuditorAsignadoId = ap.AuditorAsignadoId;
@@ -350,8 +515,163 @@ else
         cargando = false;
     }
 
+    private async Task CargarUsuariosDirectorio()
+    {
+        usuariosDirectorio.Clear();
+
+        var logins = auditoresDisponibles
+            .Concat(observadoresDisponibles)
+            .Select(x => x.PcLoginId?.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (logins.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x => logins.Contains(x.pc_login_id))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                usuariosDirectorio[u.pc_login_id.Trim()] = u;
+        }
+    }
+
+    private MeaxAllUser? GetUsuarioDirectorio(string? loginId)
+    {
+        if (string.IsNullOrWhiteSpace(loginId))
+            return null;
+
+        usuariosDirectorio.TryGetValue(loginId.Trim(), out var usuario);
+        return usuario;
+    }
+
     private string GetAuditorKey(Auditor a)
         => string.IsNullOrWhiteSpace(a.PcLoginId) ? a.Nombre : a.PcLoginId;
+
+    private string GetNombrePreferido(Auditor a)
+    {
+        var usuario = GetUsuarioDirectorio(a.PcLoginId);
+
+        if (!string.IsNullOrWhiteSpace(usuario?.username))
+            return usuario.username!;
+
+        return a.Nombre;
+    }
+
+    private string GetDepartamentoPreferido(Auditor a)
+    {
+        var usuario = GetUsuarioDirectorio(a.PcLoginId);
+
+        if (!string.IsNullOrWhiteSpace(a.Departamento))
+            return a.Departamento!;
+
+        if (!string.IsNullOrWhiteSpace(usuario?.department))
+            return usuario.department!;
+
+        return "—";
+    }
+
+    private string GetFuncionPreferida(Auditor a)
+    {
+        var usuario = GetUsuarioDirectorio(a.PcLoginId);
+
+        if (!string.IsNullOrWhiteSpace(a.Funcion))
+            return a.Funcion!;
+
+        if (!string.IsNullOrWhiteSpace(usuario?.position))
+            return usuario.position!;
+
+        return "—";
+    }
+
+    private string GetCorreoPreferido(Auditor a)
+    {
+        var usuario = GetUsuarioDirectorio(a.PcLoginId);
+
+        if (!string.IsNullOrWhiteSpace(a.Email))
+            return a.Email!;
+
+        if (!string.IsNullOrWhiteSpace(usuario?.email))
+            return usuario.email!;
+
+        return "Sin correo";
+    }
+
+    private string GetAuditorDisplay(Auditor a)
+    {
+        var nombre = GetNombrePreferido(a);
+
+        if (!string.IsNullOrWhiteSpace(a.PcLoginId) &&
+            !string.Equals(nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{nombre} ({a.PcLoginId}) - {a.Tipo}";
+        }
+
+        return $"{nombre} - {a.Tipo}";
+    }
+
+    private string GetAuditorMeta(Auditor? a)
+    {
+        if (a is null)
+            return string.Empty;
+
+        var parts = new List<string>();
+
+        var depto = GetDepartamentoPreferido(a);
+        var funcion = GetFuncionPreferida(a);
+        var correo = GetCorreoPreferido(a);
+
+        if (depto != "—")
+            parts.Add(depto);
+
+        if (funcion != "—")
+            parts.Add(funcion);
+
+        if (correo != "Sin correo")
+            parts.Add(correo);
+
+        return parts.Count == 0 ? "Sin información adicional." : string.Join(" | ", parts);
+    }
+
+    private string GetPersonaResumen(string? key, Auditor? persona, string fallback = "Sin asignar")
+    {
+        if (persona is not null)
+        {
+            var nombre = GetNombrePreferido(persona);
+
+            if (!string.IsNullOrWhiteSpace(persona.PcLoginId) &&
+                !string.Equals(nombre.Trim(), persona.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{nombre} ({persona.PcLoginId})";
+            }
+
+            return nombre;
+        }
+
+        if (string.IsNullOrWhiteSpace(key))
+            return fallback;
+
+        var usuario = GetUsuarioDirectorio(key);
+        if (usuario is not null)
+        {
+            var nombre = string.IsNullOrWhiteSpace(usuario.username) ? usuario.pc_login_id : usuario.username!;
+
+            if (!string.IsNullOrWhiteSpace(usuario.pc_login_id) &&
+                !string.Equals(nombre.Trim(), usuario.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{nombre} ({usuario.pc_login_id})";
+            }
+
+            return nombre;
+        }
+
+        return key;
+    }
 
     private void SeleccionarAuditorPrincipal(Auditor a)
         => vm.AuditorAsignadoId = GetAuditorKey(a);

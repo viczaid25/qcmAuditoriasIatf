@@ -52,6 +52,10 @@ else
                         @(hallazgo.TipoHallazgo?.Nombre ?? "Sin tipo")
                     </span>
                     <span class="meta-chip">
+                        Validación SGC:
+                        <strong>@TextoValidacionSgc</strong>
+                    </span>
+                    <span class="meta-chip">
                         Compromiso: <strong>@hallazgo.FechaCompromiso.ToString("yyyy-MM-dd")</strong>
                     </span>
                     @if (EsNcMenor)
@@ -80,6 +84,43 @@ else
                 </button>
             </div>
         </section>
+
+        @if (!HallazgoLiberadoPorSgc)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Validación SGC pendiente</h2>
+                        <p class="panel-subtitle">El flujo operativo del hallazgo está bloqueado hasta la liberación por SGC.</p>
+                    </div>
+
+                    <span class="flow-pill @GetFlowClass(hallazgo.EstatusValidacionSgc)">
+                        @TextoValidacionSgc
+                    </span>
+                </div>
+
+                @if (HallazgoPendienteSgc)
+                {
+                    <div class="alert alert-warning mb-0">
+                        Este hallazgo todavía no ha sido aprobado por el equipo SGC. Mientras tanto, no se pueden capturar 5 porqués, solución ni seguimiento operativo.
+                    </div>
+                }
+                else if (HallazgoRechazadoSgc)
+                {
+                    <div class="alert alert-danger mb-0">
+                        Este hallazgo fue rechazado por SGC. Debe corregirse o reenviarse antes de continuar con el flujo.
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(hallazgo.ComentarioRevisionSgc))
+                {
+                    <div class="comment-box mt-3">
+                        <div class="comment-label">Comentario SGC</div>
+                        <div>@hallazgo.ComentarioRevisionSgc</div>
+                    </div>
+                }
+            </section>
+        }
 
         <section class="hallazgo-grid hallazgo-grid-top">
             <div class="panel-card panel-wide">
@@ -114,24 +155,55 @@ else
                 <div class="summary-stack">
                     <div class="summary-item">
                         <span>Responsable</span>
-                        <strong>@hallazgo.ResponsableId</strong>
+                        <strong>@MostrarPersona(hallazgo.ResponsableId)</strong>
                     </div>
 
                     <div class="summary-item">
                         <span>Responsable de cierre</span>
-                        <strong>@(string.IsNullOrWhiteSpace(hallazgo.ResponsableCierreId) ? "Sin asignar" : hallazgo.ResponsableCierreId)</strong>
+                        <strong>@MostrarPersona(hallazgo.ResponsableCierreId, "Sin asignar")</strong>
                     </div>
 
                     <div class="summary-item">
                         <span>Auditor principal</span>
-                        <strong>@(string.IsNullOrWhiteSpace(AuditorPrincipalId) ? "Sin asignar" : AuditorPrincipalId)</strong>
+                        <strong>@MostrarPersona(AuditorPrincipalId, "Sin asignar")</strong>
                     </div>
 
                     @if (!string.IsNullOrWhiteSpace(SegundoAuditorId))
                     {
                         <div class="summary-item">
                             <span>Segundo auditor</span>
-                            <strong>@SegundoAuditorId</strong>
+                            <strong>@MostrarPersona(SegundoAuditorId, "Sin asignar")</strong>
+                        </div>
+                    }
+
+                    <div class="summary-item">
+                        <span>Creado por</span>
+                        <strong>@MostrarPersona(hallazgo.CreadoPorId, "No registrado")</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>Fecha creación</span>
+                        <strong>@hallazgo.FechaCreacion.ToString("yyyy-MM-dd HH:mm")</strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>Validación SGC</span>
+                        <strong>@TextoValidacionSgc</strong>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(hallazgo.RevisadoPorSgcId))
+                    {
+                        <div class="summary-item">
+                            <span>Revisó SGC</span>
+                            <strong>@MostrarPersona(hallazgo.RevisadoPorSgcId, "No registrado")</strong>
+                        </div>
+                    }
+
+                    @if (hallazgo.FechaRevisionSgc.HasValue)
+                    {
+                        <div class="summary-item">
+                            <span>Fecha revisión SGC</span>
+                            <strong>@hallazgo.FechaRevisionSgc.Value.ToString("yyyy-MM-dd HH:mm")</strong>
                         </div>
                     }
                 </div>
@@ -145,7 +217,7 @@ else
             </div>
         </section>
 
-        @if (EsNcMenor)
+        @if (EsNcMenor && HallazgoLiberadoPorSgc)
         {
             <section class="panel-card">
                 <div class="panel-head">
@@ -444,61 +516,98 @@ else
                 }
             </section>
         }
+        else if (EsNcMenor)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Flujo NC Menor bloqueado</h2>
+                        <p class="panel-subtitle">El análisis de 5 porqués y la solución se habilitarán cuando SGC apruebe el hallazgo.</p>
+                    </div>
 
-        <section class="panel-card">
-            <div class="panel-head">
-                <div>
-                    <h2>Agregar seguimiento</h2>
-                    <p class="panel-subtitle">Registra comentarios, evidencia breve o cambio de estatus.</p>
+                    <span class="flow-pill @GetFlowClass(hallazgo.EstatusValidacionSgc)">
+                        @TextoValidacionSgc
+                    </span>
                 </div>
-            </div>
 
-            <EditForm Model="vm" OnValidSubmit="GuardarSeguimiento">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
+                <div class="empty-state compact">
+                    Este hallazgo es NC Menor, pero todavía no ha sido liberado por SGC.
+                </div>
+            </section>
+        }
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Usuario actual</label>
-                        <input class="form-control" value="@usuarioActualId" disabled />
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">Cambiar estatus (opcional)</label>
-                        <InputSelect class="form-select" @bind-Value="vm.EstatusNuevo">
-                            <option value="">-- Sin cambio --</option>
-                            <option value="Abierto">Abierto</option>
-                            <option value="En Proceso">En Proceso</option>
-                            @if (!EsNcMenor || CincoPorQueAprobado)
-                            {
-                                <option value="Cerrado">Cerrado</option>
-                            }
-                        </InputSelect>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">Nota / evidencia breve (opcional)</label>
-                        <InputText class="form-control" @bind-Value="vm.Evidencia" />
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label">Comentario</label>
-                        <InputTextArea class="form-control" rows="3" @bind-Value="vm.Comentario" />
-                    </div>
-
-                    <div class="col-12 d-flex gap-2">
-                        <button class="btn btn-primary" type="submit" disabled="@guardando">
-                            @(guardando ? "Guardando..." : "Agregar seguimiento")
-                        </button>
-
-                        <button class="btn btn-outline-secondary" type="button"
-                                @onclick="VolverAuditoria" disabled="@guardando">
-                            Volver
-                        </button>
+        @if (HallazgoLiberadoPorSgc)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Agregar seguimiento</h2>
+                        <p class="panel-subtitle">Registra comentarios, evidencia breve o cambio de estatus.</p>
                     </div>
                 </div>
-            </EditForm>
-        </section>
+
+                <EditForm Model="vm" OnValidSubmit="GuardarSeguimiento">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Usuario actual</label>
+                            <input class="form-control" value="@usuarioActualId" disabled />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Cambiar estatus (opcional)</label>
+                            <InputSelect class="form-select" @bind-Value="vm.EstatusNuevo">
+                                <option value="">-- Sin cambio --</option>
+                                <option value="Abierto">Abierto</option>
+                                <option value="En Proceso">En Proceso</option>
+                                @if (!EsNcMenor || CincoPorQueAprobado)
+                                {
+                                    <option value="Cerrado">Cerrado</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Nota / evidencia breve (opcional)</label>
+                            <InputText class="form-control" @bind-Value="vm.Evidencia" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Comentario</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="vm.Comentario" />
+                        </div>
+
+                        <div class="col-12 d-flex gap-2">
+                            <button class="btn btn-primary" type="submit" disabled="@guardando">
+                                @(guardando ? "Guardando..." : "Agregar seguimiento")
+                            </button>
+
+                            <button class="btn btn-outline-secondary" type="button"
+                                    @onclick="VolverAuditoria" disabled="@guardando">
+                                Volver
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </section>
+        }
+        else
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Seguimiento bloqueado</h2>
+                        <p class="panel-subtitle">El seguimiento operativo del hallazgo se habilita después de la aprobación SGC.</p>
+                    </div>
+                </div>
+
+                <div class="empty-state compact">
+                    Mientras el hallazgo esté pendiente o rechazado por SGC, no se pueden registrar seguimientos operativos desde esta vista.
+                </div>
+            </section>
+        }
 
         <section class="panel-card">
             <div class="panel-head">
@@ -523,7 +632,7 @@ else
                     {
                         <div class="history-item">
                             <div class="history-head">
-                                <div class="history-user">@s.UsuarioId</div>
+                                <div class="history-user">@MostrarPersona(s.UsuarioId, s.UsuarioId)</div>
                                 <div class="history-date">@s.FechaRegistro.ToString("yyyy-MM-dd HH:mm")</div>
                             </div>
 
@@ -559,6 +668,8 @@ else
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
 
     private bool cargando = true;
     private bool guardando;
@@ -651,6 +762,21 @@ else
     private bool UsuarioActualPuedeRevisarCincoPorQue =>
         UsuarioActualEsAuditorPrincipal || UsuarioActualEsSegundoAuditor;
 
+    private bool HallazgoLiberadoPorSgc =>
+        string.IsNullOrWhiteSpace(hallazgo?.EstatusValidacionSgc) ||
+        string.Equals(hallazgo?.EstatusValidacionSgc, "Aprobado", StringComparison.OrdinalIgnoreCase);
+
+    private bool HallazgoPendienteSgc =>
+        string.Equals(hallazgo?.EstatusValidacionSgc, "Pendiente", StringComparison.OrdinalIgnoreCase);
+
+    private bool HallazgoRechazadoSgc =>
+        string.Equals(hallazgo?.EstatusValidacionSgc, "Rechazado", StringComparison.OrdinalIgnoreCase);
+
+    private string TextoValidacionSgc =>
+        string.IsNullOrWhiteSpace(hallazgo?.EstatusValidacionSgc)
+            ? "No registrada"
+            : hallazgo!.EstatusValidacionSgc;
+
     protected override async Task OnParametersSetAsync()
     {
         cargando = true;
@@ -719,6 +845,18 @@ else
             vmAccion.EvidenciaImplementacion = accionCorrectiva.EvidenciaImplementacion;
             vmAccion.FechaImplementacion = accionCorrectiva.FechaImplementacion;
         }
+
+        await CargarPersonasDisplay(
+            seguimientos.Select(x => x.UsuarioId)
+                .Concat(new string?[]
+                {
+                    hallazgo?.ResponsableId,
+                    hallazgo?.ResponsableCierreId,
+                    hallazgo?.CreadoPorId,
+                    hallazgo?.RevisadoPorSgcId,
+                    AuditorPrincipalId,
+                    SegundoAuditorId
+                }));
     }
 
     private string TextoDecision(bool? valor) =>
@@ -761,6 +899,12 @@ else
         {
             if (hallazgo is null || !EsNcMenor)
                 return;
+
+            if (!HallazgoLiberadoPorSgc)
+            {
+                errorMsg = "El hallazgo debe ser aprobado por SGC antes de capturar los 5 porqués.";
+                return;
+            }
 
             if (CincoPorQueAprobado)
             {
@@ -854,6 +998,12 @@ else
             if (hallazgo is null || cincoPorQue is null || !EsNcMenor)
                 return;
 
+            if (!HallazgoLiberadoPorSgc)
+            {
+                errorMsg = "El hallazgo debe ser aprobado por SGC antes de revisar los 5 porqués.";
+                return;
+            }
+
             var decision = vmRevision.Decision?.Trim();
             var comentario = vmRevision.Comentario?.Trim();
 
@@ -928,6 +1078,12 @@ else
         {
             if (hallazgo is null || !EsNcMenor)
                 return;
+
+            if (!HallazgoLiberadoPorSgc)
+            {
+                errorMsg = "El hallazgo debe ser aprobado por SGC antes de registrar la solución.";
+                return;
+            }
 
             if (cincoPorQue is null || !CincoPorQueAprobado)
             {
@@ -1010,6 +1166,12 @@ else
         try
         {
             if (hallazgo is null) return;
+
+            if (!HallazgoLiberadoPorSgc)
+            {
+                errorMsg = "El hallazgo debe ser aprobado por SGC antes de registrar seguimiento operativo.";
+                return;
+            }
 
             if (string.IsNullOrWhiteSpace(vm.Comentario))
             {
@@ -1101,4 +1263,82 @@ else
 
     private void VolverAuditoria() =>
         Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos");
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        personasDisplay.Clear();
+
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids
+            .Where(x => !personasDisplay.ContainsKey(x))
+            .ToList();
+
+        if (faltantes.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor, string fallback = "Sin asignar")
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return fallback;
+
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
 }

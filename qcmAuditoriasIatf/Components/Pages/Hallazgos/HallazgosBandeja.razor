@@ -16,72 +16,84 @@
 
 @if (cargando)
 {
-    <div class="hallazgos-loading">
-        <div class="hallazgos-skeleton hallazgos-skeleton-hero"></div>
-        <div class="hallazgos-metrics">
-            <div class="hallazgos-skeleton hallazgos-skeleton-card"></div>
-            <div class="hallazgos-skeleton hallazgos-skeleton-card"></div>
-            <div class="hallazgos-skeleton hallazgos-skeleton-card"></div>
-            <div class="hallazgos-skeleton hallazgos-skeleton-card"></div>
+    <div class="bandeja-loading">
+        <div class="bandeja-skeleton bandeja-skeleton-hero"></div>
+        <div class="bandeja-metrics">
+            <div class="bandeja-skeleton bandeja-skeleton-card"></div>
+            <div class="bandeja-skeleton bandeja-skeleton-card"></div>
+            <div class="bandeja-skeleton bandeja-skeleton-card"></div>
+            <div class="bandeja-skeleton bandeja-skeleton-card"></div>
+            <div class="bandeja-skeleton bandeja-skeleton-card"></div>
+            <div class="bandeja-skeleton bandeja-skeleton-card"></div>
         </div>
-        <div class="hallazgos-skeleton hallazgos-skeleton-table"></div>
+        <div class="bandeja-skeleton bandeja-skeleton-filters"></div>
+        <div class="bandeja-skeleton bandeja-skeleton-table"></div>
     </div>
 }
 else
 {
-    <div class="hallazgos-page">
-        <section class="hallazgos-hero">
+    <div class="bandeja-page">
+        <section class="bandeja-hero">
             <div>
-                <span class="hallazgos-kicker">Seguimiento de hallazgos</span>
-                <h1>Hallazgos de la auditoría #@auditoriaId</h1>
+                <span class="bandeja-kicker">Hallazgos de auditoría</span>
+                <h1>Hallazgos · Auditoría #@auditoriaId</h1>
 
                 @if (!string.IsNullOrWhiteSpace(auditoriaTitulo))
                 {
-                    <p>@auditoriaTitulo</p>
+                    <div class="bandeja-meta">
+                        <span class="meta-chip">@auditoriaTitulo</span>
+                    </div>
                 }
-                else
-                {
-                    <p>Consulta, filtra y da seguimiento a los hallazgos registrados para esta auditoría.</p>
-                }
+
+                <p class="hero-text">
+                    Consulta el avance de validación SGC, responsables y estatus operativo de cada hallazgo registrado en la auditoría.
+                </p>
             </div>
 
-            <div class="hallazgos-hero-actions">
-                @if (HayFiltrosActivos)
-                {
-                    <button type="button" class="hero-btn" @onclick="LimpiarFiltros">
-                        Limpiar filtros
-                    </button>
-                }
-
-                <button type="button" class="hero-btn primary" @onclick="VolverAuditoria">
+            <div class="hero-actions">
+                <button type="button"
+                        class="hero-btn primary"
+                        @onclick='() => Nav.NavigateTo($"auditorias/{auditoriaId}")'>
                     Volver a auditoría
                 </button>
             </div>
         </section>
 
-        <section class="hallazgos-metrics">
+        <section class="bandeja-metrics">
             <div class="metric-card">
                 <div class="metric-label">Total</div>
                 <div class="metric-value">@total</div>
-                <div class="metric-note">Hallazgos visibles con el filtro actual</div>
+                <div class="metric-note">Hallazgos de la auditoría</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Pendiente SGC</div>
+                <div class="metric-value">@pendientesSgc</div>
+                <div class="metric-note">Esperando validación</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Aprobados SGC</div>
+                <div class="metric-value">@aprobadosSgc</div>
+                <div class="metric-note">Liberados al flujo</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Rechazados SGC</div>
+                <div class="metric-value">@rechazadosSgc</div>
+                <div class="metric-note">Con observaciones</div>
             </div>
 
             <div class="metric-card">
                 <div class="metric-label">Abiertos</div>
                 <div class="metric-value">@abiertos</div>
-                <div class="metric-note">Pendientes de cierre</div>
+                <div class="metric-note">En operación o seguimiento</div>
             </div>
 
             <div class="metric-card">
                 <div class="metric-label">Cerrados</div>
                 <div class="metric-value">@cerrados</div>
-                <div class="metric-note">Hallazgos finalizados</div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-label">Vencidos</div>
-                <div class="metric-value">@vencidos</div>
-                <div class="metric-note">Con compromiso anterior a hoy</div>
+                <div class="metric-note">Ya finalizados</div>
             </div>
         </section>
 
@@ -89,30 +101,59 @@ else
             <div class="panel-head">
                 <div>
                     <h2>Filtros</h2>
-                    <p class="panel-subtitle">Refina el listado por proceso o estatus.</p>
+                    <p class="panel-subtitle">Refina la vista por proceso, validación SGC, estatus o texto.</p>
                 </div>
+
+                <span class="panel-badge">Mostrando @hallazgos.Count</span>
             </div>
 
-            <div class="filter-grid">
-                <div>
+            <div class="row g-3">
+                <div class="col-md-3">
                     <label class="form-label">Proceso</label>
-                    <select class="form-select" @onchange="OnProcesoChange" value="@procesoIdSeleccionado">
+                    <InputSelect class="form-select" @bind-Value="procesoIdSeleccionado">
                         <option value="0">-- Todos --</option>
                         @foreach (var p in procesosFiltro)
                         {
                             <option value="@p.ProcesoId">@p.Codigo - @p.Nombre</option>
                         }
-                    </select>
+                    </InputSelect>
                 </div>
 
-                <div>
-                    <label class="form-label">Estatus</label>
-                    <select class="form-select" @onchange="OnEstatusChange" value="@estatusSeleccionado">
-                        <option value="Todos">-- Todos --</option>
+                <div class="col-md-3">
+                    <label class="form-label">Validación SGC</label>
+                    <InputSelect class="form-select" @bind-Value="validacionSeleccionada">
+                        <option value="">-- Todas --</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Aprobado">Aprobado</option>
+                        <option value="Rechazado">Rechazado</option>
+                        <option value="__sin__">No registrada</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Estatus operativo</label>
+                    <InputSelect class="form-select" @bind-Value="estatusSeleccionado">
+                        <option value="">-- Todos --</option>
+                        <option value="Pendiente SGC">Pendiente SGC</option>
                         <option value="Abierto">Abierto</option>
                         <option value="En Proceso">En Proceso</option>
                         <option value="Cerrado">Cerrado</option>
-                    </select>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Buscar</label>
+                    <InputText class="form-control" @bind-Value="textoBusqueda" />
+                </div>
+
+                <div class="col-12 d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-primary" @onclick="AplicarFiltros">
+                        Aplicar filtros
+                    </button>
+
+                    <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarFiltros">
+                        Limpiar
+                    </button>
                 </div>
             </div>
         </section>
@@ -121,7 +162,7 @@ else
             <div class="panel-head">
                 <div>
                     <h2>Bandeja de hallazgos</h2>
-                    <p class="panel-subtitle">Listado actualizado según los filtros aplicados.</p>
+                    <p class="panel-subtitle">Estado actual del flujo de validación SGC y seguimiento operativo.</p>
                 </div>
 
                 <span class="panel-badge">@hallazgos.Count registro(s)</span>
@@ -130,7 +171,7 @@ else
             @if (hallazgos.Count == 0)
             {
                 <div class="empty-state compact">
-                    No hay hallazgos para el filtro seleccionado.
+                    No hay hallazgos para los filtros seleccionados.
                 </div>
             }
             else
@@ -141,11 +182,10 @@ else
                             <tr>
                                 <th>#</th>
                                 <th>Proceso</th>
-                                <th>Cláusula</th>
                                 <th>Tipo</th>
                                 <th>Descripción</th>
                                 <th>Responsables</th>
-                                <th>Compromiso</th>
+                                <th>Fechas</th>
                                 <th>Estatus</th>
                                 <th class="text-end">Acción</th>
                             </tr>
@@ -155,22 +195,12 @@ else
                             {
                                 <tr>
                                     <td>
-                                        <span class="id-pill">#@h.HallazgoId</span>
+                                        <div class="id-pill">#@h.HallazgoId</div>
+                                        <div class="cell-subtitle">@TextoClausula(h)</div>
                                     </td>
 
                                     <td>
-                                        <div class="cell-title">@h.Proceso?.Nombre</div>
-                                    </td>
-
-                                    <td>
-                                        @if (string.IsNullOrWhiteSpace(h.Clausula?.Codigo))
-                                        {
-                                            <span class="empty-inline">—</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="clausula-pill">@h.Clausula!.Codigo</span>
-                                        }
+                                        <div class="cell-title">@TextoProceso(h)</div>
                                     </td>
 
                                     <td>
@@ -180,41 +210,88 @@ else
                                     </td>
 
                                     <td>
-                                        <div class="desc-cell">@Recortar(h.Descripcion, 150)</div>
+                                        <div class="desc-cell">@h.Descripcion</div>
+
+                                        @if (!string.IsNullOrWhiteSpace(h.Evidencia))
+                                        {
+                                            <div class="evidencia-box">
+                                                <div class="mini-label">Evidencia inicial</div>
+                                                <div>@h.Evidencia</div>
+                                            </div>
+                                        }
                                     </td>
 
                                     <td>
                                         <div class="team-stack">
                                             <div>
                                                 <span class="team-label">Responsable:</span>
-                                                <span class="team-value">@h.ResponsableId</span>
+                                                <span class="team-value">@MostrarPersona(h.ResponsableId)</span>
                                             </div>
 
                                             @if (!string.IsNullOrWhiteSpace(h.ResponsableCierreId))
                                             {
                                                 <div>
                                                     <span class="team-label">Cierre:</span>
-                                                    <span class="team-value">@h.ResponsableCierreId</span>
+                                                    <span class="team-value">@MostrarPersona(h.ResponsableCierreId)</span>
+                                                </div>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(h.CreadoPorId))
+                                            {
+                                                <div>
+                                                    <span class="team-label">Creado por:</span>
+                                                    <span class="team-value">@MostrarPersona(h.CreadoPorId, "No registrado")</span>
                                                 </div>
                                             }
                                         </div>
                                     </td>
 
                                     <td>
-                                        <span class="date-pill">@h.FechaCompromiso.ToString("yyyy-MM-dd")</span>
+                                        <div class="cell-title">Compromiso: @h.FechaCompromiso.ToString("yyyy-MM-dd")</div>
+
+                                        @if (h.FechaCreacion != default)
+                                        {
+                                            <div class="cell-subtitle">Creación: @h.FechaCreacion.ToString("yyyy-MM-dd HH:mm")</div>
+                                        }
+
+                                        @if (h.FechaRevisionSgc.HasValue)
+                                        {
+                                            <div class="cell-subtitle">Revisión SGC: @h.FechaRevisionSgc.Value.ToString("yyyy-MM-dd HH:mm")</div>
+                                        }
                                     </td>
 
                                     <td>
-                                        <span class="status-pill @GetStatusClass(h.Estatus)">
-                                            @h.Estatus
-                                        </span>
+                                        <div class="status-stack">
+                                            <span class="validacion-pill @GetValidacionClass(h.EstatusValidacionSgc)">
+                                                @TextoValidacion(h)
+                                            </span>
+
+                                            <span class="status-pill @GetStatusClass(h.Estatus)">
+                                                @h.Estatus
+                                            </span>
+                                        </div>
+
+                                        @if (!string.IsNullOrWhiteSpace(h.ComentarioRevisionSgc))
+                                        {
+                                            <div class="comment-box-mini">
+                                                <div class="mini-label">Comentario SGC</div>
+                                                <div>@h.ComentarioRevisionSgc</div>
+                                            </div>
+                                        }
+
+                                        @if (!string.IsNullOrWhiteSpace(h.RevisadoPorSgcId))
+                                        {
+                                            <div class="cell-subtitle mt-1">
+                                                Revisó SGC: @MostrarPersona(h.RevisadoPorSgcId, "No registrado")
+                                            </div>
+                                        }
                                     </td>
 
                                     <td class="text-end">
                                         <button type="button"
-                                                class="table-btn table-btn-primary"
-                                                @onclick='() => IrDetalle(h.HallazgoId)'>
-                                            Ver
+                                                class="table-btn"
+                                                @onclick='() => Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{h.HallazgoId}")'>
+                                            Ver detalle
                                         </button>
                                     </td>
                                 </tr>
@@ -230,22 +307,27 @@ else
 @code {
     [Parameter] public int auditoriaId { get; set; }
 
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
+
     private bool cargando = true;
     private string? errorMsg;
+
     private string? auditoriaTitulo;
 
     private int procesoIdSeleccionado = 0;
-    private string estatusSeleccionado = "Todos";
+    private string validacionSeleccionada = "";
+    private string estatusSeleccionado = "";
+    private string textoBusqueda = "";
 
     private int total;
     private int abiertos;
     private int cerrados;
-    private int vencidos;
+    private int pendientesSgc;
+    private int aprobadosSgc;
+    private int rechazadosSgc;
 
     private List<Proceso> procesosFiltro = new();
     private List<Hallazgo> hallazgos = new();
-
-    private bool HayFiltrosActivos => procesoIdSeleccionado > 0 || estatusSeleccionado != "Todos";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -265,7 +347,7 @@ else
 
             auditoriaTitulo = aud is null
                 ? null
-                : $"{aud.TipoAuditoria} | {aud.FechaInicio:yyyy-MM-dd} a {aud.FechaFin:yyyy-MM-dd} | Estatus: {aud.Estatus}";
+                : $"{aud.TipoAuditoria} | {aud.FechaInicio:yyyy-MM-dd} a {aud.FechaFin:yyyy-MM-dd}";
 
             var procesoIds = await Db.AuditoriaProcesos
                 .Where(ap => ap.AuditoriaId == auditoriaId)
@@ -278,6 +360,7 @@ else
                 .OrderBy(p => p.Codigo)
                 .ToListAsync();
 
+            await CargarResumen();
             await CargarHallazgos();
         }
         catch (Exception ex)
@@ -290,10 +373,21 @@ else
         }
     }
 
+    private async Task CargarResumen()
+    {
+        var q = Db.Hallazgos.Where(h => h.AuditoriaId == auditoriaId);
+
+        total = await q.CountAsync();
+        pendientesSgc = await q.CountAsync(h => h.EstatusValidacionSgc == "Pendiente");
+        aprobadosSgc = await q.CountAsync(h => h.EstatusValidacionSgc == "Aprobado");
+        rechazadosSgc = await q.CountAsync(h => h.EstatusValidacionSgc == "Rechazado");
+        cerrados = await q.CountAsync(h => h.Estatus == "Cerrado");
+        abiertos = await q.CountAsync(h => h.Estatus == "Abierto" || h.Estatus == "En Proceso");
+    }
+
     private async Task CargarHallazgos()
     {
-        IQueryable<Hallazgo> q = Db.Hallazgos
-            .AsNoTracking()
+        var q = Db.Hallazgos
             .Include(h => h.Proceso)
             .Include(h => h.Clausula)
             .Include(h => h.TipoHallazgo)
@@ -302,69 +396,75 @@ else
         if (procesoIdSeleccionado > 0)
             q = q.Where(h => h.ProcesoId == procesoIdSeleccionado);
 
-        if (estatusSeleccionado == "Abierto")
-            q = q.Where(h => h.Estatus == "Abierto");
+        if (!string.IsNullOrWhiteSpace(validacionSeleccionada))
+        {
+            if (validacionSeleccionada == "__sin__")
+            {
+                q = q.Where(h => string.IsNullOrEmpty(h.EstatusValidacionSgc));
+            }
+            else
+            {
+                q = q.Where(h => h.EstatusValidacionSgc == validacionSeleccionada);
+            }
+        }
 
-        if (estatusSeleccionado == "En Proceso")
-            q = q.Where(h => h.Estatus == "En Proceso");
+        if (!string.IsNullOrWhiteSpace(estatusSeleccionado))
+            q = q.Where(h => h.Estatus == estatusSeleccionado);
 
-        if (estatusSeleccionado == "Cerrado")
-            q = q.Where(h => h.Estatus == "Cerrado");
+        if (!string.IsNullOrWhiteSpace(textoBusqueda))
+        {
+            var texto = textoBusqueda.Trim();
+
+            q = q.Where(h =>
+                h.Descripcion.Contains(texto) ||
+                h.ResponsableId.Contains(texto) ||
+                (h.ResponsableCierreId != null && h.ResponsableCierreId.Contains(texto)) ||
+                (h.CreadoPorId != null && h.CreadoPorId.Contains(texto)));
+        }
 
         hallazgos = await q
-            .OrderByDescending(h => h.HallazgoId)
+            .OrderBy(h => h.EstatusValidacionSgc == "Pendiente" ? 0 : h.EstatusValidacionSgc == "Rechazado" ? 1 : 2)
+            .ThenByDescending(h => h.HallazgoId)
             .ToListAsync();
 
-        total = hallazgos.Count;
-        cerrados = hallazgos.Count(h => EsCerrado(h.Estatus));
-        abiertos = total - cerrados;
-        vencidos = hallazgos.Count(h => !EsCerrado(h.Estatus) && h.FechaCompromiso.Date < DateTime.Today);
+        await CargarPersonasDisplay(
+            hallazgos.SelectMany(h => new string?[]
+            {
+                h.ResponsableId,
+                h.ResponsableCierreId,
+                h.CreadoPorId,
+                h.RevisadoPorSgcId
+            }));
     }
 
-    private async Task OnProcesoChange(ChangeEventArgs e)
+    private async Task AplicarFiltros()
     {
-        if (e.Value is null) return;
-
-        if (int.TryParse(e.Value.ToString(), out var val))
-        {
-            procesoIdSeleccionado = val;
-            await CargarHallazgos();
-            StateHasChanged();
-        }
-    }
-
-    private async Task OnEstatusChange(ChangeEventArgs e)
-    {
-        estatusSeleccionado = e.Value?.ToString() ?? "Todos";
         await CargarHallazgos();
-        StateHasChanged();
     }
 
     private async Task LimpiarFiltros()
     {
         procesoIdSeleccionado = 0;
-        estatusSeleccionado = "Todos";
+        validacionSeleccionada = "";
+        estatusSeleccionado = "";
+        textoBusqueda = "";
         await CargarHallazgos();
     }
 
-    private static bool EsCerrado(string? estatus)
-    {
-        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
-        return valor is "cerrado" or "cerrada" or "finalizado" or "finalizada";
-    }
+    private static string TextoProceso(Hallazgo h) =>
+        h.Proceso is null
+            ? "Sin proceso"
+            : $"{h.Proceso.Codigo} - {h.Proceso.Nombre}";
 
-    private static string GetStatusClass(string? estatus)
-    {
-        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+    private static string TextoClausula(Hallazgo h) =>
+        h.Clausula is null
+            ? "Sin cláusula"
+            : $"Cláusula: {h.Clausula.Codigo}";
 
-        if (valor is "cerrado" or "cerrada" or "finalizado" or "finalizada")
-            return "closed";
-
-        if (valor is "en proceso" or "en revisión" or "en revision")
-            return "progress";
-
-        return "open";
-    }
+    private static string TextoValidacion(Hallazgo h) =>
+        string.IsNullOrWhiteSpace(h.EstatusValidacionSgc)
+            ? "No registrada"
+            : h.EstatusValidacionSgc;
 
     private static string GetTipoClass(string? tipo)
     {
@@ -379,14 +479,113 @@ else
         return "neutral";
     }
 
-    private static string Recortar(string? texto, int max)
+    private static string GetValidacionClass(string? estatus)
     {
-        if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
-        return texto.Length <= max ? texto : texto[..max].TrimEnd() + "...";
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor == "aprobado")
+            return "approved";
+
+        if (valor == "rechazado")
+            return "rejected";
+
+        if (valor == "pendiente")
+            return "pending";
+
+        return "neutral";
     }
 
-    private void VolverAuditoria() => Nav.NavigateTo($"auditorias/{auditoriaId}");
+    private static string GetStatusClass(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
 
-    private void IrDetalle(int hallazgoId) =>
-        Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}");
+        if (valor is "cerrado" or "cerrada")
+            return "closed";
+
+        if (valor is "en proceso" or "en revisión" or "en revision")
+            return "progress";
+
+        if (valor is "pendiente sgc")
+            return "blocked";
+
+        return "open";
+    }
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        personasDisplay.Clear();
+
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids
+            .Where(x => !personasDisplay.ContainsKey(x))
+            .ToList();
+
+        if (faltantes.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor, string fallback = "Sin asignar")
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return fallback;
+
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
 }

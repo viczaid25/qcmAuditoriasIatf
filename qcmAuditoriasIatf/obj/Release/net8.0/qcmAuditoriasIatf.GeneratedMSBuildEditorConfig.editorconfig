@@ -32,10 +32,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yZXNcQXVkaXRvcmVzTGlzdGFkby5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaProcesoAsignar.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYVByb2Nlc29Bc2lnbmFyLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Counter.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDb3VudGVyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
@@ -76,6 +72,10 @@ build_metadata.AdditionalFiles.CssScope = b-bm0iua6xym
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTmF2TWVudS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-n2jfz1bskr
 
+[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaCalendario.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYUNhbGVuZGFyaW8ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-ejixc872ul
+
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaDetalle.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYURldGFsbGUucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-ef5s3tv012
@@ -83,6 +83,10 @@ build_metadata.AdditionalFiles.CssScope = b-ef5s3tv012
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaNueva.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYU51ZXZhLnJhem9y
 build_metadata.AdditionalFiles.CssScope = b-a9hm7vmasi
+
+[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaProcesoAsignar.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYVByb2Nlc29Bc2lnbmFyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-zvszuegucd
 
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaProcesoChecklist.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYVByb2Nlc29DaGVja2xpc3QucmF6b3I=
@@ -107,6 +111,10 @@ build_metadata.AdditionalFiles.CssScope = b-d6xafaed0r
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Home.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIb21lLnJhem9y
 build_metadata.AdditionalFiles.CssScope = b-rktzq20osz
+
+[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Interfaces/InterfacesSgcHallazgos.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xJbnRlcmZhY2VzXEludGVyZmFjZXNTZ2NIYWxsYXpnb3MucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-c1311xys5y
 
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Pages/Account/Login.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWNjb3VudFxMb2dpbi5jc2h0bWw=
