@@ -1,66 +1,453 @@
 ﻿@page "/auditores"
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Catalogos
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
-<h3>Auditores</h3>
+@attribute [Authorize]
 
-<div class="d-flex gap-2 mb-3">
-    <button class="btn btn-primary"
-            @onclick='() => Nav.NavigateTo("auditores/nuevo")'>
-        Nuevo
-    </button>
-</div>
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger" style="white-space:pre-wrap">@errorMsg</div>
+}
 
 @if (cargando)
 {
-    <p>Cargando...</p>
+    <div class="auditores-loading">
+        <div class="auditores-skeleton auditores-skeleton-hero"></div>
+        <div class="auditores-metrics">
+            <div class="auditores-skeleton auditores-skeleton-card"></div>
+            <div class="auditores-skeleton auditores-skeleton-card"></div>
+            <div class="auditores-skeleton auditores-skeleton-card"></div>
+            <div class="auditores-skeleton auditores-skeleton-card"></div>
+        </div>
+        <div class="auditores-skeleton auditores-skeleton-filters"></div>
+        <div class="auditores-skeleton auditores-skeleton-table"></div>
+    </div>
 }
 else
 {
-    <table class="table table-hover align-middle">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Tipo</th>
-                <th>Departamento</th>
-                <th>Función</th>
-                <th>Activo</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var a in lista)
-            {
-                <tr>
-                    <td>
-                        <div class="fw-semibold">@a.Nombre</div>
-                        <div class="text-muted small">@a.Email</div>
-                    </td>
-                    <td>@a.Tipo</td>
-                    <td>@a.Departamento</td>
-                    <td>@a.Funcion</td>
-                    <td>@(a.Activo ? "Sí" : "No")</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary"
-                                @onclick='() => Nav.NavigateTo(string.Format("auditores/{0}", a.AuditorId))'>
-                            Editar
+    <div class="auditores-page">
+        <section class="auditores-hero">
+            <div>
+                <span class="auditores-kicker">Catálogo</span>
+                <h1>Auditores</h1>
+
+                <div class="auditores-meta">
+                    <span class="meta-chip">
+                        Total: <strong>@lista.Count</strong>
+                    </span>
+
+                    <span class="meta-chip">
+                        Activos: <strong>@lista.Count(x => x.Activo)</strong>
+                    </span>
+
+                    <span class="meta-chip">
+                        Inactivos: <strong>@lista.Count(x => !x.Activo)</strong>
+                    </span>
+
+                    <span class="meta-chip">
+                        Mostrando: <strong>@AuditoresFiltrados.Count()</strong>
+                    </span>
+                </div>
+
+                <p class="hero-text">
+                    Administra el catálogo de auditores, observadores y personal en entrenamiento.
+                </p>
+            </div>
+
+            <div class="hero-actions">
+                <button type="button"
+                        class="hero-btn primary"
+                        @onclick='() => Nav.NavigateTo("auditores/nuevo")'>
+                    Nuevo auditor
+                </button>
+            </div>
+        </section>
+
+        @if (auditorPendienteEliminar is not null)
+        {
+            <section class="panel-card danger-panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Confirmar eliminación</h2>
+                        <p class="panel-subtitle">
+                            Esta acción eliminará el auditor del catálogo.
+                        </p>
+                    </div>
+
+                    <span class="panel-badge danger">Pendiente</span>
+                </div>
+
+                <div class="confirm-box">
+                    <div class="confirm-name">@auditorPendienteEliminar.Nombre</div>
+
+                    <div class="confirm-meta">
+                        <span>Tipo: <strong>@auditorPendienteEliminar.Tipo</strong></span>
+                        <span>PC Login: <strong>@(string.IsNullOrWhiteSpace(auditorPendienteEliminar.PcLoginId) ? "Sin capturar" : auditorPendienteEliminar.PcLoginId)</strong></span>
+                    </div>
+
+                    <div class="confirm-warning">
+                        Confirma solo si realmente deseas quitar este registro del catálogo.
+                    </div>
+
+                    <div class="confirm-actions">
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                @onclick="CancelarEliminar"
+                                disabled="@eliminando">
+                            Cancelar
                         </button>
-                    </td>
-                </tr>
+
+                        <button type="button"
+                                class="btn btn-danger"
+                                @onclick="EliminarAuditor"
+                                disabled="@eliminando">
+                            @(eliminando ? "Eliminando..." : "Eliminar auditor")
+                        </button>
+                    </div>
+                </div>
+            </section>
+        }
+
+        <section class="auditores-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Auditores</div>
+                <div class="metric-value">@lista.Count(x => x.Tipo == "Auditor")</div>
+                <div class="metric-note">Perfil principal</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Entrenamiento</div>
+                <div class="metric-value">@lista.Count(x => x.Tipo == "Entrenamiento")</div>
+                <div class="metric-note">En formación</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Observadores</div>
+                <div class="metric-value">@lista.Count(x => x.Tipo == "Observador")</div>
+                <div class="metric-note">Apoyo en auditoría</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Con PC Login</div>
+                <div class="metric-value">@lista.Count(x => !string.IsNullOrWhiteSpace(x.PcLoginId))</div>
+                <div class="metric-note">Identificados en sistema</div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Filtros</h2>
+                    <p class="panel-subtitle">Busca por nombre, correo, login, departamento o función.</p>
+                </div>
+
+                <span class="panel-badge">@AuditoresFiltrados.Count() resultado(s)</span>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label">Buscar</label>
+                    <input class="form-control"
+                           @bind="textoBusqueda"
+                           @bind:event="oninput"
+                           placeholder="Nombre, email, login, departamento..." />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Tipo</label>
+                    <InputSelect class="form-select" @bind-Value="tipoSeleccionado">
+                        <option value="">-- Todos --</option>
+                        @foreach (var tipo in TiposDisponibles)
+                        {
+                            <option value="@tipo">@tipo</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Estatus</label>
+                    <InputSelect class="form-select" @bind-Value="filtroActivo">
+                        <option value="todos">Todos</option>
+                        <option value="activos">Activos</option>
+                        <option value="inactivos">Inactivos</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button"
+                            class="btn btn-outline-secondary w-100"
+                            @onclick="LimpiarFiltros">
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Bandeja de auditores</h2>
+                    <p class="panel-subtitle">Edita o elimina registros del catálogo.</p>
+                </div>
+
+                <span class="panel-badge">@AuditoresFiltrados.Count() registro(s)</span>
+            </div>
+
+            @if (!AuditoresFiltrados.Any())
+            {
+                <div class="empty-state compact">
+                    No hay auditores para los filtros seleccionados.
+                </div>
             }
-        </tbody>
-    </table>
+            else
+            {
+                <div class="table-wrap">
+                    <table class="auditores-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Departamento</th>
+                                <th>Función</th>
+                                <th>PC Login</th>
+                                <th>Estatus</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var a in AuditoresFiltrados)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="cell-title">@a.Nombre</div>
+
+                                        @if (!string.IsNullOrWhiteSpace(a.Email))
+                                        {
+                                            <div class="cell-subtitle">@a.Email</div>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <span class="tipo-pill @GetTipoClass(a.Tipo)">
+                                            @a.Tipo
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        @if (string.IsNullOrWhiteSpace(a.Departamento))
+                                        {
+                                            <span class="empty-inline">Sin capturar</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@a.Departamento</span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @if (string.IsNullOrWhiteSpace(a.Funcion))
+                                        {
+                                            <span class="empty-inline">Sin capturar</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@a.Funcion</span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @if (string.IsNullOrWhiteSpace(a.PcLoginId))
+                                        {
+                                            <span class="empty-inline">Sin PC Login</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="login-pill">@a.PcLoginId</span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <span class="status-pill @(a.Activo ? "open" : "closed")">
+                                            @(a.Activo ? "Activo" : "Inactivo")
+                                        </span>
+                                    </td>
+
+                                    <td class="text-end">
+                                        <div class="action-stack">
+                                            <button type="button"
+                                                    class="table-btn"
+                                                    @onclick='() => Nav.NavigateTo($"auditores/{a.AuditorId}")'>
+                                                Editar
+                                            </button>
+
+                                            <button type="button"
+                                                    class="table-btn table-btn-danger"
+                                                    @onclick="() => PrepararEliminar(a)">
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
 }
 
 @code {
     private bool cargando = true;
+    private bool eliminando;
+    private string? errorMsg;
+
+    private string textoBusqueda = "";
+    private string tipoSeleccionado = "";
+    private string filtroActivo = "todos";
+
+    private Auditor? auditorPendienteEliminar;
     private List<Auditor> lista = new();
+
+    private IEnumerable<string> TiposDisponibles =>
+        lista.Select(x => x.Tipo)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct()
+            .OrderBy(x => x);
+
+    private IEnumerable<Auditor> AuditoresFiltrados =>
+        lista
+            .Where(CumpleFiltroBusqueda)
+            .Where(CumpleFiltroTipo)
+            .Where(CumpleFiltroActivo)
+            .OrderBy(x => x.Nombre);
 
     protected override async Task OnInitializedAsync()
     {
-        lista = await Db.Auditores.OrderBy(x => x.Nombre).ToListAsync();
-        cargando = false;
+        await CargarLista();
+    }
+
+    private async Task CargarLista()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            lista = await Db.Auditores
+                .AsNoTracking()
+                .OrderBy(x => x.Nombre)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private bool CumpleFiltroBusqueda(Auditor a)
+    {
+        if (string.IsNullOrWhiteSpace(textoBusqueda))
+            return true;
+
+        var texto = textoBusqueda.Trim();
+
+        return (a.Nombre?.Contains(texto, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (a.Email?.Contains(texto, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (a.PcLoginId?.Contains(texto, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (a.Departamento?.Contains(texto, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (a.Funcion?.Contains(texto, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (a.Tipo?.Contains(texto, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private bool CumpleFiltroTipo(Auditor a)
+    {
+        if (string.IsNullOrWhiteSpace(tipoSeleccionado))
+            return true;
+
+        return string.Equals(a.Tipo, tipoSeleccionado, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool CumpleFiltroActivo(Auditor a)
+    {
+        return filtroActivo switch
+        {
+            "activos" => a.Activo,
+            "inactivos" => !a.Activo,
+            _ => true
+        };
+    }
+
+    private void LimpiarFiltros()
+    {
+        textoBusqueda = "";
+        tipoSeleccionado = "";
+        filtroActivo = "todos";
+    }
+
+    private void PrepararEliminar(Auditor auditor)
+    {
+        auditorPendienteEliminar = auditor;
+        errorMsg = null;
+    }
+
+    private void CancelarEliminar()
+    {
+        auditorPendienteEliminar = null;
+    }
+
+    private async Task EliminarAuditor()
+    {
+        if (auditorPendienteEliminar is null || eliminando)
+            return;
+
+        eliminando = true;
+        errorMsg = null;
+
+        try
+        {
+            var entity = await Db.Auditores
+                .FirstOrDefaultAsync(x => x.AuditorId == auditorPendienteEliminar.AuditorId);
+
+            if (entity is null)
+            {
+                errorMsg = "No se encontró el auditor a eliminar.";
+                return;
+            }
+
+            Db.Auditores.Remove(entity);
+            await Db.SaveChangesAsync();
+
+            lista.RemoveAll(x => x.AuditorId == entity.AuditorId);
+            auditorPendienteEliminar = null;
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            eliminando = false;
+        }
+    }
+
+    private static string GetTipoClass(string? tipo)
+    {
+        var valor = tipo?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor.Contains("observador"))
+            return "observador";
+
+        if (valor.Contains("entrenamiento"))
+            return "training";
+
+        return "auditor";
     }
 }

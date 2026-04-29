@@ -169,3 +169,5 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\qcmAuditoriasIatf.genruntimeconfig.cache
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\ref\qcmAuditoriasIatf.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditores\AuditoresListado.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditores\AuditorEditar.razor.rz.scp.css

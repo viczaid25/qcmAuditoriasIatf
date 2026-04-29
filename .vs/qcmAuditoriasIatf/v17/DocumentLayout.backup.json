@@ -3,6 +3,14 @@
   "WorkspaceRootPath": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{500048F4-2BE5-42E2-A7AD-FE1B5DADBE0D}|qcmAuditoriasIatf\\qcmAuditoriasIatf.csproj|c:\\users\\dm45207\\source\\repos\\qcmauditoriasiatf\\qcmauditoriasiatf\\components\\pages\\auditores\\auditoreslistado.razor.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
+      "RelativeMoniker": "D:0:0:{500048F4-2BE5-42E2-A7AD-FE1B5DADBE0D}|qcmAuditoriasIatf\\qcmAuditoriasIatf.csproj|solutionrelative:qcmauditoriasiatf\\components\\pages\\auditores\\auditoreslistado.razor.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{500048F4-2BE5-42E2-A7AD-FE1B5DADBE0D}|qcmAuditoriasIatf\\qcmAuditoriasIatf.csproj|c:\\users\\dm45207\\source\\repos\\qcmauditoriasiatf\\qcmauditoriasiatf\\components\\pages\\auditores\\auditoreslistado.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{500048F4-2BE5-42E2-A7AD-FE1B5DADBE0D}|qcmAuditoriasIatf\\qcmAuditoriasIatf.csproj|solutionrelative:qcmauditoriasiatf\\components\\pages\\auditores\\auditoreslistado.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{500048F4-2BE5-42E2-A7AD-FE1B5DADBE0D}|qcmAuditoriasIatf\\qcmAuditoriasIatf.csproj|c:\\users\\dm45207\\source\\repos\\qcmauditoriasiatf\\qcmauditoriasiatf\\components\\pages\\hallazgos\\hallazgonuevodesdechecklist.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{500048F4-2BE5-42E2-A7AD-FE1B5DADBE0D}|qcmAuditoriasIatf\\qcmAuditoriasIatf.csproj|solutionrelative:qcmauditoriasiatf\\components\\pages\\hallazgos\\hallazgonuevodesdechecklist.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
@@ -46,34 +54,8 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 9,
+          "SelectedChildIndex": 2,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "AuditoriaCalendario.razor.css",
-              "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor.css",
-              "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor.css",
-              "ToolTip": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor.css",
-              "RelativeToolTip": "qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor.css",
-              "ViewState": "AgIAALoBAAAAAAAAAAAAAMsBAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
-              "WhenOpened": "2026-04-29T16:49:00.386Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "App.razor",
-              "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\App.razor",
-              "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\App.razor",
-              "ToolTip": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\App.razor",
-              "RelativeToolTip": "qcmAuditoriasIatf\\Components\\App.razor",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAA0AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-04-29T16:43:47.015Z",
-              "EditorCaption": ""
-            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
@@ -84,7 +66,57 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AuditoresListado.razor.css",
+              "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Auditores\\AuditoresListado.razor.css",
+              "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\Pages\\Auditores\\AuditoresListado.razor.css",
+              "ToolTip": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Auditores\\AuditoresListado.razor.css",
+              "RelativeToolTip": "qcmAuditoriasIatf\\Components\\Pages\\Auditores\\AuditoresListado.razor.css",
+              "ViewState": "AgIAALkBAAAAAAAAAAAYwNwBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
+              "WhenOpened": "2026-04-29T20:27:38.893Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "AuditoresListado.razor",
+              "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Auditores\\AuditoresListado.razor",
+              "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\Pages\\Auditores\\AuditoresListado.razor",
+              "ToolTip": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Auditores\\AuditoresListado.razor",
+              "RelativeToolTip": "qcmAuditoriasIatf\\Components\\Pages\\Auditores\\AuditoresListado.razor",
+              "ViewState": "AgIAAKIBAAAAAAAAAAAkwMQBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-04-29T20:26:07.358Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 4,
+              "Title": "AuditoriaCalendario.razor.css",
+              "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor.css",
+              "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor.css",
+              "ToolTip": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor.css",
+              "RelativeToolTip": "qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor.css",
+              "ViewState": "AgIAALoBAAAAAAAAAAAAAMsBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
+              "WhenOpened": "2026-04-29T16:49:00.386Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "App.razor",
+              "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\App.razor",
+              "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\App.razor",
+              "ToolTip": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\App.razor",
+              "RelativeToolTip": "qcmAuditoriasIatf\\Components\\App.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAA0AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-04-29T16:43:47.015Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "calendar-export.js",
               "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\wwwroot\\js\\calendar-export.js",
               "RelativeDocumentMoniker": "qcmAuditoriasIatf\\wwwroot\\js\\calendar-export.js",
@@ -92,12 +124,11 @@
               "RelativeToolTip": "qcmAuditoriasIatf\\wwwroot\\js\\calendar-export.js",
               "ViewState": "AgIAACYAAAAAAAAAAAAuwEgAAAACAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
-              "WhenOpened": "2026-04-29T16:43:25.865Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-29T16:43:25.865Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "AuditoriaCalendario.razor",
               "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor",
               "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor",
@@ -105,12 +136,11 @@
               "RelativeToolTip": "qcmAuditoriasIatf\\Components\\Pages\\Auditorias\\AuditoriaCalendario.razor",
               "ViewState": "AgIAADACAAAAAAAAAAAAAEsCAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-04-29T16:35:45.554Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-29T16:35:45.554Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 7,
               "Title": "HallazgosBandeja.razor",
               "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgosBandeja.razor",
               "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgosBandeja.razor",
@@ -118,12 +148,11 @@
               "RelativeToolTip": "qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgosBandeja.razor",
               "ViewState": "AgIAADgCAAAAAAAAAAAuwFoCAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-04-29T16:31:40.675Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-29T16:31:40.675Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "InterfacesSgcHallazgos.razor",
               "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Interfaces\\InterfacesSgcHallazgos.razor",
               "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\Pages\\Interfaces\\InterfacesSgcHallazgos.razor",
@@ -131,12 +160,11 @@
               "RelativeToolTip": "qcmAuditoriasIatf\\Components\\Pages\\Interfaces\\InterfacesSgcHallazgos.razor",
               "ViewState": "AgIAAJoCAAAAAAAAAAAuwLYCAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-04-29T16:14:47.097Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-29T16:14:47.097Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 9,
               "Title": "HallazgoDetalle.razor",
               "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgoDetalle.razor",
               "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgoDetalle.razor",
@@ -144,17 +172,16 @@
               "RelativeToolTip": "qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgoDetalle.razor",
               "ViewState": "AgIAAHgAAAAAAAAAAAAuwJoAAAASAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-04-29T16:09:30.599Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-29T16:09:30.599Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "HallazgoNuevoDesdeChecklist.razor",
               "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgoNuevoDesdeChecklist.razor",
               "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgoNuevoDesdeChecklist.razor",
-              "ToolTip": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgoNuevoDesdeChecklist.razor*",
-              "RelativeToolTip": "qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgoNuevoDesdeChecklist.razor*",
+              "ToolTip": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgoNuevoDesdeChecklist.razor",
+              "RelativeToolTip": "qcmAuditoriasIatf\\Components\\Pages\\Hallazgos\\HallazgoNuevoDesdeChecklist.razor",
               "ViewState": "AgIAAP8BAAAAAAAAAAAAAA0CAAA6AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2026-04-29T16:08:50.748Z",
@@ -162,7 +189,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 10,
               "Title": "Hallazgo.cs",
               "DocumentMoniker": "C:\\Users\\dm45207\\source\\repos\\qcmAuditoriasIatf\\qcmAuditoriasIatf\\Models\\Hallazgos\\Hallazgo.cs",
               "RelativeDocumentMoniker": "qcmAuditoriasIatf\\Models\\Hallazgos\\Hallazgo.cs",
@@ -170,8 +197,7 @@
               "RelativeToolTip": "qcmAuditoriasIatf\\Models\\Hallazgos\\Hallazgo.cs",
               "ViewState": "AgIAABAAAAAAAAAAAAA5wB0AAAA7AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T16:05:52.379Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-29T16:05:52.379Z"
             }
           ]
         }
