@@ -167,6 +167,14 @@ else
                                     <td>
                                         <div class="desc-cell">@row.Descripcion</div>
 
+                                        @if (!string.IsNullOrWhiteSpace(row.JustificacionNoConformidad))
+                                        {
+                                            <div class="evidencia-box">
+                                                <div class="mini-label">Justificación de la NC</div>
+                                                <div>@row.JustificacionNoConformidad</div>
+                                            </div>
+                                        }
+
                                         @if (!string.IsNullOrWhiteSpace(row.Evidencia))
                                         {
                                             <div class="evidencia-box">
@@ -180,15 +188,15 @@ else
                                         <div class="team-stack">
                                             <div>
                                                 <span class="team-label">Responsable:</span>
-                                                <span class="team-value">@row.ResponsableId</span>
+                                                <span class="team-value">@MostrarPersona(row.ResponsableId, row.ResponsableId)</span>
                                             </div>
                                             <div>
                                                 <span class="team-label">Cierre:</span>
-                                                <span class="team-value">@row.ResponsableCierreId</span>
+                                                <span class="team-value">@MostrarPersona(row.ResponsableCierreId, "Sin asignar")</span>
                                             </div>
                                             <div>
                                                 <span class="team-label">Creado por:</span>
-                                                <span class="team-value">@row.CreadoPorId</span>
+                                                <span class="team-value">@MostrarPersona(row.CreadoPorId, "No registrado")</span>
                                             </div>
                                         </div>
                                     </td>
@@ -275,9 +283,25 @@ else
                             <div class="reviewed-body">
                                 <div class="reviewed-text">@row.Descripcion</div>
 
+                                @if (!string.IsNullOrWhiteSpace(row.JustificacionNoConformidad))
+                                {
+                                    <div class="comment-box mt-3">
+                                        <div class="mini-label">Justificación de la NC</div>
+                                        <div>@row.JustificacionNoConformidad</div>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(row.Evidencia))
+                                {
+                                    <div class="comment-box mt-3">
+                                        <div class="mini-label">Evidencia inicial</div>
+                                        <div>@row.Evidencia</div>
+                                    </div>
+                                }
+
                                 <div class="reviewed-meta">
-                                    <span>Responsable: <strong>@row.ResponsableId</strong></span>
-                                    <span>Revisó: <strong>@(string.IsNullOrWhiteSpace(row.RevisadoPorSgcId) ? "—" : row.RevisadoPorSgcId)</strong></span>
+                                    <span>Responsable: <strong>@MostrarPersona(row.ResponsableId, row.ResponsableId)</strong></span>
+                                    <span>Revisó: <strong>@MostrarPersona(row.RevisadoPorSgcId, "—")</strong></span>
                                     @if (row.FechaRevisionSgc.HasValue)
                                     {
                                         <span>Fecha: <strong>@row.FechaRevisionSgc.Value.ToString("yyyy-MM-dd HH:mm")</strong></span>
@@ -310,6 +334,8 @@ else
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
+
     private bool cargando = true;
     private string? errorMsg;
     private int? guardandoHallazgoId;
@@ -332,6 +358,7 @@ else
         public string ClausulaTexto { get; set; } = "";
         public string TipoHallazgoNombre { get; set; } = "";
         public string Descripcion { get; set; } = "";
+        public string? JustificacionNoConformidad { get; set; }
         public string? Evidencia { get; set; }
         public string ResponsableId { get; set; } = "";
         public string? ResponsableCierreId { get; set; }
@@ -401,6 +428,7 @@ else
     {
         pendientes.Clear();
         revisados.Clear();
+        personasDisplay.Clear();
 
         if (!usuarioEsSgc)
             return;
@@ -436,6 +464,22 @@ else
         revisados = revisadosEntity
             .Select(MapRow)
             .ToList();
+
+        await CargarPersonasDisplay(
+            pendientes.SelectMany(x => new string?[]
+            {
+                x.ResponsableId,
+                x.ResponsableCierreId,
+                x.CreadoPorId,
+                x.RevisadoPorSgcId
+            })
+            .Concat(revisados.SelectMany(x => new string?[]
+            {
+                x.ResponsableId,
+                x.ResponsableCierreId,
+                x.CreadoPorId,
+                x.RevisadoPorSgcId
+            })));
     }
 
     private static HallazgoRowVm MapRow(Hallazgo h) => new()
@@ -446,6 +490,7 @@ else
         ClausulaTexto = h.Clausula is null ? "Sin cláusula" : $"{h.Clausula.Codigo} - {h.Clausula.Descripcion}",
         TipoHallazgoNombre = h.TipoHallazgo?.Nombre ?? "Sin tipo",
         Descripcion = h.Descripcion,
+        JustificacionNoConformidad = h.JustificacionNoConformidad,
         Evidencia = h.Evidencia,
         ResponsableId = h.ResponsableId,
         ResponsableCierreId = h.ResponsableCierreId,
@@ -539,6 +584,82 @@ else
         {
             guardandoHallazgoId = null;
         }
+    }
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids
+            .Where(x => !personasDisplay.ContainsKey(x))
+            .ToList();
+
+        if (faltantes.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor, string fallback = "Sin asignar")
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return fallback;
+
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
     }
 
     private static string GetTipoClass(string? tipo)

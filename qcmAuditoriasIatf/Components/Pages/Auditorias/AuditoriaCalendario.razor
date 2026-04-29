@@ -1,10 +1,14 @@
 ﻿@page "/auditorias/{id:int}/calendario"
 @using System.Globalization
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
 @using qcmAuditoriasIatf.Models.Auditorias
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 @attribute [Authorize]
 
@@ -66,145 +70,155 @@ else
             </div>
 
             <div class="hero-actions">
+                <button type="button" class="hero-btn" @onclick="ExportarImagen">
+                    Compartir imagen
+                </button>
+
+                <button type="button" class="hero-btn" @onclick="ExportarPdf">
+                    Compartir PDF
+                </button>
+
                 <button type="button" class="hero-btn primary" @onclick="VolverAuditoria">
                     Volver al detalle
                 </button>
             </div>
         </section>
 
-        <section class="calendario-metrics">
-            <div class="metric-card">
-                <div class="metric-label">Procesos</div>
-                <div class="metric-value">@procesos.Count</div>
-                <div class="metric-note">Total de procesos de la auditoría</div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-label">Programados</div>
-                <div class="metric-value">@totalProgramados</div>
-                <div class="metric-note">Con fecha asignada</div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-label">Sin fecha</div>
-                <div class="metric-value">@procesosSinFecha.Count</div>
-                <div class="metric-note">Pendientes por programar</div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-label">Este mes</div>
-                <div class="metric-value">@procesosMesActual</div>
-                <div class="metric-note">Procesos en @TituloMes</div>
-            </div>
-        </section>
-
-        <section class="panel-card">
-            <div class="toolbar-inner">
-                <div class="month-nav">
-                    <button type="button"
-                            class="month-nav-btn"
-                            @onclick="MesAnterior"
-                            disabled="@(!CanGoPrevMonth)">
-                        ‹
-                    </button>
-
-                    <div class="month-title">@TituloMes</div>
-
-                    <button type="button"
-                            class="month-nav-btn"
-                            @onclick="MesSiguiente"
-                            disabled="@(!CanGoNextMonth)">
-                        ›
-                    </button>
+        <div id="calendario-export" class="calendario-export">
+            <section class="calendario-metrics">
+                <div class="metric-card">
+                    <div class="metric-label">Procesos</div>
+                    <div class="metric-value">@procesos.Count</div>
+                    <div class="metric-note">Total de procesos de la auditoría</div>
                 </div>
 
-                <div class="toolbar-stats">
-                    <span class="toolbar-chip">Procesos este mes: @procesosMesActual</span>
-                    <span class="toolbar-chip">Días con actividad: @diasConActividadMes</span>
-                </div>
-            </div>
-        </section>
-
-        <section class="panel-card">
-            <div class="panel-head">
-                <div>
-                    <h2>Calendario mensual</h2>
-                    <p class="panel-subtitle">Da clic en un proceso para abrir su asignación y edición.</p>
+                <div class="metric-card">
+                    <div class="metric-label">Programados</div>
+                    <div class="metric-value">@totalProgramados</div>
+                    <div class="metric-note">Con fecha asignada</div>
                 </div>
 
-                <span class="panel-badge">@TituloMes</span>
-            </div>
+                <div class="metric-card">
+                    <div class="metric-label">Sin fecha</div>
+                    <div class="metric-value">@procesosSinFecha.Count</div>
+                    <div class="metric-note">Pendientes por programar</div>
+                </div>
 
-            <div class="calendar-scroll">
-                <div class="calendar-shell">
-                    <div class="weekdays">
-                        <div class="weekday-cell">Lun</div>
-                        <div class="weekday-cell">Mar</div>
-                        <div class="weekday-cell">Mié</div>
-                        <div class="weekday-cell">Jue</div>
-                        <div class="weekday-cell">Vie</div>
-                        <div class="weekday-cell">Sáb</div>
-                        <div class="weekday-cell">Dom</div>
+                <div class="metric-card">
+                    <div class="metric-label">Este mes</div>
+                    <div class="metric-value">@procesosMesActual</div>
+                    <div class="metric-note">Procesos en @TituloMes</div>
+                </div>
+            </section>
+
+            <section class="panel-card">
+                <div class="toolbar-inner">
+                    <div class="month-nav">
+                        <button type="button"
+                                class="month-nav-btn"
+                                @onclick="MesAnterior"
+                                disabled="@(!CanGoPrevMonth)">
+                            ‹
+                        </button>
+
+                        <div class="month-title">@TituloMes</div>
+
+                        <button type="button"
+                                class="month-nav-btn"
+                                @onclick="MesSiguiente"
+                                disabled="@(!CanGoNextMonth)">
+                            ›
+                        </button>
                     </div>
 
-                    <div class="calendar-grid">
-                        @foreach (var dia in diasCalendario)
-                        {
-                            <div class="calendar-day @(dia.EsMesActual ? "current" : "outside") @(dia.EsHoy ? "today" : "") @(dia.EnRangoAuditoria ? "" : "out-of-range")">
-                                <div class="calendar-day-head">
-                                    <span class="day-number">@dia.Fecha.Day</span>
-
-                                    @if (dia.Eventos.Count > 0)
-                                    {
-                                        <span class="day-count">@dia.Eventos.Count</span>
-                                    }
-                                </div>
-
-                                <div class="day-events">
-                                    @if (dia.Eventos.Count == 0)
-                                    {
-                                        @if (dia.EsMesActual && dia.EnRangoAuditoria)
-                                        {
-                                            <div class="day-empty">Sin procesos</div>
-                                        }
-                                        else if (dia.EsMesActual && !dia.EnRangoAuditoria)
-                                        {
-                                            <div class="day-empty muted">Fuera del rango</div>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        @foreach (var ev in dia.Eventos)
-                                        {
-                                            <button type="button"
-                                                    class="event-card"
-                                                    @onclick="() => IrProceso(ev.AuditoriaProcesoId)">
-                                                <div class="event-code">@ev.ProcesoCodigo</div>
-                                                <div class="event-name">@ev.ProcesoNombre</div>
-
-                                                @if (!string.IsNullOrWhiteSpace(ev.UnidadTexto))
-                                                {
-                                                    <div class="event-meta">@ev.UnidadTexto</div>
-                                                }
-
-                                                @if (!string.IsNullOrWhiteSpace(ev.LineaNombre))
-                                                {
-                                                    <div class="event-meta">Línea: @ev.LineaNombre</div>
-                                                }
-
-                                                <div class="event-meta">
-                                                    Auditor: @MostrarPersona(ev.AuditorAsignadoId, "Pendiente")
-                                                </div>
-                                            </button>
-                                        }
-                                    }
-                                </div>
-                            </div>
-                        }
+                    <div class="toolbar-stats">
+                        <span class="toolbar-chip">Procesos este mes: @procesosMesActual</span>
+                        <span class="toolbar-chip">Días con actividad: @diasConActividadMes</span>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Calendario mensual</h2>
+                        <p class="panel-subtitle">Da clic en un proceso para abrir su asignación y edición.</p>
+                    </div>
+
+                    <span class="panel-badge">@TituloMes</span>
+                </div>
+
+                <div class="calendar-scroll">
+                    <div class="calendar-shell">
+                        <div class="weekdays">
+                            <div class="weekday-cell">Lun</div>
+                            <div class="weekday-cell">Mar</div>
+                            <div class="weekday-cell">Mié</div>
+                            <div class="weekday-cell">Jue</div>
+                            <div class="weekday-cell">Vie</div>
+                            <div class="weekday-cell">Sáb</div>
+                            <div class="weekday-cell">Dom</div>
+                        </div>
+
+                        <div class="calendar-grid">
+                            @foreach (var dia in diasCalendario)
+                            {
+                                <div class="calendar-day @(dia.EsMesActual ? "current" : "outside") @(dia.EsHoy ? "today" : "") @(dia.EnRangoAuditoria ? "" : "out-of-range")">
+                                    <div class="calendar-day-head">
+                                        <span class="day-number">@dia.Fecha.Day</span>
+
+                                        @if (dia.Eventos.Count > 0)
+                                        {
+                                            <span class="day-count">@dia.Eventos.Count</span>
+                                        }
+                                    </div>
+
+                                    <div class="day-events">
+                                        @if (dia.Eventos.Count == 0)
+                                        {
+                                            @if (dia.EsMesActual && dia.EnRangoAuditoria)
+                                            {
+                                                <div class="day-empty">Sin procesos</div>
+                                            }
+                                            else if (dia.EsMesActual && !dia.EnRangoAuditoria)
+                                            {
+                                                <div class="day-empty muted">Fuera del rango</div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            @foreach (var ev in dia.Eventos)
+                                            {
+                                                <button type="button"
+                                                        class="event-card"
+                                                        @onclick="() => IrProceso(ev.AuditoriaProcesoId)">
+                                                    <div class="event-code">@ev.ProcesoCodigo</div>
+                                                    <div class="event-name">@ev.ProcesoNombre</div>
+
+                                                    @if (!string.IsNullOrWhiteSpace(ev.UnidadTexto))
+                                                    {
+                                                        <div class="event-meta">@ev.UnidadTexto</div>
+                                                    }
+
+                                                    @if (!string.IsNullOrWhiteSpace(ev.LineaNombre))
+                                                    {
+                                                        <div class="event-meta">Línea: @ev.LineaNombre</div>
+                                                    }
+
+                                                    <div class="event-meta">
+                                                        Auditor: @MostrarPersona(ev.AuditorAsignadoId, "Pendiente")
+                                                    </div>
+                                                </button>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
 
         @if (procesosSinFecha.Count > 0)
         {
@@ -403,7 +417,7 @@ else
                 .ToList());
 
         var primerDiaMes = PrimerDiaMes(mesActual);
-        var offset = ((int)primerDiaMes.DayOfWeek + 6) % 7; // lunes = 0
+        var offset = ((int)primerDiaMes.DayOfWeek + 6) % 7;
         var inicioGrid = primerDiaMes.AddDays(-offset);
 
         for (int i = 0; i < 42; i++)
@@ -435,6 +449,32 @@ else
         if (!CanGoNextMonth) return;
         mesActual = PrimerDiaMes(mesActual.AddMonths(1));
         ConstruirCalendario();
+    }
+
+    private async Task ExportarImagen()
+    {
+        try
+        {
+            var nombre = $"Calendario_Auditoria_{id}_{mesActual:yyyy_MM}";
+            await JS.InvokeVoidAsync("auditCalendarExport.exportImage", "calendario-export", nombre);
+        }
+        catch (JSException ex)
+        {
+            errorMsg = $"No se pudo exportar la imagen. {ex.Message}";
+        }
+    }
+
+    private async Task ExportarPdf()
+    {
+        try
+        {
+            var nombre = $"Calendario_Auditoria_{id}_{mesActual:yyyy_MM}";
+            await JS.InvokeVoidAsync("auditCalendarExport.exportPdf", "calendario-export", nombre);
+        }
+        catch (JSException ex)
+        {
+            errorMsg = $"No se pudo exportar el PDF. {ex.Message}";
+        }
     }
 
     private static DateTime PrimerDiaMes(DateTime fecha) =>
@@ -530,10 +570,10 @@ else
                 personasDisplay[u.username.Trim()] = display;
         }
 
-        foreach (var id in ids)
+        foreach (var idPersona in ids)
         {
-            if (!personasDisplay.ContainsKey(id))
-                personasDisplay[id] = id;
+            if (!personasDisplay.ContainsKey(idPersona))
+                personasDisplay[idPersona] = idPersona;
         }
     }
 

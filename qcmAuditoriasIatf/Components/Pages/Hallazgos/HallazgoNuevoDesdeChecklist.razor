@@ -70,8 +70,13 @@ else
                     }
 
                     <span class="meta-chip">
-                        Auditor asignado:
-                        <strong>@(string.IsNullOrWhiteSpace(ResponsableHallazgoId) ? "Sin asignar" : ResponsableHallazgoId)</strong>
+                        Auditor del proceso:
+                        <strong>@(string.IsNullOrWhiteSpace(AuditorProcesoId) ? "Sin asignar" : AuditorProcesoId)</strong>
+                    </span>
+
+                    <span class="meta-chip">
+                        Responsable del hallazgo:
+                        <strong>@usuarioActualId</strong>
                     </span>
                 </div>
 
@@ -110,22 +115,6 @@ else
 
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Usuario actual</label>
-                            <input class="form-control" value="@usuarioActualId" disabled />
-                            <div class="field-help">
-                                Este usuario quedará registrado como quien crea el hallazgo.
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Nombre del usuario</label>
-                            <input class="form-control" value="@usuarioActualNombre" disabled />
-                            <div class="field-help">
-                                Se toma desde la sesión autenticada.
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
                             <label class="form-label">Fecha compromiso</label>
                             <InputDate class="form-control" @bind-Value="vm.FechaCompromiso" />
                         </div>
@@ -149,16 +138,6 @@ else
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">Responsable del hallazgo</label>
-                            <input class="form-control"
-                                   value="@(string.IsNullOrWhiteSpace(ResponsableHallazgoId) ? "Sin auditor asignado" : ResponsableHallazgoId)"
-                                   disabled />
-                            <div class="field-help">
-                                Se toma automáticamente del auditor principal asignado al proceso.
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
                             <label class="form-label">Responsable de finalizar el hallazgo</label>
                             <InputSelect class="form-select" @bind-Value="vm.ResponsableCierreId">
                                 <option value="">-- Selecciona --</option>
@@ -172,6 +151,11 @@ else
                         <div class="col-12">
                             <label class="form-label">Descripción de la No Conformidad</label>
                             <InputTextArea class="form-control" @bind-Value="vm.DescripcionNoConformidad" rows="4" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Justificación de la No Conformidad</label>
+                            <InputTextArea class="form-control" @bind-Value="vm.JustificacionNoConformidad" rows="4" />
                         </div>
 
                         <div class="col-12">
@@ -247,11 +231,10 @@ else
                     {
                         <div class="user-summary-card">
                             <div class="user-summary-role">Responsable del hallazgo</div>
-                            <div class="user-summary-name">
-                                @(string.IsNullOrWhiteSpace(ResponsableHallazgoId) ? "Sin auditor asignado" : ResponsableHallazgoId)
-                            </div>
+                            <div class="user-summary-name">@usuarioActualNombre</div>
+                            <div class="user-summary-login">@usuarioActualId</div>
                             <div class="user-summary-meta">
-                                Se toma automáticamente del auditor principal del proceso.
+                                Se toma automáticamente del usuario autenticado que crea el hallazgo.
                             </div>
                         </div>
                     }
@@ -338,17 +321,15 @@ else
     private TipoHallazgo? TipoSeleccionado =>
         tiposHallazgo.FirstOrDefault(x => x.TipoHallazgoId == vm.TipoHallazgoId);
 
-    private string? ResponsableHallazgoId =>
+    private string? AuditorProcesoId =>
         ap?.AuditorAsignadoId?.Trim();
 
     private bool PuedeCrearHallazgo =>
-        !string.IsNullOrWhiteSpace(ResponsableHallazgoId);
+        !string.IsNullOrWhiteSpace(AuditorProcesoId);
 
     private MeaxAllUser? ResponsableHallazgoUsuario =>
-        string.IsNullOrWhiteSpace(ResponsableHallazgoId)
-            ? null
-            : usuariosDisponibles.FirstOrDefault(x =>
-                string.Equals(x.pc_login_id, ResponsableHallazgoId, StringComparison.OrdinalIgnoreCase));
+        usuariosDisponibles.FirstOrDefault(x =>
+            string.Equals(x.pc_login_id, usuarioActualId, StringComparison.OrdinalIgnoreCase));
 
     private MeaxAllUser? ResponsableCierreSeleccionado =>
         usuariosDisponibles.FirstOrDefault(x =>
@@ -360,6 +341,7 @@ else
         public DateTime FechaCompromiso { get; set; } = DateTime.Today.AddDays(7);
         public string? ResponsableCierreId { get; set; }
         public string? DescripcionNoConformidad { get; set; }
+        public string? JustificacionNoConformidad { get; set; }
         public string? Evidencia { get; set; }
     }
 
@@ -479,6 +461,12 @@ else
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(vm.JustificacionNoConformidad))
+            {
+                errorMsg = "La justificación de la no conformidad es obligatoria.";
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(vm.ResponsableCierreId))
             {
                 errorMsg = "El responsable de finalizar el hallazgo es obligatorio.";
@@ -508,9 +496,10 @@ else
                 PreguntaId = preguntaId,
 
                 Descripcion = vm.DescripcionNoConformidad.Trim(),
+                JustificacionNoConformidad = vm.JustificacionNoConformidad.Trim(),
                 Evidencia = string.IsNullOrWhiteSpace(vm.Evidencia) ? null : vm.Evidencia.Trim(),
 
-                ResponsableId = ResponsableHallazgoId!,
+                ResponsableId = usuarioActualId.Trim(),
                 ResponsableCierreId = vm.ResponsableCierreId.Trim(),
 
                 CreadoPorId = usuarioActualId,
@@ -528,7 +517,7 @@ else
             {
                 HallazgoId = hallazgo.HallazgoId,
                 UsuarioId = usuarioActualId,
-                Comentario = $"Creó el hallazgo y lo envió a validación SGC. Responsable: {hallazgo.ResponsableId}. Responsable de cierre: {hallazgo.ResponsableCierreId}.",
+                Comentario = $"Creó el hallazgo y lo envió a validación SGC. Responsable del hallazgo: {hallazgo.ResponsableId}. Responsable de cierre: {hallazgo.ResponsableCierreId}.",
                 EstatusNuevo = hallazgo.Estatus
             });
 

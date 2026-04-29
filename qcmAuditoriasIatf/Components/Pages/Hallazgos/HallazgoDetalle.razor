@@ -133,6 +133,16 @@ else
 
                 <div class="content-box">@hallazgo.Descripcion</div>
 
+                @if (!string.IsNullOrWhiteSpace(hallazgo.JustificacionNoConformidad))
+                {
+                    <div class="section-divider"></div>
+
+                    <div class="mini-section">
+                        <div class="mini-section-label">Justificación de la no conformidad</div>
+                        <div class="content-box subtle">@hallazgo.JustificacionNoConformidad</div>
+                    </div>
+                }
+
                 @if (!string.IsNullOrWhiteSpace(hallazgo.Evidencia))
                 {
                     <div class="section-divider"></div>

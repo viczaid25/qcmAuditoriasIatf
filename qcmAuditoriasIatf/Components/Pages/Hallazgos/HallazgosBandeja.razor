@@ -212,6 +212,14 @@ else
                                     <td>
                                         <div class="desc-cell">@h.Descripcion</div>
 
+                                        @if (!string.IsNullOrWhiteSpace(h.JustificacionNoConformidad))
+                                        {
+                                            <div class="evidencia-box">
+                                                <div class="mini-label">Justificación de la NC</div>
+                                                <div>@h.JustificacionNoConformidad</div>
+                                            </div>
+                                        }
+
                                         @if (!string.IsNullOrWhiteSpace(h.Evidencia))
                                         {
                                             <div class="evidencia-box">
@@ -417,9 +425,13 @@ else
 
             q = q.Where(h =>
                 h.Descripcion.Contains(texto) ||
+                (h.JustificacionNoConformidad != null && h.JustificacionNoConformidad.Contains(texto)) ||
+                (h.Evidencia != null && h.Evidencia.Contains(texto)) ||
+                (h.ComentarioRevisionSgc != null && h.ComentarioRevisionSgc.Contains(texto)) ||
                 h.ResponsableId.Contains(texto) ||
                 (h.ResponsableCierreId != null && h.ResponsableCierreId.Contains(texto)) ||
-                (h.CreadoPorId != null && h.CreadoPorId.Contains(texto)));
+                (h.CreadoPorId != null && h.CreadoPorId.Contains(texto)) ||
+                (h.RevisadoPorSgcId != null && h.RevisadoPorSgcId.Contains(texto)));
         }
 
         hallazgos = await q

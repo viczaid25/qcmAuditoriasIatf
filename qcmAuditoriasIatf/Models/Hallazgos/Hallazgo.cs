@@ -26,6 +26,9 @@ public class Hallazgo
     [Required]
     public string Descripcion { get; set; } = string.Empty;
 
+    [StringLength(2000)]
+    public string? JustificacionNoConformidad { get; set; }
+
     public string? Evidencia { get; set; }
 
     [Required]

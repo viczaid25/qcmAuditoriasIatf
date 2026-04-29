@@ -6,3 +6,4 @@ wwwroot\images\favicon.ico
 wwwroot\images\icons\icon-192.png
 wwwroot\images\icons\icon-512.png
 wwwroot\images\logo.png
+wwwroot\js\calendar-export.js
