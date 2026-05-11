@@ -9,6 +9,7 @@
 @using System.Security.Claims
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 @attribute [Authorize]
 
@@ -92,14 +93,14 @@ else
             </div>
         </section>
 
-        @if (!PuedeCrearHallazgo)
+@*         @if (!PuedeCrearHallazgo)
         {
             <div class="alert alert-warning mb-0">
-                No puedes crear este hallazgo todavía porque el proceso no tiene auditor principal asignado.
-                Primero asigna el equipo auditor del proceso.
+                No se pudo identificar el usuario autenticado.
+                Vuelve a iniciar sesión para crear el hallazgo.
             </div>
         }
-
+ *@
         <EditForm Model="vm" OnValidSubmit="Guardar">
             <DataAnnotationsValidator />
             <ValidationSummary />
@@ -279,7 +280,7 @@ else
                     <div class="action-buttons">
                         <button class="btn btn-danger btn-lg"
                                 type="submit"
-                                disabled="@guardando || !PuedeCrearHallazgo">
+                                disabled="@guardando">
                             @(guardando ? "Guardando..." : "Guardar hallazgo")
                         </button>
 
@@ -300,9 +301,6 @@ else
     [Parameter] public int auditoriaId { get; set; }
     [Parameter] public int auditoriaProcesoId { get; set; }
     [Parameter] public int preguntaId { get; set; }
-
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
     private bool cargando = true;
     private bool guardando;
@@ -325,7 +323,8 @@ else
         ap?.AuditorAsignadoId?.Trim();
 
     private bool PuedeCrearHallazgo =>
-        !string.IsNullOrWhiteSpace(AuditorProcesoId);
+        !string.IsNullOrWhiteSpace(usuarioActualId) &&
+        !string.Equals(usuarioActualId, "sistema", StringComparison.OrdinalIgnoreCase);
 
     private MeaxAllUser? ResponsableHallazgoUsuario =>
         usuariosDisponibles.FirstOrDefault(x =>
@@ -386,23 +385,41 @@ else
 
     private async Task CargarUsuarioActual()
     {
-        if (AuthenticationStateTask is null)
-            return;
+        usuarioActualId = "sistema";
+        usuarioActualNombre = "sistema";
 
-        var authState = await AuthenticationStateTask;
-        var user = authState.User;
-
-        if (user.Identity?.IsAuthenticated == true)
+        try
         {
-            usuarioActualId =
-                user.FindFirst("pc_login_id")?.Value
-                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? "sistema";
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-            usuarioActualNombre =
-                user.Identity?.Name
-                ?? user.FindFirst(ClaimTypes.Name)?.Value
-                ?? usuarioActualId;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                usuarioActualId =
+                    user.FindFirst("pc_login_id")?.Value
+                    ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? user.Identity?.Name
+                    ?? "sistema";
+
+                usuarioActualNombre =
+                    user.FindFirst(ClaimTypes.Name)?.Value
+                    ?? user.Identity?.Name
+                    ?? usuarioActualId;
+            }
+        }
+        catch
+        {
+            usuarioActualId = "sistema";
+            usuarioActualNombre = "sistema";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && string.Equals(usuarioActualId, "sistema", StringComparison.OrdinalIgnoreCase))
+        {
+            await CargarUsuarioActual();
+            StateHasChanged();
         }
     }
 
@@ -434,12 +451,6 @@ else
             if (string.IsNullOrWhiteSpace(usuarioActualId) || usuarioActualId == "sistema")
             {
                 errorMsg = "No se pudo identificar el usuario autenticado.";
-                return;
-            }
-
-            if (!PuedeCrearHallazgo)
-            {
-                errorMsg = "No se puede crear el hallazgo porque el proceso no tiene auditor principal asignado.";
                 return;
             }
 
