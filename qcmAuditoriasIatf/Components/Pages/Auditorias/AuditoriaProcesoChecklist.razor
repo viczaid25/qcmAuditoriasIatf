@@ -138,7 +138,6 @@ else
                                 <th>Pregunta</th>
                                 <th>Resultado</th>
                                 <th>Evidencia</th>
-                                <th>Comentarios</th>
                                 <th class="text-end">Hallazgo</th>
                             </tr>
                         </thead>
@@ -196,13 +195,6 @@ else
                                         <InputTextArea class="form-control form-control-sm table-textarea"
                                                        rows="3"
                                                        @bind-Value="row.Evidencia"
-                                                       disabled="@guardando" />
-                                    </td>
-
-                                    <td>
-                                        <InputTextArea class="form-control form-control-sm table-textarea"
-                                                       rows="3"
-                                                       @bind-Value="row.Comentarios"
                                                        disabled="@guardando" />
                                     </td>
 

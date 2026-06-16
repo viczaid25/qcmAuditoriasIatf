@@ -71,6 +71,7 @@
     color: #fff;
     text-decoration: none;
     font-weight: 700;
+    text-decoration: none;
     border: 1px solid rgba(255,255,255,0.08);
     transition: all 0.18s ease;
     display: inline-flex;
@@ -88,40 +89,6 @@
         border-color: transparent;
         box-shadow: 0 12px 24px rgba(59,130,246,0.25);
     }
-
-.calendario-metrics {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
-}
-
-.metric-card {
-    padding: 1.15rem 1.2rem;
-    border-radius: 22px;
-    background: rgba(255,255,255,0.94);
-    border: 1px solid rgba(226,232,240,0.95);
-    box-shadow: 0 14px 30px rgba(15,23,42,0.06);
-}
-
-.metric-label {
-    color: #64748b;
-    font-size: 0.9rem;
-    font-weight: 700;
-    margin-bottom: 0.55rem;
-}
-
-.metric-value {
-    color: #0f172a;
-    font-size: 2rem;
-    font-weight: 800;
-    line-height: 1;
-    margin-bottom: 0.35rem;
-}
-
-.metric-note {
-    color: #64748b;
-    font-size: 0.85rem;
-}
 
 .panel-card {
     padding: 1.25rem;
@@ -166,6 +133,37 @@
         background: #fff7ed;
         color: #c2410c;
     }
+
+.auditoria-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.info-card {
+    padding: 1rem;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.info-label {
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.info-value {
+    color: #0f172a;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
 
 .toolbar-inner {
     display: flex;
@@ -457,6 +455,67 @@
 
 .calendario-export {
     background: #ffffff;
+    display: grid;
+    gap: 1.25rem;
+}
+
+.export-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.1rem 1.6rem;
+    border-radius: 18px;
+    background: #0f172a;
+    color: #fff;
+}
+
+.export-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.export-form-code {
+    font-size: 1.45rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    color: #fff;
+    line-height: 1;
+}
+
+.export-doc-title {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.65);
+    font-weight: 500;
+}
+
+.export-header-right {
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+    text-align: right;
+}
+
+.export-meta-row {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    align-items: baseline;
+}
+
+.export-meta-label {
+    color: rgba(255,255,255,0.55);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.export-meta-value {
+    color: #fff;
+    font-size: 0.92rem;
+    font-weight: 800;
 }
 
 .calendario-skeleton {
@@ -468,6 +527,10 @@
 
 .calendario-skeleton-hero {
     height: 210px;
+}
+
+.calendario-skeleton-info {
+    height: 220px;
 }
 
 .calendario-skeleton-toolbar {
@@ -489,10 +552,6 @@
 }
 
 @media (max-width: 1100px) {
-    .calendario-metrics {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .calendario-hero,
     .toolbar-inner,
     .pending-item {
@@ -503,13 +562,13 @@
     .toolbar-stats {
         justify-content: flex-start;
     }
+
+    .auditoria-info-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 640px) {
-    .calendario-metrics {
-        grid-template-columns: 1fr;
-    }
-
     .calendario-hero,
     .panel-card {
         padding: 1rem;

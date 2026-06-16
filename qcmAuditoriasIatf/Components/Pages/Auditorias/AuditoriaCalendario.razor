@@ -1,8 +1,6 @@
 ﻿@page "/auditorias/{id:int}/calendario"
 @using System.Globalization
 @using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using qcmAuditoriasIatf.Models.Auditorias
@@ -21,6 +19,7 @@
 {
     <div class="calendario-loading">
         <div class="calendario-skeleton calendario-skeleton-hero"></div>
+        <div class="calendario-skeleton calendario-skeleton-info"></div>
         <div class="calendario-skeleton calendario-skeleton-toolbar"></div>
         <div class="calendario-skeleton calendario-skeleton-calendar"></div>
     </div>
@@ -44,7 +43,7 @@ else
         <section class="calendario-hero">
             <div>
                 <span class="calendario-kicker">Agenda de auditoría</span>
-                <h1>Calendario de auditoría #@id</h1>
+                <h1>MX-6100-F1 · Calendario de auditoría #@id</h1>
 
                 <div class="calendario-meta">
                     <span class="meta-chip">
@@ -65,7 +64,7 @@ else
                 </div>
 
                 <p class="hero-text">
-                    Visualiza por mes las fechas programadas de los procesos de la auditoría y detecta fácilmente los pendientes sin fecha.
+                    Visualiza por mes las fechas programadas de los procesos de la auditoría y consulta su información general.
                 </p>
             </div>
 
@@ -85,29 +84,65 @@ else
         </section>
 
         <div id="calendario-export" class="calendario-export">
-            <section class="calendario-metrics">
-                <div class="metric-card">
-                    <div class="metric-label">Procesos</div>
-                    <div class="metric-value">@procesos.Count</div>
-                    <div class="metric-note">Total de procesos de la auditoría</div>
+            <div class="export-header">
+                <div class="export-header-left">
+                    <div class="export-form-code">MX-6100-F1</div>
+                    <div class="export-doc-title">Calendario de Auditoría Interna IATF 16949</div>
+                </div>
+                <div class="export-header-right">
+                    <div class="export-meta-row">
+                        <span class="export-meta-label">Tipo:</span>
+                        <span class="export-meta-value">@auditoria.TipoAuditoria</span>
+                    </div>
+                    <div class="export-meta-row">
+                        <span class="export-meta-label">Período:</span>
+                        <span class="export-meta-value">@auditoria.FechaInicio.ToString("yyyy-MM-dd") – @auditoria.FechaFin.ToString("yyyy-MM-dd")</span>
+                    </div>
+                    <div class="export-meta-row">
+                        <span class="export-meta-label">Auditoría:</span>
+                        <span class="export-meta-value">#@id</span>
+                    </div>
+                </div>
+            </div>
+
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Información de la auditoría</h2>
+                        <p class="panel-subtitle">Resumen general de la planeación y el enfoque de la auditoría.</p>
+                    </div>
+
+                    <span class="panel-badge">Auditoría #@id</span>
                 </div>
 
-                <div class="metric-card">
-                    <div class="metric-label">Programados</div>
-                    <div class="metric-value">@totalProgramados</div>
-                    <div class="metric-note">Con fecha asignada</div>
-                </div>
+                <div class="auditoria-info-grid">
+                    <div class="info-card">
+                        <div class="info-label">Objetivo</div>
+                        <div class="info-value">
+                            @(string.IsNullOrWhiteSpace(auditoria.Objetivo) ? "Sin información capturada." : auditoria.Objetivo)
+                        </div>
+                    </div>
 
-                <div class="metric-card">
-                    <div class="metric-label">Sin fecha</div>
-                    <div class="metric-value">@procesosSinFecha.Count</div>
-                    <div class="metric-note">Pendientes por programar</div>
-                </div>
+                    <div class="info-card">
+                        <div class="info-label">Alcance</div>
+                        <div class="info-value">
+                            @(string.IsNullOrWhiteSpace(auditoria.Alcance) ? "Sin información capturada." : auditoria.Alcance)
+                        </div>
+                    </div>
 
-                <div class="metric-card">
-                    <div class="metric-label">Este mes</div>
-                    <div class="metric-value">@procesosMesActual</div>
-                    <div class="metric-note">Procesos en @TituloMes</div>
+                    <div class="info-card">
+                        <div class="info-label">Criterios</div>
+                        <div class="info-value">
+                            @(string.IsNullOrWhiteSpace(auditoria.Criterios) ? "Sin información capturada." : auditoria.Criterios)
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-label">Métodos</div>
+                        <div class="info-value">
+                            @(string.IsNullOrWhiteSpace(auditoria.Metodos) ? "Sin información capturada." : auditoria.Metodos)
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -269,7 +304,6 @@ else
     [Parameter] public int id { get; set; }
 
     private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
-
     private static readonly CultureInfo CulturaEs = CultureInfo.GetCultureInfo("es-MX");
 
     private bool cargando = true;

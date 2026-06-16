@@ -23,10 +23,16 @@ public class Auditoria
     public string Alcance { get; set; } = string.Empty;
 
     [Required]
-    public string AuditorLiderId { get; set; } = "sistema"; // temporal si no tienes Identity
+    public string Criterios { get; set; } = string.Empty;
 
     [Required]
-    public string Estatus { get; set; } = "Planeada"; // Planeada/EnProceso/Cerrada
+    public string Metodos { get; set; } = string.Empty;
+
+    [Required]
+    public string AuditorLiderId { get; set; } = string.Empty;
+
+    [Required]
+    public string Estatus { get; set; } = "Planeada";
 
     public ICollection<AuditoriaProceso> AuditoriaProcesos { get; set; } = new List<AuditoriaProceso>();
     public ICollection<AuditoriaChecklist> AuditoriaChecklists { get; set; } = new List<AuditoriaChecklist>();

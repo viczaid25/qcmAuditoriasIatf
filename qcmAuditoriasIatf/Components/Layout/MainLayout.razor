@@ -1,8 +1,9 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
+<div class="page @(sidebarCollapsed ? "sidebar-collapsed" : "")">
     <aside class="sidebar">
-        <NavMenu />
+        <NavMenu IsCollapsed="sidebarCollapsed"
+                 OnToggleSidebar="ToggleSidebar" />
     </aside>
 
     <main>
@@ -17,3 +18,13 @@
     <a href="" class="reload">Recargar</a>
     <a class="dismiss">🗙</a>
 </div>
+
+@code {
+    private bool sidebarCollapsed = false;
+
+    private Task ToggleSidebar()
+    {
+        sidebarCollapsed = !sidebarCollapsed;
+        return Task.CompletedTask;
+    }
+}

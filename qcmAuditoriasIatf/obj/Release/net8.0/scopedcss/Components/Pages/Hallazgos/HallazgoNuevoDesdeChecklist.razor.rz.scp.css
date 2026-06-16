@@ -328,3 +328,20 @@
         width: 100%;
     }
 }
+
+.nuevo-hallazgo-sections[b-t8j6nevnhg] {
+    display: grid;
+    gap: 1rem;
+}
+
+.responsables-grid[b-t8j6nevnhg] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+@media (max-width: 900px) {
+    .responsables-grid[b-t8j6nevnhg] {
+        grid-template-columns: 1fr;
+    }
+}

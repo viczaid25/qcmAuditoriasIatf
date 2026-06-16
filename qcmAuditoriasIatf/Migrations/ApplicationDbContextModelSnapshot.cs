@@ -38,6 +38,10 @@ namespace qcmAuditoriasIatf.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Criterios")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Estatus")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -47,6 +51,10 @@ namespace qcmAuditoriasIatf.Migrations
 
                     b.Property<DateTime>("FechaInicio")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Metodos")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Objetivo")
                         .IsRequired()
@@ -115,12 +123,22 @@ namespace qcmAuditoriasIatf.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AuditoriaProcesoId"));
 
+                    b.Property<string>("AuditadoId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("AuditorAsignadoId")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("AuditoriaId")
                         .HasColumnType("int");
+
+                    b.Property<string>("ClausulasIatfTop3NcmMayoresPasadas")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClausulasIatfTop3NcmMenoresPasadas")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("FechaProgramada")
                         .HasColumnType("datetime2");
@@ -134,6 +152,15 @@ namespace qcmAuditoriasIatf.Migrations
 
                     b.Property<int>("ProcesoId")
                         .HasColumnType("int");
+
+                    b.Property<string>("ReclamosAuditoriasPasadas")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ResultadosAuditoriasInternasPrevias")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SeguimientoAccionesCorrectivasIatf")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SegundoAuditorId")
                         .HasMaxLength(100)
@@ -529,6 +556,14 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<int>("ClausulaId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ComentarioRevisionSgc")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("CreadoPorId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Descripcion")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -537,11 +572,26 @@ namespace qcmAuditoriasIatf.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("EstatusValidacionSgc")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("Evidencia")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("FechaCompromiso")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaRevisionSgc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("JustificacionNoConformidad")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<int?>("PreguntaId")
                         .HasColumnType("int");
@@ -556,6 +606,10 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<string>("ResponsableId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RevisadoPorSgcId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("TipoHallazgoId")
                         .HasColumnType("int");
@@ -586,6 +640,10 @@ namespace qcmAuditoriasIatf.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HallazgoCincoPorQueId"));
+
+                    b.Property<string>("Acciones")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<bool?>("AprobacionAuditorAsignado")
                         .HasColumnType("bit");
@@ -701,6 +759,35 @@ namespace qcmAuditoriasIatf.Migrations
                     b.HasIndex("HallazgoId", "FechaRegistro");
 
                     b.ToTable("qmcAudHallazgoSeguimiento");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Seguridad.UsuarioPerfil", b =>
+                {
+                    b.Property<int>("UsuarioPerfilId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UsuarioPerfilId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PcLoginId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Perfil")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("UsuarioPerfilId");
+
+                    b.HasIndex("PcLoginId", "Perfil")
+                        .IsUnique();
+
+                    b.ToTable("qmcAudUsuarioPerfil");
                 });
 
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Auditorias.AuditoriaChecklist", b =>

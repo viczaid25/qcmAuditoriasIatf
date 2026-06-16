@@ -1,0 +1,500 @@
+@page "/hallazgos"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.Hallazgos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger" style="white-space:pre-wrap">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="global-loading">
+        <div class="global-skeleton global-skeleton-hero"></div>
+        <div class="global-metrics-grid">
+            <div class="global-skeleton global-skeleton-card"></div>
+            <div class="global-skeleton global-skeleton-card"></div>
+            <div class="global-skeleton global-skeleton-card"></div>
+            <div class="global-skeleton global-skeleton-card"></div>
+            <div class="global-skeleton global-skeleton-card"></div>
+            <div class="global-skeleton global-skeleton-card"></div>
+        </div>
+        <div class="global-skeleton global-skeleton-filters"></div>
+        <div class="global-skeleton global-skeleton-table"></div>
+    </div>
+}
+else
+{
+    <div class="global-page">
+        <section class="global-hero">
+            <div>
+                <span class="global-kicker">Vista global</span>
+                <h1>Todos los hallazgos</h1>
+                <p class="hero-text">
+                    Consulta y filtra los hallazgos de todas las auditorías, ordenados por auditoría más reciente.
+                </p>
+            </div>
+        </section>
+
+        <section class="global-metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total</div>
+                <div class="metric-value">@total</div>
+                <div class="metric-note">Hallazgos registrados</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Pendiente SGC</div>
+                <div class="metric-value">@pendientesSgc</div>
+                <div class="metric-note">Esperando validación</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Aprobados SGC</div>
+                <div class="metric-value">@aprobadosSgc</div>
+                <div class="metric-note">Liberados al flujo</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Rechazados SGC</div>
+                <div class="metric-value">@rechazadosSgc</div>
+                <div class="metric-note">Con observaciones</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Abiertos</div>
+                <div class="metric-value">@abiertos</div>
+                <div class="metric-note">En operación o seguimiento</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Cerrados</div>
+                <div class="metric-value">@cerrados</div>
+                <div class="metric-note">Ya finalizados</div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Filtros</h2>
+                    <p class="panel-subtitle">Refina por auditoría, validación SGC, estatus o texto.</p>
+                </div>
+                <span class="panel-badge">Mostrando @hallazgos.Count</span>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Auditoría</label>
+                    <InputSelect class="form-select" @bind-Value="auditoriaIdSeleccionada">
+                        <option value="0">-- Todas --</option>
+                        @foreach (var a in auditoriasFiltro)
+                        {
+                            <option value="@a.AuditoriaId">@TextoAuditoria(a)</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Validación SGC</label>
+                    <InputSelect class="form-select" @bind-Value="validacionSeleccionada">
+                        <option value="">-- Todas --</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Aprobado">Aprobado</option>
+                        <option value="Rechazado">Rechazado</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Estatus operativo</label>
+                    <InputSelect class="form-select" @bind-Value="estatusSeleccionado">
+                        <option value="">-- Todos --</option>
+                        <option value="Pendiente SGC">Pendiente SGC</option>
+                        <option value="Abierto">Abierto</option>
+                        <option value="En Proceso">En Proceso</option>
+                        <option value="Cerrado">Cerrado</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Buscar</label>
+                    <InputText class="form-control" @bind-Value="textoBusqueda" placeholder="Descripción, responsable..." />
+                </div>
+
+                <div class="col-12 d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-primary" @onclick="AplicarFiltros">
+                        Aplicar filtros
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarFiltros">
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Bandeja global de hallazgos</h2>
+                    <p class="panel-subtitle">Ordenados por auditoría más reciente.</p>
+                </div>
+                <span class="panel-badge">@hallazgos.Count registro(s)</span>
+            </div>
+
+            @if (hallazgos.Count == 0)
+            {
+                <div class="empty-state compact">
+                    No hay hallazgos para los filtros seleccionados.
+                </div>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="hallazgos-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Auditoría</th>
+                                <th>Proceso</th>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                                <th>Responsables</th>
+                                <th>Fechas</th>
+                                <th>Estatus</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var h in hallazgos)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="id-pill">#@h.HallazgoId</div>
+                                        <div class="cell-subtitle">@TextoClausula(h)</div>
+                                    </td>
+
+                                    <td>
+                                        @if (h.Auditoria is not null)
+                                        {
+                                            <div class="cell-title">@h.Auditoria.TipoAuditoria</div>
+                                            <div class="cell-subtitle">@h.Auditoria.FechaInicio.ToString("yyyy-MM-dd") – @h.Auditoria.FechaFin.ToString("yyyy-MM-dd")</div>
+                                            <div class="auditoria-id-chip">ID #@h.AuditoriaId</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="cell-subtitle">Sin auditoría</span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <div class="cell-title">@TextoProceso(h)</div>
+                                    </td>
+
+                                    <td>
+                                        <span class="tipo-pill @GetTipoClass(h.TipoHallazgo?.Nombre)">
+                                            @(h.TipoHallazgo?.Nombre ?? "Sin tipo")
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <div class="desc-cell">@h.Descripcion</div>
+                                        @if (!string.IsNullOrWhiteSpace(h.JustificacionNoConformidad))
+                                        {
+                                            <div class="evidencia-box">
+                                                <div class="mini-label">Justificación NC</div>
+                                                <div>@h.JustificacionNoConformidad</div>
+                                            </div>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <div class="team-stack">
+                                            <div>
+                                                <span class="team-label">Responsable:</span>
+                                                <span class="team-value">@MostrarPersona(h.ResponsableId)</span>
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(h.ResponsableCierreId))
+                                            {
+                                                <div>
+                                                    <span class="team-label">Cierre:</span>
+                                                    <span class="team-value">@MostrarPersona(h.ResponsableCierreId)</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="cell-title">Compromiso: @h.FechaCompromiso.ToString("yyyy-MM-dd")</div>
+                                        @if (h.FechaCreacion != default)
+                                        {
+                                            <div class="cell-subtitle">Creación: @h.FechaCreacion.ToString("yyyy-MM-dd")</div>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <div class="status-stack">
+                                            <span class="validacion-pill @GetValidacionClass(h.EstatusValidacionSgc)">
+                                                @h.EstatusValidacionSgc
+                                            </span>
+                                            <span class="status-pill @GetStatusClass(h.Estatus)">
+                                                @h.Estatus
+                                            </span>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(h.ComentarioRevisionSgc))
+                                        {
+                                            <div class="comment-box-mini">
+                                                <div class="mini-label">Comentario SGC</div>
+                                                <div>@h.ComentarioRevisionSgc</div>
+                                            </div>
+                                        }
+                                    </td>
+
+                                    <td class="text-end">
+                                        <button type="button"
+                                                class="table-btn"
+                                                @onclick='() => Nav.NavigateTo($"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}")'>
+                                            Ver detalle
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool cargando = true;
+    private string? errorMsg;
+
+    private int auditoriaIdSeleccionada = 0;
+    private string validacionSeleccionada = "";
+    private string estatusSeleccionado = "";
+    private string textoBusqueda = "";
+
+    private int total;
+    private int abiertos;
+    private int cerrados;
+    private int pendientesSgc;
+    private int aprobadosSgc;
+    private int rechazadosSgc;
+
+    private List<Auditoria> auditoriasFiltro = new();
+    private List<Hallazgo> hallazgos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarTodo();
+    }
+
+    private async Task CargarTodo()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            auditoriasFiltro = await Db.Auditorias
+                .AsNoTracking()
+                .OrderByDescending(a => a.FechaInicio)
+                .ToListAsync();
+
+            await CargarResumen();
+            await CargarHallazgos();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarResumen()
+    {
+        IQueryable<Hallazgo> q = Db.Hallazgos;
+
+        if (auditoriaIdSeleccionada > 0)
+            q = q.Where(h => h.AuditoriaId == auditoriaIdSeleccionada);
+
+        total = await q.CountAsync();
+        pendientesSgc = await q.CountAsync(h => h.EstatusValidacionSgc == "Pendiente");
+        aprobadosSgc = await q.CountAsync(h => h.EstatusValidacionSgc == "Aprobado");
+        rechazadosSgc = await q.CountAsync(h => h.EstatusValidacionSgc == "Rechazado");
+        cerrados = await q.CountAsync(h => h.Estatus == "Cerrado");
+        abiertos = await q.CountAsync(h => h.Estatus == "Abierto" || h.Estatus == "En Proceso");
+    }
+
+    private async Task CargarHallazgos()
+    {
+        var q = Db.Hallazgos
+            .Include(h => h.Proceso)
+            .Include(h => h.Clausula)
+            .Include(h => h.TipoHallazgo)
+            .Include(h => h.Auditoria)
+            .AsQueryable();
+
+        if (auditoriaIdSeleccionada > 0)
+            q = q.Where(h => h.AuditoriaId == auditoriaIdSeleccionada);
+
+        if (!string.IsNullOrWhiteSpace(validacionSeleccionada))
+            q = q.Where(h => h.EstatusValidacionSgc == validacionSeleccionada);
+
+        if (!string.IsNullOrWhiteSpace(estatusSeleccionado))
+            q = q.Where(h => h.Estatus == estatusSeleccionado);
+
+        if (!string.IsNullOrWhiteSpace(textoBusqueda))
+        {
+            var texto = textoBusqueda.Trim();
+            q = q.Where(h =>
+                h.Descripcion.Contains(texto) ||
+                (h.JustificacionNoConformidad != null && h.JustificacionNoConformidad.Contains(texto)) ||
+                (h.Evidencia != null && h.Evidencia.Contains(texto)) ||
+                h.ResponsableId.Contains(texto) ||
+                (h.ResponsableCierreId != null && h.ResponsableCierreId.Contains(texto)) ||
+                (h.CreadoPorId != null && h.CreadoPorId.Contains(texto)));
+        }
+
+        hallazgos = await q
+            .OrderByDescending(h => h.Auditoria!.FechaInicio)
+            .ThenByDescending(h => h.HallazgoId)
+            .ToListAsync();
+
+        await CargarPersonasDisplay(
+            hallazgos.SelectMany(h => new string?[]
+            {
+                h.ResponsableId,
+                h.ResponsableCierreId,
+                h.CreadoPorId
+            }));
+    }
+
+    private async Task AplicarFiltros()
+    {
+        await CargarResumen();
+        await CargarHallazgos();
+    }
+
+    private async Task LimpiarFiltros()
+    {
+        auditoriaIdSeleccionada = 0;
+        validacionSeleccionada = "";
+        estatusSeleccionado = "";
+        textoBusqueda = "";
+        await CargarResumen();
+        await CargarHallazgos();
+    }
+
+    private static string TextoAuditoria(Auditoria a) =>
+        $"#{a.AuditoriaId} · {a.TipoAuditoria} | {a.FechaInicio:yyyy-MM-dd} a {a.FechaFin:yyyy-MM-dd}";
+
+    private static string TextoProceso(Hallazgo h) =>
+        h.Proceso is null ? "Sin proceso" : $"{h.Proceso.Codigo} - {h.Proceso.Nombre}";
+
+    private static string TextoClausula(Hallazgo h) =>
+        h.Clausula is null ? "Sin cláusula" : $"Cláusula: {h.Clausula.Codigo}";
+
+    private static string GetTipoClass(string? tipo)
+    {
+        var valor = tipo?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (valor.Contains("mayor")) return "major";
+        if (valor.Contains("menor")) return "minor";
+        return "neutral";
+    }
+
+    private static string GetValidacionClass(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (valor == "aprobado") return "approved";
+        if (valor == "rechazado") return "rejected";
+        if (valor == "pendiente") return "pending";
+        return "neutral";
+    }
+
+    private static string GetStatusClass(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (valor is "cerrado" or "cerrada") return "closed";
+        if (valor is "en proceso" or "en revisión" or "en revision") return "progress";
+        if (valor is "pendiente sgc") return "blocked";
+        return "open";
+    }
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        personasDisplay.Clear();
+
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0) return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids.Where(x => !personasDisplay.ContainsKey(x)).ToList();
+        if (faltantes.Count == 0) return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor, string fallback = "Sin asignar")
+    {
+        if (string.IsNullOrWhiteSpace(valor)) return fallback;
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
+}

@@ -524,3 +524,31 @@
         align-items: flex-start;
     }
 }
+
+.hallazgo-grid[b-632mtvfssd],
+.hallazgo-grid-top[b-632mtvfssd] {
+    align-items: start;
+}
+
+    .hallazgo-grid .panel-card[b-632mtvfssd] {
+        position: relative;
+        overflow: visible;
+    }
+
+.hallazgo-action-zone[b-632mtvfssd] {
+    position: relative;
+    z-index: 50;
+    overflow: visible;
+}
+
+.hallazgo-btn-clickable[b-632mtvfssd] {
+    position: relative;
+    z-index: 60;
+    pointer-events: auto;
+}
+
+.panel-card[b-632mtvfssd]::before,
+.panel-head[b-632mtvfssd]::before,
+.hallazgo-hero[b-632mtvfssd]::before {
+    pointer-events: none;
+}

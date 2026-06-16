@@ -80,6 +80,20 @@ else
                             @(string.IsNullOrWhiteSpace(auditoria.Alcance) ? "Sin alcance capturado." : auditoria.Alcance)
                         </div>
                     </div>
+
+                    <div class="text-card">
+                        <div class="text-card-label">Criterios</div>
+                        <div class="text-card-value">
+                            @(string.IsNullOrWhiteSpace(auditoria.Criterios) ? "Sin criterios capturados." : auditoria.Criterios)
+                        </div>
+                    </div>
+
+                    <div class="text-card">
+                        <div class="text-card-label">Método</div>
+                        <div class="text-card-value">
+                            @(string.IsNullOrWhiteSpace(auditoria.Metodos) ? "Sin método capturado." : auditoria.Metodos)
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -122,105 +136,6 @@ else
                 <div class="metric-label">Procesos programados</div>
                 <div class="metric-value">@procesosConFecha</div>
                 <div class="metric-note">Con fecha asignada dentro del rango</div>
-            </div>
-        </section>
-
-        <section class="auditoria-grid">
-            <div class="panel-card">
-                <div class="panel-head">
-                    <div>
-                        <h2>Avance de checklist</h2>
-                        <p class="panel-subtitle">Distribución de respuestas capturadas.</p>
-                    </div>
-                    <span class="panel-badge">@checklistTotal total</span>
-                </div>
-
-                @if (checklistTotal == 0)
-                {
-                    <div class="empty-state compact">
-                        Aún no hay respuestas del checklist para esta auditoría.
-                    </div>
-                }
-                else
-                {
-                    <div class="progress-list">
-                        <div class="progress-item">
-                            <div class="progress-top">
-                                <span>Cumple</span>
-                                <strong>@checklistCumple (@checklistCumplePct%)</strong>
-                            </div>
-                            <div class="progress-track">
-                                <div class="progress-fill success" style="@PctStyle(checklistCumplePct)"></div>
-                            </div>
-                        </div>
-
-                        <div class="progress-item">
-                            <div class="progress-top">
-                                <span>No cumple</span>
-                                <strong>@checklistNoCumple (@checklistNoCumplePct%)</strong>
-                            </div>
-                            <div class="progress-track">
-                                <div class="progress-fill danger" style="@PctStyle(checklistNoCumplePct)"></div>
-                            </div>
-                        </div>
-
-                        <div class="progress-item">
-                            <div class="progress-top">
-                                <span>No aplica</span>
-                                <strong>@checklistNoAplica (@checklistNoAplicaPct%)</strong>
-                            </div>
-                            <div class="progress-track">
-                                <div class="progress-fill neutral" style="@PctStyle(checklistNoAplicaPct)"></div>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-
-            <div class="panel-card">
-                <div class="panel-head">
-                    <div>
-                        <h2>Resumen de hallazgos</h2>
-                        <p class="panel-subtitle">Indicadores rápidos del seguimiento.</p>
-                    </div>
-                    <span class="panel-badge">@hallazgosTotal total</span>
-                </div>
-
-                <div class="summary-stack">
-                    <div class="summary-item">
-                        <span>Abiertos</span>
-                        <strong class="text-open">@hallazgosAbiertos</strong>
-                    </div>
-
-                    <div class="summary-item">
-                        <span>Cerrados</span>
-                        <strong class="text-closed">@hallazgosCerrados</strong>
-                    </div>
-
-                    <div class="summary-item">
-                        <span>Con auditor asignado</span>
-                        <strong>@procesosAsignados</strong>
-                    </div>
-
-                    <div class="summary-item">
-                        <span>Pendientes de asignación</span>
-                        <strong>@procesosPendientes</strong>
-                    </div>
-
-                    <div class="summary-item">
-                        <span>Con fecha programada</span>
-                        <strong>@procesosConFecha</strong>
-                    </div>
-
-                    <div class="summary-item">
-                        <span>Sin fecha programada</span>
-                        <strong>@procesosSinFecha</strong>
-                    </div>
-                </div>
-
-                <button type="button" class="hero-btn primary w-100 mt-3" @onclick="IrHallazgos">
-                    Ir a hallazgos
-                </button>
             </div>
         </section>
 

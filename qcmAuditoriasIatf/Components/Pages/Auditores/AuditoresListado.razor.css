@@ -474,3 +474,11 @@
         width: 100%;
     }
 }
+
+.group-block + .group-block {
+    margin-top: 1.5rem;
+}
+
+.group-head {
+    margin-bottom: 0.85rem;
+}

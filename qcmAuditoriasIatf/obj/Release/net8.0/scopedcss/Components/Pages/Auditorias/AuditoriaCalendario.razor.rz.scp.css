@@ -71,6 +71,7 @@
     color: #fff;
     text-decoration: none;
     font-weight: 700;
+    text-decoration: none;
     border: 1px solid rgba(255,255,255,0.08);
     transition: all 0.18s ease;
     display: inline-flex;
@@ -88,40 +89,6 @@
         border-color: transparent;
         box-shadow: 0 12px 24px rgba(59,130,246,0.25);
     }
-
-.calendario-metrics[b-ejixc872ul] {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
-}
-
-.metric-card[b-ejixc872ul] {
-    padding: 1.15rem 1.2rem;
-    border-radius: 22px;
-    background: rgba(255,255,255,0.94);
-    border: 1px solid rgba(226,232,240,0.95);
-    box-shadow: 0 14px 30px rgba(15,23,42,0.06);
-}
-
-.metric-label[b-ejixc872ul] {
-    color: #64748b;
-    font-size: 0.9rem;
-    font-weight: 700;
-    margin-bottom: 0.55rem;
-}
-
-.metric-value[b-ejixc872ul] {
-    color: #0f172a;
-    font-size: 2rem;
-    font-weight: 800;
-    line-height: 1;
-    margin-bottom: 0.35rem;
-}
-
-.metric-note[b-ejixc872ul] {
-    color: #64748b;
-    font-size: 0.85rem;
-}
 
 .panel-card[b-ejixc872ul] {
     padding: 1.25rem;
@@ -166,6 +133,37 @@
         background: #fff7ed;
         color: #c2410c;
     }
+
+.auditoria-info-grid[b-ejixc872ul] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.info-card[b-ejixc872ul] {
+    padding: 1rem;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.info-label[b-ejixc872ul] {
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.info-value[b-ejixc872ul] {
+    color: #0f172a;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
 
 .toolbar-inner[b-ejixc872ul] {
     display: flex;
@@ -457,6 +455,8 @@
 
 .calendario-export[b-ejixc872ul] {
     background: #ffffff;
+    display: grid;
+    gap: 1.25rem;
 }
 
 .calendario-skeleton[b-ejixc872ul] {
@@ -468,6 +468,10 @@
 
 .calendario-skeleton-hero[b-ejixc872ul] {
     height: 210px;
+}
+
+.calendario-skeleton-info[b-ejixc872ul] {
+    height: 220px;
 }
 
 .calendario-skeleton-toolbar[b-ejixc872ul] {
@@ -489,10 +493,6 @@
 }
 
 @media (max-width: 1100px) {
-    .calendario-metrics[b-ejixc872ul] {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .calendario-hero[b-ejixc872ul],
     .toolbar-inner[b-ejixc872ul],
     .pending-item[b-ejixc872ul] {
@@ -503,13 +503,13 @@
     .toolbar-stats[b-ejixc872ul] {
         justify-content: flex-start;
     }
+
+    .auditoria-info-grid[b-ejixc872ul] {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 640px) {
-    .calendario-metrics[b-ejixc872ul] {
-        grid-template-columns: 1fr;
-    }
-
     .calendario-hero[b-ejixc872ul],
     .panel-card[b-ejixc872ul] {
         padding: 1rem;

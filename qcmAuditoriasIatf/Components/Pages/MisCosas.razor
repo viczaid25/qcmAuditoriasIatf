@@ -1,0 +1,1092 @@
+﻿@page "/mis-cosas"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Models.Hallazgos
+@using System.Security.Claims
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger" style="white-space:pre-wrap">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="mis-loading">
+        <div class="mis-skeleton mis-skeleton-hero"></div>
+        <div class="mis-skeleton mis-skeleton-metrics"></div>
+        <div class="mis-skeleton mis-skeleton-table"></div>
+        <div class="mis-skeleton mis-skeleton-table"></div>
+        <div class="mis-skeleton mis-skeleton-table"></div>
+    </div>
+}
+else
+{
+    <div class="mis-page">
+        <section class="mis-hero">
+            <div>
+                <span class="mis-kicker">Panel personal</span>
+                <h1>Mis cosas</h1>
+
+                <div class="mis-meta">
+                    <span class="meta-chip">
+                        Usuario: <strong>@usuarioActualId</strong>
+                    </span>
+
+                    @if (!string.IsNullOrWhiteSpace(usuarioActualNombre) && usuarioActualNombre != usuarioActualId)
+                    {
+                        <span class="meta-chip">
+                            Nombre: <strong>@usuarioActualNombre</strong>
+                        </span>
+                    }
+
+                    <span class="meta-chip">
+                        Pendientes: <strong>@misPendientes.Count</strong>
+                    </span>
+                </div>
+
+                <p class="hero-text">
+                    Consulta tus procesos, hallazgos y acciones pendientes dentro del sistema.
+                </p>
+            </div>
+
+            <div class="hero-actions">
+                <button type="button" class="hero-btn" @onclick="IrAuditorias">
+                    Ver auditorías
+                </button>
+            </div>
+        </section>
+
+        <section class="mis-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Mis pendientes</div>
+                <div class="metric-value">@misPendientes.Count</div>
+                <div class="metric-note">Acciones que requieren atención</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Mis procesos</div>
+                <div class="metric-value">@misProcesos.Count</div>
+                <div class="metric-note">Como principal, segundo u observador</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Mis hallazgos</div>
+                <div class="metric-value">@misHallazgos.Count</div>
+                <div class="metric-note">Responsable o responsable de cierre</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Sin fecha</div>
+                <div class="metric-value">@misProcesos.Count(x => !x.FechaProgramada.HasValue)</div>
+                <div class="metric-note">Procesos asignados pendientes de programar</div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Filtros</h2>
+                    <p class="panel-subtitle">Cambia la vista, prioridad y urgencia de lo que quieres revisar.</p>
+                </div>
+
+                <span class="panel-badge">Vista actual: @vistaSeleccionada</span>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Vista</label>
+                    <InputSelect class="form-select" @bind-Value="vistaSeleccionada">
+                        <option value="Todo">Todo</option>
+                        <option value="Pendientes">Solo pendientes</option>
+                        <option value="Procesos">Solo procesos</option>
+                        <option value="Hallazgos">Solo hallazgos</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Prioridad</label>
+                    <InputSelect class="form-select" @bind-Value="prioridadSeleccionada">
+                        <option value="">-- Todas --</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Media">Media</option>
+                        <option value="Baja">Baja</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Buscar</label>
+                    <input class="form-control"
+                           @bind="textoBusqueda"
+                           @bind:event="oninput" />
+                </div>
+
+                <div class="col-12">
+                    <div class="filters-inline">
+                        <label class="check-chip">
+                            <InputCheckbox @bind-Value="soloVencidos" />
+                            <span>Solo vencidos</span>
+                        </label>
+
+                        <label class="check-chip">
+                            <InputCheckbox @bind-Value="soloEstaSemana" />
+                            <span>Esta semana</span>
+                        </label>
+
+                        <button type="button" class="table-btn" @onclick="LimpiarFiltros">
+                            Limpiar filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        @if (MostrarPendientes)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Mis pendientes</h2>
+                        <p class="panel-subtitle">Lo más importante que requiere acción de tu parte.</p>
+                    </div>
+
+                    <span class="panel-badge">@pendientesFiltrados.Count pendiente(s)</span>
+                </div>
+
+                @if (pendientesFiltrados.Count == 0)
+                {
+                    <div class="empty-state compact">
+                        No hay pendientes para los filtros seleccionados.
+                    </div>
+                }
+                else
+                {
+                    <div class="pending-list">
+                        @foreach (var p in pendientesFiltrados)
+                        {
+                            <div class="pending-item-card">
+                                <div class="pending-top">
+                                    <div>
+                                        <div class="pending-title">@p.Titulo</div>
+                                        <div class="pending-subtitle">@p.Subtitulo</div>
+                                    </div>
+
+                                    <span class="priority-pill @p.PrioridadCss">@p.Prioridad</span>
+                                </div>
+
+                                <div class="pending-tags">
+                                    <span class="kind-pill">@p.Tipo</span>
+
+                                    @if (p.Vencido)
+                                    {
+                                        <span class="kind-pill overdue">Vencido</span>
+                                    }
+                                    else if (p.EstaSemana)
+                                    {
+                                        <span class="kind-pill week">Esta semana</span>
+                                    }
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(p.Descripcion))
+                                {
+                                    <div class="pending-desc">@p.Descripcion</div>
+                                }
+
+                                <div class="pending-actions">
+                                    <button type="button"
+                                            class="table-btn table-btn-primary"
+                                            @onclick="() => Nav.NavigateTo(p.Url)">
+                                        Abrir
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        }
+
+        @if (MostrarProcesos)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Mis procesos asignados</h2>
+                        <p class="panel-subtitle">Procesos donde apareces como auditor principal, segundo auditor u observador.</p>
+                    </div>
+
+                    <span class="panel-badge">@procesosFiltrados.Count registro(s)</span>
+                </div>
+
+                @if (procesosFiltrados.Count == 0)
+                {
+                    <div class="empty-state compact">
+                        No hay procesos para los filtros seleccionados.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-wrap">
+                        <table class="mis-table">
+                            <thead>
+                                <tr>
+                                    <th>Auditoría</th>
+                                    <th>Proceso</th>
+                                    <th>Mi rol</th>
+                                    <th>Prioridad</th>
+                                    <th>Fecha</th>
+                                    <th>Línea</th>
+                                    <th class="text-end">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in procesosFiltrados)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="cell-title">#@item.AuditoriaId</div>
+                                            <div class="cell-subtitle">@item.TipoAuditoria</div>
+                                            <div class="cell-subtitle">@item.FechaInicio.ToString("yyyy-MM-dd") a @item.FechaFin.ToString("yyyy-MM-dd")</div>
+                                        </td>
+
+                                        <td>
+                                            <div class="cell-title">@item.ProcesoCodigo</div>
+                                            <div class="cell-subtitle">@item.ProcesoNombre</div>
+                                            @if (!string.IsNullOrWhiteSpace(item.UnidadTexto))
+                                            {
+                                                <div class="cell-subtitle">@item.UnidadTexto</div>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            <span class="role-pill">@item.Rol</span>
+                                        </td>
+
+                                        <td>
+                                            <span class="priority-pill @item.PrioridadCss">@item.Prioridad</span>
+                                        </td>
+
+                                        <td>
+                                            @if (item.FechaProgramada.HasValue)
+                                            {
+                                                <span class="date-pill">@item.FechaProgramada.Value.ToString("yyyy-MM-dd")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="status-pill progress">Pendiente</span>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            @if (string.IsNullOrWhiteSpace(item.LineaNombre))
+                                            {
+                                                <span class="empty-inline">—</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="linea-pill">@item.LineaNombre</span>
+                                            }
+                                        </td>
+
+                                        <td class="text-end">
+                                            <button type="button"
+                                                    class="table-btn"
+                                                    @onclick="() => IrProceso(item.AuditoriaId, item.AuditoriaProcesoId)">
+                                                Abrir
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        }
+
+        @if (MostrarHallazgos)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Mis hallazgos</h2>
+                        <p class="panel-subtitle">Hallazgos donde eres responsable o responsable de cierre.</p>
+                    </div>
+
+                    <span class="panel-badge">@hallazgosFiltrados.Count registro(s)</span>
+                </div>
+
+                @if (hallazgosFiltrados.Count == 0)
+                {
+                    <div class="empty-state compact">
+                        No hay hallazgos para los filtros seleccionados.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-wrap">
+                        <table class="mis-table">
+                            <thead>
+                                <tr>
+                                    <th>Hallazgo</th>
+                                    <th>Proceso</th>
+                                    <th>Mi rol</th>
+                                    <th>Prioridad</th>
+                                    <th>Validación SGC</th>
+                                    <th>Estatus</th>
+                                    <th>Compromiso</th>
+                                    <th class="text-end">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in hallazgosFiltrados)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="cell-title">#@item.HallazgoId</div>
+                                            <div class="cell-subtitle">Auditoría #@item.AuditoriaId</div>
+                                            @if (!string.IsNullOrWhiteSpace(item.TipoHallazgo))
+                                            {
+                                                <div class="cell-subtitle">@item.TipoHallazgo</div>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            <div class="cell-title">@item.ProcesoCodigo</div>
+                                            <div class="cell-subtitle">@item.ProcesoNombre</div>
+                                        </td>
+
+                                        <td>
+                                            <span class="role-pill">@item.Rol</span>
+                                        </td>
+
+                                        <td>
+                                            <span class="priority-pill @item.PrioridadCss">@item.Prioridad</span>
+                                        </td>
+
+                                        <td>
+                                            <span class="validacion-pill @GetValidacionClass(item.EstatusValidacionSgc)">
+                                                @TextoValidacion(item.EstatusValidacionSgc)
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <span class="status-pill @GetStatusClass(item.Estatus)">
+                                                @item.Estatus
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <span class="date-pill">@item.FechaCompromiso.ToString("yyyy-MM-dd")</span>
+                                        </td>
+
+                                        <td class="text-end">
+                                            <button type="button"
+                                                    class="table-btn table-btn-primary"
+                                                    @onclick="() => IrHallazgo(item.AuditoriaId, item.HallazgoId)">
+                                                Abrir
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        }
+    </div>
+}
+
+@code {
+    private bool cargando = true;
+    private string? errorMsg;
+
+    private string usuarioActualId = "sistema";
+    private string usuarioActualNombre = "sistema";
+
+    private string vistaSeleccionada = "Todo";
+    private string prioridadSeleccionada = "";
+    private string textoBusqueda = "";
+    private bool soloVencidos;
+    private bool soloEstaSemana;
+
+    private List<MiProcesoVm> misProcesos = new();
+    private List<MiHallazgoVm> misHallazgos = new();
+    private List<MiPendienteVm> misPendientes = new();
+
+    private bool MostrarPendientes => vistaSeleccionada == "Todo" || vistaSeleccionada == "Pendientes";
+    private bool MostrarProcesos => vistaSeleccionada == "Todo" || vistaSeleccionada == "Procesos";
+    private bool MostrarHallazgos => vistaSeleccionada == "Todo" || vistaSeleccionada == "Hallazgos";
+
+    private List<MiPendienteVm> pendientesFiltrados =>
+        misPendientes
+            .Where(CumpleFiltroPendiente)
+            .OrderBy(x => x.PrioridadOrden)
+            .ThenByDescending(x => x.Vencido)
+            .ThenBy(x => x.FechaReferencia ?? DateTime.MaxValue)
+            .ThenBy(x => x.Titulo)
+            .ToList();
+
+    private List<MiProcesoVm> procesosFiltrados =>
+        misProcesos
+            .Where(CumpleFiltroProceso)
+            .OrderBy(x => x.PrioridadOrden)
+            .ThenByDescending(x => x.Vencido)
+            .ThenBy(x => x.FechaProgramada ?? x.FechaInicio)
+            .ThenBy(x => x.ProcesoCodigo)
+            .ToList();
+
+    private List<MiHallazgoVm> hallazgosFiltrados =>
+        misHallazgos
+            .Where(CumpleFiltroHallazgo)
+            .OrderBy(x => x.PrioridadOrden)
+            .ThenByDescending(x => x.Vencido)
+            .ThenBy(x => x.FechaCompromiso)
+            .ThenBy(x => x.HallazgoId)
+            .ToList();
+
+    private class MiProcesoVm
+    {
+        public int AuditoriaId { get; set; }
+        public int AuditoriaProcesoId { get; set; }
+        public string TipoAuditoria { get; set; } = "";
+        public DateTime FechaInicio { get; set; }
+        public DateTime FechaFin { get; set; }
+        public string ProcesoCodigo { get; set; } = "";
+        public string ProcesoNombre { get; set; } = "";
+        public string? UnidadTexto { get; set; }
+        public DateTime? FechaProgramada { get; set; }
+        public string? LineaNombre { get; set; }
+        public string Rol { get; set; } = "";
+        public string Prioridad { get; set; } = "Media";
+        public int PrioridadOrden { get; set; } = 2;
+        public string PrioridadCss { get; set; } = "medium";
+        public bool Vencido { get; set; }
+        public bool EstaSemana { get; set; }
+    }
+
+    private class MiHallazgoVm
+    {
+        public int HallazgoId { get; set; }
+        public int AuditoriaId { get; set; }
+        public string ProcesoCodigo { get; set; } = "";
+        public string ProcesoNombre { get; set; } = "";
+        public string? TipoHallazgo { get; set; }
+        public string Estatus { get; set; } = "";
+        public string? EstatusValidacionSgc { get; set; }
+        public DateTime FechaCompromiso { get; set; }
+        public string Rol { get; set; } = "";
+        public string Prioridad { get; set; } = "Media";
+        public int PrioridadOrden { get; set; } = 2;
+        public string PrioridadCss { get; set; } = "medium";
+        public bool Vencido { get; set; }
+        public bool EstaSemana { get; set; }
+    }
+
+    private class MiPendienteVm
+    {
+        public string Tipo { get; set; } = "";
+        public string Titulo { get; set; } = "";
+        public string Subtitulo { get; set; } = "";
+        public string? Descripcion { get; set; }
+        public string Url { get; set; } = "";
+        public string Prioridad { get; set; } = "Media";
+        public int PrioridadOrden { get; set; } = 2;
+        public string PrioridadCss { get; set; } = "medium";
+        public DateTime? FechaReferencia { get; set; }
+        public bool Vencido { get; set; }
+        public bool EstaSemana { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            await CargarUsuarioActual();
+
+            if (string.IsNullOrWhiteSpace(usuarioActualId) ||
+                string.Equals(usuarioActualId, "sistema", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMsg = "No se pudo identificar el usuario autenticado.";
+                return;
+            }
+
+            await CargarProcesos();
+            await CargarHallazgos();
+            await CargarPendientes();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        usuarioActualId = "sistema";
+        usuarioActualNombre = "sistema";
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var login =
+                    user.FindFirst("pc_login_id")?.Value
+                    ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? user.Identity?.Name
+                    ?? "sistema";
+
+                usuarioActualId = NormalizarLogin(login);
+
+                usuarioActualNombre =
+                    user.FindFirst(ClaimTypes.Name)?.Value
+                    ?? user.Identity?.Name
+                    ?? usuarioActualId;
+            }
+        }
+        catch
+        {
+            usuarioActualId = "sistema";
+            usuarioActualNombre = "sistema";
+        }
+    }
+
+    private async Task CargarProcesos()
+    {
+        var login = NormalizarLogin(usuarioActualId);
+        var hoy = DateTime.Today;
+        var inicioSemana = ObtenerInicioSemana(hoy);
+        var finSemana = inicioSemana.AddDays(6);
+
+        var procesosDb = await Db.AuditoriaProcesos
+            .AsNoTracking()
+            .Include(x => x.Auditoria)
+            .Include(x => x.Proceso)
+            .Include(x => x.UnidadNegocio)
+            .ToListAsync();
+
+        misProcesos = procesosDb
+            .Where(x =>
+                CoincideLogin(x.AuditorAsignadoId, login) ||
+                CoincideLogin(x.SegundoAuditorId, login) ||
+                CoincideLogin(x.ObservadorId, login))
+            .Select(x =>
+            {
+                var prioridad = ResolverPrioridadProceso(x, hoy);
+                var vencido = x.FechaProgramada.HasValue
+                    ? x.FechaProgramada.Value.Date < hoy
+                    : (x.Auditoria?.FechaInicio.Date ?? hoy) <= hoy;
+
+                var estaSemana = x.FechaProgramada.HasValue &&
+                                 x.FechaProgramada.Value.Date >= inicioSemana &&
+                                 x.FechaProgramada.Value.Date <= finSemana;
+
+                return new MiProcesoVm
+                {
+                    AuditoriaId = x.AuditoriaId,
+                    AuditoriaProcesoId = x.AuditoriaProcesoId,
+                    TipoAuditoria = x.Auditoria?.TipoAuditoria ?? "Sin tipo",
+                    FechaInicio = x.Auditoria?.FechaInicio ?? hoy,
+                    FechaFin = x.Auditoria?.FechaFin ?? hoy,
+                    ProcesoCodigo = x.Proceso?.Codigo ?? "Sin código",
+                    ProcesoNombre = x.Proceso?.Nombre ?? "Sin proceso",
+                    UnidadTexto = x.UnidadNegocio is null ? null : $"{x.UnidadNegocio.Codigo} - {x.UnidadNegocio.Nombre}",
+                    FechaProgramada = x.FechaProgramada,
+                    LineaNombre = x.LineaNombre,
+                    Rol = CoincideLogin(x.AuditorAsignadoId, login)
+                        ? "Auditor principal"
+                        : CoincideLogin(x.SegundoAuditorId, login)
+                            ? "Segundo auditor"
+                            : "Observador",
+                    Prioridad = prioridad,
+                    PrioridadOrden = ObtenerPrioridadOrden(prioridad),
+                    PrioridadCss = ObtenerPrioridadCss(prioridad),
+                    Vencido = vencido,
+                    EstaSemana = estaSemana
+                };
+            })
+            .ToList();
+    }
+
+    private async Task CargarHallazgos()
+    {
+        var login = NormalizarLogin(usuarioActualId);
+        var hoy = DateTime.Today;
+        var inicioSemana = ObtenerInicioSemana(hoy);
+        var finSemana = inicioSemana.AddDays(6);
+
+        var hallazgosDb = await Db.Hallazgos
+            .AsNoTracking()
+            .Include(x => x.Proceso)
+            .Include(x => x.TipoHallazgo)
+            .ToListAsync();
+
+        misHallazgos = hallazgosDb
+            .Where(x =>
+                CoincideLogin(x.ResponsableId, login) ||
+                CoincideLogin(x.ResponsableCierreId, login))
+            .Select(x =>
+            {
+                var prioridad = ResolverPrioridadHallazgo(x, hoy);
+                var vencido = !string.Equals(x.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase) &&
+                              x.FechaCompromiso.Date < hoy;
+
+                var estaSemana = x.FechaCompromiso.Date >= inicioSemana &&
+                                 x.FechaCompromiso.Date <= finSemana;
+
+                return new MiHallazgoVm
+                {
+                    HallazgoId = x.HallazgoId,
+                    AuditoriaId = x.AuditoriaId,
+                    ProcesoCodigo = x.Proceso?.Codigo ?? "Sin código",
+                    ProcesoNombre = x.Proceso?.Nombre ?? "Sin proceso",
+                    TipoHallazgo = x.TipoHallazgo?.Nombre,
+                    Estatus = x.Estatus,
+                    EstatusValidacionSgc = x.EstatusValidacionSgc,
+                    FechaCompromiso = x.FechaCompromiso,
+                    Rol = CoincideLogin(x.ResponsableId, login)
+                        ? "Responsable"
+                        : "Responsable de cierre",
+                    Prioridad = prioridad,
+                    PrioridadOrden = ObtenerPrioridadOrden(prioridad),
+                    PrioridadCss = ObtenerPrioridadCss(prioridad),
+                    Vencido = vencido,
+                    EstaSemana = estaSemana
+                };
+            })
+            .ToList();
+    }
+
+    private async Task CargarPendientes()
+    {
+        var login = NormalizarLogin(usuarioActualId);
+        var hoy = DateTime.Today;
+
+        misPendientes.Clear();
+
+        foreach (var p in misProcesos.Where(x => !x.FechaProgramada.HasValue))
+        {
+            var vencido = p.FechaInicio.Date <= hoy;
+
+            AgregarPendiente(
+                tipo: "Proceso sin fecha",
+                titulo: $"{p.ProcesoCodigo} - {p.ProcesoNombre}",
+                subtitulo: $"Auditoría #{p.AuditoriaId} · {p.Rol}",
+                descripcion: "Este proceso está asignado, pero aún no tiene fecha programada.",
+                url: $"auditorias/{p.AuditoriaId}/procesos/{p.AuditoriaProcesoId}",
+                fechaReferencia: p.FechaInicio,
+                vencido: vencido);
+        }
+
+        foreach (var h in misHallazgos.Where(x =>
+                     x.Rol == "Responsable de cierre" &&
+                     !string.Equals(x.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase)))
+        {
+            AgregarPendiente(
+                tipo: "Hallazgo a atender",
+                titulo: $"Hallazgo #{h.HallazgoId}",
+                subtitulo: $"{h.ProcesoCodigo} - {h.ProcesoNombre}",
+                descripcion: $"Estatus: {h.Estatus}. Compromiso: {h.FechaCompromiso:yyyy-MM-dd}.",
+                url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
+                fechaReferencia: h.FechaCompromiso,
+                vencido: h.FechaCompromiso.Date < hoy);
+        }
+
+        var ncMenorResponsableCierre = misHallazgos
+            .Where(x =>
+                x.Rol == "Responsable de cierre" &&
+                string.Equals(x.EstatusValidacionSgc, "Aprobado", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(x.TipoHallazgo, "NC Menor", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var idsNcMenor = ncMenorResponsableCierre
+            .Select(x => x.HallazgoId)
+            .ToList();
+
+        if (idsNcMenor.Count > 0)
+        {
+            var idsCincoPorques = await Db.HallazgosCincoPorQue
+                .AsNoTracking()
+                .Where(x => idsNcMenor.Contains(x.HallazgoId))
+                .Select(x => x.HallazgoId)
+                .ToListAsync();
+
+            foreach (var h in ncMenorResponsableCierre.Where(x => !idsCincoPorques.Contains(x.HallazgoId)))
+            {
+                AgregarPendiente(
+                    tipo: "Capturar 5 porqués",
+                    titulo: $"Hallazgo #{h.HallazgoId}",
+                    subtitulo: $"{h.ProcesoCodigo} - {h.ProcesoNombre}",
+                    descripcion: "NC Menor aprobada por SGC pendiente de captura de 5 porqués.",
+                    url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
+                    fechaReferencia: h.FechaCompromiso,
+                    vencido: h.FechaCompromiso.Date < hoy);
+            }
+        }
+
+        foreach (var h in misHallazgos.Where(x =>
+                     x.Rol == "Responsable" &&
+                     string.Equals(x.EstatusValidacionSgc, "Pendiente", StringComparison.OrdinalIgnoreCase)))
+        {
+            AgregarPendiente(
+                tipo: "Pendiente SGC",
+                titulo: $"Hallazgo #{h.HallazgoId}",
+                subtitulo: $"{h.ProcesoCodigo} - {h.ProcesoNombre}",
+                descripcion: "El hallazgo fue creado y está esperando validación de SGC.",
+                url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
+                fechaReferencia: h.FechaCompromiso,
+                vencido: false);
+        }
+
+        var procesosRevisor = misProcesos
+            .Where(x => x.Rol == "Auditor principal" || x.Rol == "Segundo auditor")
+            .Select(x => x.AuditoriaProcesoId)
+            .Distinct()
+            .ToList();
+
+        if (procesosRevisor.Count > 0)
+        {
+            var hallazgosRevisables = await Db.Hallazgos
+                .AsNoTracking()
+                .Include(x => x.Proceso)
+                .Include(x => x.TipoHallazgo)
+                .Include(x => x.AuditoriaProceso)
+                .Where(x => procesosRevisor.Contains(x.AuditoriaProcesoId))
+                .ToListAsync();
+
+            var ncMenorRevisables = hallazgosRevisables
+                .Where(x =>
+                    string.Equals(x.EstatusValidacionSgc, "Aprobado", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(x.TipoHallazgo?.Nombre, "NC Menor", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var idsRevisables = ncMenorRevisables
+                .Select(x => x.HallazgoId)
+                .ToList();
+
+            if (idsRevisables.Count > 0)
+            {
+                var registrosCincoPorques = await Db.HallazgosCincoPorQue
+                    .AsNoTracking()
+                    .Where(x => idsRevisables.Contains(x.HallazgoId))
+                    .ToListAsync();
+
+                foreach (var h in ncMenorRevisables)
+                {
+                    var registro = registrosCincoPorques.FirstOrDefault(x => x.HallazgoId == h.HallazgoId);
+                    if (registro is null)
+                        continue;
+
+                    var esPrincipal = CoincideLogin(h.AuditoriaProceso?.AuditorAsignadoId, login);
+                    var esSegundo = CoincideLogin(h.AuditoriaProceso?.SegundoAuditorId, login);
+
+                    var pendienteRevision =
+                        (esPrincipal && registro.AprobacionAuditorAsignado == null) ||
+                        (esSegundo && registro.AprobacionSegundoAuditor == null);
+
+                    if (!pendienteRevision)
+                        continue;
+
+                    AgregarPendiente(
+                        tipo: "Revisar 5 porqués",
+                        titulo: $"Hallazgo #{h.HallazgoId}",
+                        subtitulo: $"{h.Proceso?.Codigo} - {h.Proceso?.Nombre}",
+                        descripcion: "Ya se capturaron los 5 porqués y están pendientes de tu revisión.",
+                        url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
+                        fechaReferencia: h.FechaCompromiso,
+                        vencido: h.FechaCompromiso.Date < hoy);
+                }
+            }
+        }
+
+        misPendientes = misPendientes
+            .OrderBy(x => x.PrioridadOrden)
+            .ThenByDescending(x => x.Vencido)
+            .ThenBy(x => x.FechaReferencia ?? DateTime.MaxValue)
+            .ThenBy(x => x.Titulo)
+            .ToList();
+    }
+
+    private void AgregarPendiente(
+        string tipo,
+        string titulo,
+        string subtitulo,
+        string? descripcion,
+        string url,
+        DateTime? fechaReferencia,
+        bool vencido)
+    {
+        var prioridad = ResolverPrioridadPendiente(tipo, fechaReferencia, vencido);
+
+        misPendientes.Add(new MiPendienteVm
+        {
+            Tipo = tipo,
+            Titulo = titulo,
+            Subtitulo = subtitulo,
+            Descripcion = descripcion,
+            Url = url,
+            FechaReferencia = fechaReferencia,
+            Vencido = vencido,
+            EstaSemana = fechaReferencia.HasValue && EstaEnSemana(fechaReferencia.Value),
+            Prioridad = prioridad,
+            PrioridadOrden = ObtenerPrioridadOrden(prioridad),
+            PrioridadCss = ObtenerPrioridadCss(prioridad)
+        });
+    }
+
+    private bool CumpleFiltroPendiente(MiPendienteVm item)
+    {
+        if (!CumpleFiltroPrioridad(item.Prioridad))
+            return false;
+
+        if (soloVencidos && !item.Vencido)
+            return false;
+
+        if (soloEstaSemana && !item.EstaSemana)
+            return false;
+
+        if (!CumpleTexto(item.Titulo, item.Subtitulo, item.Descripcion, item.Tipo, item.Prioridad))
+            return false;
+
+        return true;
+    }
+
+    private bool CumpleFiltroProceso(MiProcesoVm item)
+    {
+        if (!CumpleFiltroPrioridad(item.Prioridad))
+            return false;
+
+        if (soloVencidos && !item.Vencido)
+            return false;
+
+        if (soloEstaSemana && !item.EstaSemana)
+            return false;
+
+        if (!CumpleTexto(item.ProcesoCodigo, item.ProcesoNombre, item.UnidadTexto, item.Rol, item.TipoAuditoria))
+            return false;
+
+        return true;
+    }
+
+    private bool CumpleFiltroHallazgo(MiHallazgoVm item)
+    {
+        if (!CumpleFiltroPrioridad(item.Prioridad))
+            return false;
+
+        if (soloVencidos && !item.Vencido)
+            return false;
+
+        if (soloEstaSemana && !item.EstaSemana)
+            return false;
+
+        if (!CumpleTexto(item.ProcesoCodigo, item.ProcesoNombre, item.TipoHallazgo, item.Rol, item.Estatus, item.EstatusValidacionSgc))
+            return false;
+
+        return true;
+    }
+
+    private bool CumpleFiltroPrioridad(string prioridad)
+    {
+        if (string.IsNullOrWhiteSpace(prioridadSeleccionada))
+            return true;
+
+        return string.Equals(prioridadSeleccionada, prioridad, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool CumpleTexto(params string?[] valores)
+    {
+        if (string.IsNullOrWhiteSpace(textoBusqueda))
+            return true;
+
+        var texto = textoBusqueda.Trim();
+
+        return valores.Any(v =>
+            !string.IsNullOrWhiteSpace(v) &&
+            v.Contains(texto, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void LimpiarFiltros()
+    {
+        vistaSeleccionada = "Todo";
+        prioridadSeleccionada = "";
+        textoBusqueda = "";
+        soloVencidos = false;
+        soloEstaSemana = false;
+    }
+
+    private string ResolverPrioridadProceso(AuditoriaProceso proceso, DateTime hoy)
+    {
+        if (proceso.FechaProgramada.HasValue)
+        {
+            if (proceso.FechaProgramada.Value.Date < hoy)
+                return "Alta";
+
+            if (proceso.FechaProgramada.Value.Date <= hoy.AddDays(7))
+                return "Media";
+
+            return "Baja";
+        }
+
+        if ((proceso.Auditoria?.FechaInicio.Date ?? hoy) <= hoy)
+            return "Alta";
+
+        return "Media";
+    }
+
+    private string ResolverPrioridadHallazgo(Hallazgo hallazgo, DateTime hoy)
+    {
+        if (string.Equals(hallazgo.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase))
+            return "Baja";
+
+        if (hallazgo.FechaCompromiso.Date < hoy)
+            return "Alta";
+
+        if (hallazgo.FechaCompromiso.Date <= hoy.AddDays(7))
+            return "Media";
+
+        if (string.Equals(hallazgo.EstatusValidacionSgc, "Pendiente", StringComparison.OrdinalIgnoreCase))
+            return "Baja";
+
+        return "Media";
+    }
+
+    private string ResolverPrioridadPendiente(string tipo, DateTime? fechaReferencia, bool vencido)
+    {
+        if (tipo == "Capturar 5 porqués" || tipo == "Revisar 5 porqués")
+            return "Alta";
+
+        if (tipo == "Hallazgo a atender")
+        {
+            if (vencido)
+                return "Alta";
+
+            if (fechaReferencia.HasValue && fechaReferencia.Value.Date <= DateTime.Today.AddDays(3))
+                return "Alta";
+
+            return "Media";
+        }
+
+        if (tipo == "Proceso sin fecha")
+            return vencido ? "Alta" : "Media";
+
+        if (tipo == "Pendiente SGC")
+            return "Baja";
+
+        return "Media";
+    }
+
+    private static int ObtenerPrioridadOrden(string prioridad) =>
+        prioridad switch
+        {
+            "Alta" => 1,
+            "Media" => 2,
+            "Baja" => 3,
+            _ => 4
+        };
+
+    private static string ObtenerPrioridadCss(string prioridad) =>
+        prioridad switch
+        {
+            "Alta" => "high",
+            "Media" => "medium",
+            "Baja" => "low",
+            _ => "medium"
+        };
+
+    private static DateTime ObtenerInicioSemana(DateTime fecha)
+    {
+        var offset = ((int)fecha.DayOfWeek + 6) % 7;
+        return fecha.Date.AddDays(-offset);
+    }
+
+    private static bool EstaEnSemana(DateTime fecha)
+    {
+        var inicio = ObtenerInicioSemana(DateTime.Today);
+        var fin = inicio.AddDays(6);
+        return fecha.Date >= inicio && fecha.Date <= fin;
+    }
+
+    private static string NormalizarLogin(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return string.Empty;
+
+        var v = valor.Trim();
+
+        if (v.Contains("\\"))
+            v = v[(v.LastIndexOf('\\') + 1)..];
+
+        if (v.Contains("@"))
+            v = v[..v.IndexOf('@')];
+
+        return v.Trim().ToUpperInvariant();
+    }
+
+    private static bool CoincideLogin(string? valorDb, string loginNormalizado)
+    {
+        if (string.IsNullOrWhiteSpace(valorDb) || string.IsNullOrWhiteSpace(loginNormalizado))
+            return false;
+
+        return NormalizarLogin(valorDb) == loginNormalizado;
+    }
+
+    private static string TextoValidacion(string? valor) =>
+        string.IsNullOrWhiteSpace(valor) ? "No registrada" : valor;
+
+    private static string GetValidacionClass(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor == "aprobado")
+            return "approved";
+
+        if (valor == "rechazado")
+            return "rejected";
+
+        if (valor == "pendiente")
+            return "pending";
+
+        return "neutral";
+    }
+
+    private static string GetStatusClass(string? estatus)
+    {
+        var valor = estatus?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor is "cerrado" or "cerrada" or "finalizado" or "finalizada")
+            return "closed";
+
+        if (valor is "en proceso" or "en revisión" or "en revision")
+            return "progress";
+
+        if (valor is "pendiente sgc")
+            return "blocked";
+
+        return "open";
+    }
+
+    private void IrAuditorias() => Nav.NavigateTo("auditorias");
+
+    private void IrProceso(int auditoriaId, int auditoriaProcesoId) =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/procesos/{auditoriaProcesoId}");
+
+    private void IrHallazgo(int auditoriaId, int hallazgoId) =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}");
+}

@@ -1,106 +1,132 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Nav
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid d-flex align-items-center">
-        <img src="images/logo.png" alt="Logo MEAX" height="30" class="me-2" onerror="this.style.display='none'" />
+<div class="nav-menu-root @(IsCollapsed ? "is-collapsed" : "")">
+    <div class="top-row ps-3 navbar navbar-dark">
+        <div class="container-fluid d-flex align-items-center">
+            <div class="brand-wrap">
+                <img src="images/logo.png" alt="Logo MEAX" height="30" class="me-2 brand-logo" onerror="this.style.display='none'" />
 
-        <a class="navbar-brand text-white fw-bold d-flex flex-column justify-content-center"
-           style="font-size: 0.9rem; line-height: 1.15; letter-spacing: 0.3px;"
-           href="">
-            <span>Auditorías</span>
-            <span>IATF</span>
-        </a>
+                <a class="navbar-brand text-white fw-bold d-flex flex-column justify-content-center brand-text"
+                   style="font-size: 0.9rem; line-height: 1.15; letter-spacing: 0.3px;"
+                   href="">
+                    <span>Auditorías</span>
+                    <span>IATF</span>
+                </a>
+            </div>
 
-        <button type="button" title="Navigation menu" class="navbar-toggler ms-auto" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+            <button type="button" title="Colapsar menú" class="navbar-toggler ms-auto" @onclick="ToggleNavMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
     </div>
-</div>
 
-<div class="nav-scrollable @NavMenuCssClass">
-    <div class="nav-shell">
-        <nav class="flex-column">
-            <div class="nav-section-title px-3">Principal</div>
+    <div class="nav-scrollable">
+        <div class="nav-shell">
+            <nav class="flex-column">
+                <div class="nav-section-title px-3">Principal</div>
 
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                    <i class="fas fa-home" aria-hidden="true"></i> Inicio
-                </NavLink>
-            </div>
-
-            <div class="nav-section-title px-3">Auditorías</div>
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="auditorias" Match="NavLinkMatch.All">
-                    <i class="fas fa-clipboard-list" aria-hidden="true"></i> Ver auditorías
-                </NavLink>
-            </div>
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="auditorias/nueva" Match="NavLinkMatch.All">
-                    <i class="fas fa-plus-circle" aria-hidden="true"></i> Nueva auditoría
-                </NavLink>
-            </div>
-
-            <div class="nav-section-title px-3">Procesos</div>
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="procesos" Match="NavLinkMatch.All">
-                    <i class="fas fa-project-diagram" aria-hidden="true"></i> Ver procesos
-                </NavLink>
-            </div>
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="procesos/nuevo" Match="NavLinkMatch.All">
-                    <i class="fas fa-folder-plus" aria-hidden="true"></i> Nuevo proceso
-                </NavLink>
-            </div>
-
-            <div class="nav-section-title px-3">Equipo auditor</div>
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="auditores" Match="NavLinkMatch.All">
-                    <i class="fas fa-users" aria-hidden="true"></i> Ver auditores
-                </NavLink>
-            </div>
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="auditores/nuevo" Match="NavLinkMatch.All">
-                    <i class="fas fa-user-plus" aria-hidden="true"></i> Alta auditor
-                </NavLink>
-            </div>
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="interfaces/sgc/hallazgos">
-                    <i class="fas fa-clipboard-check" aria-hidden="true"></i> Validación SGC
-                </NavLink>
-            </div>
-        </nav>
-
-        <AuthorizeView>
-            <Authorized>
-                <div class="nav-user-box">
-                    <div class="nav-user-label">Sesión activa</div>
-                    <div class="nav-user-name">@context.User.Identity?.Name</div>
-
-                    <button type="button" class="nav-logout-btn" @onclick="Salir">
-                        Salir
-                    </button>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All" title="Inicio">
+                        <span class="nav-icon"><i class="fa-solid fa-house"></i></span>
+                        <span class="nav-text">Inicio</span>
+                    </NavLink>
                 </div>
-            </Authorized>
-        </AuthorizeView>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="mis-cosas" Match="NavLinkMatch.All">
+                        <i class="fas fa-briefcase" aria-hidden="true"></i>
+                        <span class="nav-text">Mis cosas</span>
+                    </NavLink>
+                </div>
+
+                <div class="nav-section-title px-3">Auditorías</div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="auditorias" Match="NavLinkMatch.All" title="Ver auditorías">
+                        <span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span>
+                        <span class="nav-text">Ver auditorías</span>
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="auditorias/nueva" Match="NavLinkMatch.All" title="Nueva auditoría">
+                        <span class="nav-icon"><i class="fa-solid fa-circle-plus"></i></span>
+                        <span class="nav-text">Nueva auditoría</span>
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="hallazgos" Match="NavLinkMatch.All" title="Ver hallazgos">
+                        <span class="nav-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                        <span class="nav-text">Ver hallazgos</span>
+                    </NavLink>
+                </div>
+
+                <div class="nav-section-title px-3">Procesos</div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="procesos" Match="NavLinkMatch.All" title="Ver procesos">
+                        <span class="nav-icon"><i class="fa-solid fa-diagram-project"></i></span>
+                        <span class="nav-text">Ver procesos</span>
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="procesos/nuevo" Match="NavLinkMatch.All" title="Nuevo proceso">
+                        <span class="nav-icon"><i class="fa-solid fa-folder-plus"></i></span>
+                        <span class="nav-text">Nuevo proceso</span>
+                    </NavLink>
+                </div>
+
+                <div class="nav-section-title px-3">Equipo auditor</div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="auditores" Match="NavLinkMatch.All" title="Ver auditores">
+                        <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
+                        <span class="nav-text">Ver auditores</span>
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="auditores/nuevo" Match="NavLinkMatch.All" title="Alta auditor">
+                        <span class="nav-icon"><i class="fa-solid fa-user-plus"></i></span>
+                        <span class="nav-text">Alta auditor</span>
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="interfaces/sgc/hallazgos" title="Validación SGC">
+                        <span class="nav-icon"><i class="fa-solid fa-clipboard-check"></i></span>
+                        <span class="nav-text">Validación SGC</span>
+                    </NavLink>
+                </div>
+            </nav>
+
+            <AuthorizeView>
+                <Authorized>
+                    <div class="nav-user-box">
+                        <div class="nav-user-label">Sesión activa</div>
+                        <div class="nav-user-name">@context.User.Identity?.Name</div>
+
+                        <button type="button" class="nav-logout-btn" @onclick="Salir">
+                            <span class="nav-icon"><i class="fa-solid fa-right-from-bracket"></i></span>
+                            <span class="nav-text">Salir</span>
+                        </button>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </div>
     </div>
 </div>
 
 @code {
-    private bool collapseNavMenu = true;
+    [Parameter] public bool IsCollapsed { get; set; }
+    [Parameter] public EventCallback OnToggleSidebar { get; set; }
 
-    private string NavMenuCssClass => collapseNavMenu ? "collapse" : "show";
-
-    private void ToggleNavMenu()
+    private async Task ToggleNavMenu()
     {
-        collapseNavMenu = !collapseNavMenu;
+        await OnToggleSidebar.InvokeAsync();
     }
 
     private void Salir()

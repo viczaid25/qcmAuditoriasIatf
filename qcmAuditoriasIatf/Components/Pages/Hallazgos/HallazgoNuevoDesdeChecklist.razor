@@ -105,8 +105,31 @@ else
             <DataAnnotationsValidator />
             <ValidationSummary />
 
-            <div class="nuevo-hallazgo-grid">
-                <section class="panel-card panel-main">
+            <div class="nuevo-hallazgo-sections">
+                <section class="panel-card">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Contexto del checklist</h2>
+                            <p class="panel-subtitle">Información de referencia tomada del checklist.</p>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(pregunta.Requisito))
+                    {
+                        <div class="context-card">
+                            <div class="context-label">Requisito</div>
+                            <div class="context-value small-text">@pregunta.Requisito</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state compact">
+                            La pregunta no tiene requisito capturado.
+                        </div>
+                    }
+                </section>
+
+                <section class="panel-card">
                     <div class="panel-head">
                         <div>
                             <h2>Datos del hallazgo</h2>
@@ -155,116 +178,92 @@ else
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label">Justificación de la No Conformidad</label>
-                            <InputTextArea class="form-control" @bind-Value="vm.JustificacionNoConformidad" rows="4" />
-                        </div>
-
-                        <div class="col-12">
                             <label class="form-label">Evidencia</label>
                             <InputTextArea class="form-control" @bind-Value="vm.Evidencia" rows="4" />
                             <div class="field-help">Opcional.</div>
                         </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Justificación de la No Conformidad</label>
+                            <InputTextArea class="form-control" @bind-Value="vm.JustificacionNoConformidad" rows="4" />
+                        </div>
                     </div>
                 </section>
 
-                <section class="panel-card panel-side">
+                <section class="panel-card">
                     <div class="panel-head">
                         <div>
-                            <h2>Contexto del checklist</h2>
-                            <p class="panel-subtitle">Información de referencia para documentar correctamente el hallazgo.</p>
+                            <h2>Responsables y flujo</h2>
+                            <p class="panel-subtitle">Información del responsable y del envío a validación SGC.</p>
                         </div>
                     </div>
-
-                    <div class="context-card">
-                        <div class="context-label">Proceso</div>
-                        <div class="context-value">@ap.Proceso?.Codigo - @ap.Proceso?.Nombre</div>
-                    </div>
-
-                    <div class="context-card">
-                        <div class="context-label">Pregunta</div>
-                        <div class="context-value">@pregunta.Pregunta</div>
-                    </div>
-
-                    @if (!string.IsNullOrWhiteSpace(pregunta.Requisito))
-                    {
-                        <div class="context-card">
-                            <div class="context-label">Requisito</div>
-                            <div class="context-value small-text">@pregunta.Requisito</div>
-                        </div>
-                    }
-
-                    @if (pregunta.Clausula is not null)
-                    {
-                        <div class="context-card">
-                            <div class="context-label">Cláusula</div>
-                            <div class="context-value">@pregunta.Clausula.Codigo - @pregunta.Clausula.Descripcion</div>
-                        </div>
-                    }
-
-                    <div class="section-divider"></div>
 
                     <div class="alert alert-info mb-3">
                         Al guardar, el hallazgo quedará en <b>Pendiente SGC</b> hasta que sea revisado y aprobado por el equipo SGC.
                     </div>
 
-                    <div class="mini-section-label">Responsables</div>
-
-                    @if (ResponsableHallazgoUsuario is not null)
-                    {
-                        <div class="user-summary-card">
-                            <div class="user-summary-role">Responsable del hallazgo</div>
-                            <div class="user-summary-name">@GetNombreUsuario(ResponsableHallazgoUsuario)</div>
-                            <div class="user-summary-login">@ResponsableHallazgoUsuario.pc_login_id</div>
-                            <div class="user-summary-meta">
-                                @ResponsableHallazgoUsuario.department
-                                @if (!string.IsNullOrWhiteSpace(ResponsableHallazgoUsuario.position))
-                                {
-                                    <span> | @ResponsableHallazgoUsuario.position</span>
-                                }
-                            </div>
-                            @if (!string.IsNullOrWhiteSpace(ResponsableHallazgoUsuario.email))
+                    <div class="responsables-grid">
+                        <div>
+                            @if (ResponsableHallazgoUsuario is not null)
                             {
-                                <div class="user-summary-meta">@ResponsableHallazgoUsuario.email</div>
+                                <div class="user-summary-card">
+                                    <div class="user-summary-role">Responsable del hallazgo</div>
+                                    <div class="user-summary-name">@GetNombreUsuario(ResponsableHallazgoUsuario)</div>
+                                    <div class="user-summary-login">@ResponsableHallazgoUsuario.pc_login_id</div>
+                                    <div class="user-summary-meta">
+                                        @ResponsableHallazgoUsuario.department
+                                        @if (!string.IsNullOrWhiteSpace(ResponsableHallazgoUsuario.position))
+                                        {
+                                            <span> | @ResponsableHallazgoUsuario.position</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(ResponsableHallazgoUsuario.email))
+                                    {
+                                        <div class="user-summary-meta">@ResponsableHallazgoUsuario.email</div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="user-summary-card">
+                                    <div class="user-summary-role">Responsable del hallazgo</div>
+                                    <div class="user-summary-name">@usuarioActualNombre</div>
+                                    <div class="user-summary-login">@usuarioActualId</div>
+                                    <div class="user-summary-meta">
+                                        Se toma automáticamente del usuario autenticado que crea el hallazgo.
+                                    </div>
+                                </div>
                             }
                         </div>
-                    }
-                    else
-                    {
-                        <div class="user-summary-card">
-                            <div class="user-summary-role">Responsable del hallazgo</div>
-                            <div class="user-summary-name">@usuarioActualNombre</div>
-                            <div class="user-summary-login">@usuarioActualId</div>
-                            <div class="user-summary-meta">
-                                Se toma automáticamente del usuario autenticado que crea el hallazgo.
-                            </div>
-                        </div>
-                    }
 
-                    @if (ResponsableCierreSeleccionado is not null)
-                    {
-                        <div class="user-summary-card">
-                            <div class="user-summary-role">Responsable de cierre</div>
-                            <div class="user-summary-name">@GetNombreUsuario(ResponsableCierreSeleccionado)</div>
-                            <div class="user-summary-login">@ResponsableCierreSeleccionado.pc_login_id</div>
-                            <div class="user-summary-meta">
-                                @ResponsableCierreSeleccionado.department
-                                @if (!string.IsNullOrWhiteSpace(ResponsableCierreSeleccionado.position))
-                                {
-                                    <span> | @ResponsableCierreSeleccionado.position</span>
-                                }
-                            </div>
-                            @if (!string.IsNullOrWhiteSpace(ResponsableCierreSeleccionado.email))
+                        <div>
+                            @if (ResponsableCierreSeleccionado is not null)
                             {
-                                <div class="user-summary-meta">@ResponsableCierreSeleccionado.email</div>
+                                <div class="user-summary-card">
+                                    <div class="user-summary-role">Responsable de cierre</div>
+                                    <div class="user-summary-name">@GetNombreUsuario(ResponsableCierreSeleccionado)</div>
+                                    <div class="user-summary-login">@ResponsableCierreSeleccionado.pc_login_id</div>
+                                    <div class="user-summary-meta">
+                                        @ResponsableCierreSeleccionado.department
+                                        @if (!string.IsNullOrWhiteSpace(ResponsableCierreSeleccionado.position))
+                                        {
+                                            <span> | @ResponsableCierreSeleccionado.position</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(ResponsableCierreSeleccionado.email))
+                                    {
+                                        <div class="user-summary-meta">@ResponsableCierreSeleccionado.email</div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="empty-state compact">
+                                    Aún no se ha seleccionado responsable de cierre.
+                                </div>
                             }
                         </div>
-                    }
-                    else
-                    {
-                        <div class="empty-state compact">
-                            Aún no se ha seleccionado responsable de cierre.
-                        </div>
-                    }
+                    </div>
                 </section>
             </div>
 

@@ -6,6 +6,7 @@
 @using System.Security.Claims
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 @attribute [Authorize]
 
@@ -288,6 +289,10 @@ else
                             <div class="why-item"><span>3</span><div>@cincoPorQue.PorQue3</div></div>
                             <div class="why-item"><span>4</span><div>@cincoPorQue.PorQue4</div></div>
                             <div class="why-item"><span>5</span><div>@cincoPorQue.PorQue5</div></div>
+                            @if (!string.IsNullOrWhiteSpace(cincoPorQue.Acciones))
+                            {
+                                <div class="why-item why-item-acciones"><span>Acciones</span><div>@cincoPorQue.Acciones</div></div>
+                            }
                         </div>
                     }
 
@@ -298,54 +303,75 @@ else
                         </div>
                     }
 
-                    <EditForm Model="vm5" OnValidSubmit="GuardarCincoPorQue">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary />
-
-                        <div class="row g-3 mt-1">
-                            <div class="col-md-6">
-                                <label class="form-label">Usuario actual</label>
-                                <input class="form-control" value="@usuarioActualId" disabled />
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">¿Por qué? 1</label>
-                                <InputTextArea class="form-control" rows="2" @bind-Value="vm5.PorQue1"
-                                               disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)" />
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">¿Por qué? 2</label>
-                                <InputTextArea class="form-control" rows="2" @bind-Value="vm5.PorQue2"
-                                               disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)" />
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">¿Por qué? 3</label>
-                                <InputTextArea class="form-control" rows="2" @bind-Value="vm5.PorQue3"
-                                               disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)" />
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">¿Por qué? 4</label>
-                                <InputTextArea class="form-control" rows="2" @bind-Value="vm5.PorQue4"
-                                               disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)" />
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">¿Por qué? 5</label>
-                                <InputTextArea class="form-control" rows="2" @bind-Value="vm5.PorQue5"
-                                               disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)" />
-                            </div>
-
-                            <div class="col-12 d-flex gap-2">
-                                <button class="btn btn-warning" type="submit"
-                                        disabled="@guardando || !UsuarioActualEsResponsableCierre || CincoPorQueAprobado">
-                                    @(guardando ? "Guardando..." : (cincoPorQue is null ? "Guardar 5 porqués" : "Actualizar 5 porqués"))
-                                </button>
-                            </div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label class="form-label">Usuario actual</label>
+                            <input class="form-control" value="@usuarioActualId" disabled />
                         </div>
-                    </EditForm>
+
+                        <div class="col-12">
+                            <label class="form-label">¿Por qué? 1</label>
+                            <textarea class="form-control"
+                                      rows="2"
+                                      @bind="vm5.PorQue1"
+                                      disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">¿Por qué? 2</label>
+                            <textarea class="form-control"
+                                      rows="2"
+                                      @bind="vm5.PorQue2"
+                                      disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">¿Por qué? 3</label>
+                            <textarea class="form-control"
+                                      rows="2"
+                                      @bind="vm5.PorQue3"
+                                      disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">¿Por qué? 4</label>
+                            <textarea class="form-control"
+                                      rows="2"
+                                      @bind="vm5.PorQue4"
+                                      disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">¿Por qué? 5</label>
+                            <textarea class="form-control"
+                                      rows="2"
+                                      @bind="vm5.PorQue5"
+                                      disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Acciones</label>
+                            <textarea class="form-control"
+                                      rows="3"
+                                      @bind="vm5.Acciones"
+                                      placeholder="Acciones derivadas del análisis causa raíz..."
+                                      disabled="@(!UsuarioActualEsResponsableCierre || CincoPorQueAprobado)"></textarea>
+                        </div>
+
+                        <div class="col-12 hallazgo-action-zone">
+                            @if (!string.IsNullOrWhiteSpace(msg5))
+                            {
+                                <div class="alert alert-warning mt-2">@msg5</div>
+                            }
+
+                            <button class="btn btn-warning hallazgo-btn-clickable"
+                                    type="button"
+                                    @onclick="GuardarCincoPorQue"
+                                    disabled="@(guardando || !UsuarioActualEsResponsableCierre || CincoPorQueAprobado)">
+                                @(guardando ? "Guardando..." : (cincoPorQue is null ? "Guardar 5 porqués" : "Actualizar 5 porqués"))
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="panel-card">
@@ -402,7 +428,7 @@ else
                             </div>
                         }
 
-                        <EditForm Model="vmRevision" OnValidSubmit="RevisarCincoPorQue">
+                        <EditForm Model="vmRevision">
                             <DataAnnotationsValidator />
                             <ValidationSummary />
 
@@ -429,7 +455,9 @@ else
                                 </div>
 
                                 <div class="col-12 d-flex gap-2">
-                                    <button class="btn btn-success" type="submit"
+                                    <button class="btn btn-success"
+                                            type="button"
+                                            @onclick='@(async () => await RevisarCincoPorQue())'
                                             disabled="@guardando || !UsuarioActualPuedeRevisarCincoPorQue">
                                         @(guardando ? "Guardando..." : "Registrar revisión")
                                     </button>
@@ -487,7 +515,7 @@ else
                         </div>
                     }
 
-                    <EditForm Model="vmAccion" OnValidSubmit="GuardarAccionCorrectiva">
+                    <EditForm Model="vmAccion">
                         <DataAnnotationsValidator />
                         <ValidationSummary />
 
@@ -516,7 +544,9 @@ else
                             </div>
 
                             <div class="col-12 d-flex gap-2">
-                                <button class="btn btn-danger" type="submit"
+                                <button class="btn btn-danger"
+                                        type="button"
+                                        @onclick='@(async () => await GuardarAccionCorrectiva())'
                                         disabled="@guardando || !UsuarioActualEsResponsableCierre">
                                     @(guardando ? "Guardando..." : (accionCorrectiva is null ? "Guardar solución" : "Actualizar solución"))
                                 </button>
@@ -542,79 +572,6 @@ else
 
                 <div class="empty-state compact">
                     Este hallazgo es NC Menor, pero todavía no ha sido liberado por SGC.
-                </div>
-            </section>
-        }
-
-        @if (HallazgoLiberadoPorSgc)
-        {
-            <section class="panel-card">
-                <div class="panel-head">
-                    <div>
-                        <h2>Agregar seguimiento</h2>
-                        <p class="panel-subtitle">Registra comentarios, evidencia breve o cambio de estatus.</p>
-                    </div>
-                </div>
-
-                <EditForm Model="vm" OnValidSubmit="GuardarSeguimiento">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Usuario actual</label>
-                            <input class="form-control" value="@usuarioActualId" disabled />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Cambiar estatus (opcional)</label>
-                            <InputSelect class="form-select" @bind-Value="vm.EstatusNuevo">
-                                <option value="">-- Sin cambio --</option>
-                                <option value="Abierto">Abierto</option>
-                                <option value="En Proceso">En Proceso</option>
-                                @if (!EsNcMenor || CincoPorQueAprobado)
-                                {
-                                    <option value="Cerrado">Cerrado</option>
-                                }
-                            </InputSelect>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Nota / evidencia breve (opcional)</label>
-                            <InputText class="form-control" @bind-Value="vm.Evidencia" />
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label">Comentario</label>
-                            <InputTextArea class="form-control" rows="3" @bind-Value="vm.Comentario" />
-                        </div>
-
-                        <div class="col-12 d-flex gap-2">
-                            <button class="btn btn-primary" type="submit" disabled="@guardando">
-                                @(guardando ? "Guardando..." : "Agregar seguimiento")
-                            </button>
-
-                            <button class="btn btn-outline-secondary" type="button"
-                                    @onclick="VolverAuditoria" disabled="@guardando">
-                                Volver
-                            </button>
-                        </div>
-                    </div>
-                </EditForm>
-            </section>
-        }
-        else
-        {
-            <section class="panel-card">
-                <div class="panel-head">
-                    <div>
-                        <h2>Seguimiento bloqueado</h2>
-                        <p class="panel-subtitle">El seguimiento operativo del hallazgo se habilita después de la aprobación SGC.</p>
-                    </div>
-                </div>
-
-                <div class="empty-state compact">
-                    Mientras el hallazgo esté pendiente o rechazado por SGC, no se pueden registrar seguimientos operativos desde esta vista.
                 </div>
             </section>
         }
@@ -676,70 +633,44 @@ else
     [Parameter] public int auditoriaId { get; set; }
     [Parameter] public int hallazgoId { get; set; }
 
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
-
     private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
 
     private bool cargando = true;
     private bool guardando;
     private string? errorMsg;
-
     private string usuarioActualId = "sistema";
     private string usuarioActualNombre = "sistema";
+    private string? msg5;
 
     private Hallazgo? hallazgo;
     private HallazgoCincoPorQue? cincoPorQue;
     private AccionCorrectiva? accionCorrectiva;
     private List<HallazgoSeguimiento> seguimientos = new();
 
-    private SeguimientoVm vm = new();
     private CincoPorQueVm vm5 = new();
     private RevisionVm vmRevision = new();
     private AccionVm vmAccion = new();
 
-    private class SeguimientoVm
-    {
-        [System.ComponentModel.DataAnnotations.Required]
-        public string? Comentario { get; set; }
-
-        public string? Evidencia { get; set; }
-        public string? EstatusNuevo { get; set; }
-    }
-
     private class CincoPorQueVm
     {
-        [System.ComponentModel.DataAnnotations.Required]
         public string? PorQue1 { get; set; }
-
-        [System.ComponentModel.DataAnnotations.Required]
         public string? PorQue2 { get; set; }
-
-        [System.ComponentModel.DataAnnotations.Required]
         public string? PorQue3 { get; set; }
-
-        [System.ComponentModel.DataAnnotations.Required]
         public string? PorQue4 { get; set; }
-
-        [System.ComponentModel.DataAnnotations.Required]
         public string? PorQue5 { get; set; }
+        public string? Acciones { get; set; }
     }
 
     private class RevisionVm
     {
-        [System.ComponentModel.DataAnnotations.Required]
         public string? Decision { get; set; }
-
         public string? Comentario { get; set; }
     }
 
     private class AccionVm
     {
-        [System.ComponentModel.DataAnnotations.Required]
         public string? AccionDefinida { get; set; }
-
         public string? EvidenciaImplementacion { get; set; }
-
         public DateTime FechaImplementacion { get; set; } = DateTime.Today;
     }
 
@@ -759,15 +690,15 @@ else
     private bool UsuarioActualEsResponsableCierre =>
         hallazgo is not null &&
         !string.IsNullOrWhiteSpace(hallazgo.ResponsableCierreId) &&
-        string.Equals(usuarioActualId, hallazgo.ResponsableCierreId.Trim(), StringComparison.OrdinalIgnoreCase);
+        NormalizarLogin(usuarioActualId) == NormalizarLogin(hallazgo.ResponsableCierreId);
 
     private bool UsuarioActualEsAuditorPrincipal =>
         !string.IsNullOrWhiteSpace(AuditorPrincipalId) &&
-        string.Equals(usuarioActualId, AuditorPrincipalId, StringComparison.OrdinalIgnoreCase);
+        NormalizarLogin(usuarioActualId) == NormalizarLogin(AuditorPrincipalId);
 
     private bool UsuarioActualEsSegundoAuditor =>
         !string.IsNullOrWhiteSpace(SegundoAuditorId) &&
-        string.Equals(usuarioActualId, SegundoAuditorId, StringComparison.OrdinalIgnoreCase);
+        NormalizarLogin(usuarioActualId) == NormalizarLogin(SegundoAuditorId);
 
     private bool UsuarioActualPuedeRevisarCincoPorQue =>
         UsuarioActualEsAuditorPrincipal || UsuarioActualEsSegundoAuditor;
@@ -791,6 +722,7 @@ else
     {
         cargando = true;
         errorMsg = null;
+        msg5 = null;
 
         await CargarUsuarioActual();
         await CargarPantalla();
@@ -800,24 +732,51 @@ else
 
     private async Task CargarUsuarioActual()
     {
-        if (AuthenticationStateTask is null)
-            return;
+        usuarioActualId = "sistema";
+        usuarioActualNombre = "sistema";
 
-        var authState = await AuthenticationStateTask;
-        var user = authState.User;
-
-        if (user.Identity?.IsAuthenticated == true)
+        try
         {
-            usuarioActualId =
-                user.FindFirst("pc_login_id")?.Value
-                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? "sistema";
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-            usuarioActualNombre =
-                user.Identity?.Name
-                ?? user.FindFirst(ClaimTypes.Name)?.Value
-                ?? usuarioActualId;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var login =
+                    user.FindFirst("pc_login_id")?.Value
+                    ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? user.Identity?.Name
+                    ?? "sistema";
+
+                usuarioActualId = NormalizarLogin(login);
+
+                usuarioActualNombre =
+                    user.FindFirst(ClaimTypes.Name)?.Value
+                    ?? user.Identity?.Name
+                    ?? usuarioActualId;
+            }
         }
+        catch
+        {
+            usuarioActualId = "sistema";
+            usuarioActualNombre = "sistema";
+        }
+    }
+
+    private static string NormalizarLogin(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return string.Empty;
+
+        var v = valor.Trim();
+
+        if (v.Contains("\\"))
+            v = v[(v.LastIndexOf('\\') + 1)..];
+
+        if (v.Contains("@"))
+            v = v[..v.IndexOf('@')];
+
+        return v.Trim().ToUpperInvariant();
     }
 
     private async Task CargarPantalla()
@@ -847,6 +806,11 @@ else
             vm5.PorQue3 = cincoPorQue.PorQue3;
             vm5.PorQue4 = cincoPorQue.PorQue4;
             vm5.PorQue5 = cincoPorQue.PorQue5;
+            vm5.Acciones = cincoPorQue.Acciones;
+        }
+        else
+        {
+            vm5 = new CincoPorQueVm();
         }
 
         if (accionCorrectiva is not null)
@@ -855,6 +819,12 @@ else
             vmAccion.EvidenciaImplementacion = accionCorrectiva.EvidenciaImplementacion;
             vmAccion.FechaImplementacion = accionCorrectiva.FechaImplementacion;
         }
+        else
+        {
+            vmAccion = new AccionVm();
+        }
+
+        vmRevision = new RevisionVm();
 
         await CargarPersonasDisplay(
             seguimientos.Select(x => x.UsuarioId)
@@ -901,36 +871,41 @@ else
 
     private async Task GuardarCincoPorQue()
     {
+        msg5 = null;
+        errorMsg = null;
+
         if (guardando) return;
         guardando = true;
-        errorMsg = null;
 
         try
         {
             if (hallazgo is null || !EsNcMenor)
+            {
+                msg5 = "El hallazgo no es NC Menor o no está cargado.";
                 return;
+            }
 
             if (!HallazgoLiberadoPorSgc)
             {
-                errorMsg = "El hallazgo debe ser aprobado por SGC antes de capturar los 5 porqués.";
+                msg5 = "El hallazgo debe ser aprobado por SGC antes de capturar los 5 porqués.";
                 return;
             }
 
             if (CincoPorQueAprobado)
             {
-                errorMsg = "Los 5 porqués ya fueron aprobados y ya no se pueden editar.";
+                msg5 = "Los 5 porqués ya fueron aprobados y ya no se pueden editar.";
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(hallazgo.ResponsableCierreId))
             {
-                errorMsg = "El hallazgo no tiene responsable de cierre asignado.";
+                msg5 = "El hallazgo no tiene responsable de cierre asignado.";
                 return;
             }
 
             if (!UsuarioActualEsResponsableCierre)
             {
-                errorMsg = "Solo el responsable de cierre puede capturar los 5 porqués.";
+                msg5 = "Solo el responsable de cierre puede capturar los 5 porqués.";
                 return;
             }
 
@@ -940,7 +915,7 @@ else
                 string.IsNullOrWhiteSpace(vm5.PorQue4) ||
                 string.IsNullOrWhiteSpace(vm5.PorQue5))
             {
-                errorMsg = "Debes capturar los 5 porqués completos.";
+                msg5 = "Debes capturar los 5 porqués completos.";
                 return;
             }
 
@@ -963,6 +938,7 @@ else
             cincoPorQue.PorQue3 = vm5.PorQue3.Trim();
             cincoPorQue.PorQue4 = vm5.PorQue4.Trim();
             cincoPorQue.PorQue5 = vm5.PorQue5.Trim();
+            cincoPorQue.Acciones = string.IsNullOrWhiteSpace(vm5.Acciones) ? null : vm5.Acciones.Trim();
 
             cincoPorQue.Estatus = "Pendiente";
             cincoPorQue.AprobacionAuditorAsignado = null;
@@ -985,15 +961,18 @@ else
             });
 
             await Db.SaveChangesAsync();
+
+            msg5 = "Los 5 porqués se guardaron correctamente.";
             await CargarPantalla();
         }
         catch (Exception ex)
         {
-            errorMsg = ex.InnerException?.Message ?? ex.Message;
+            msg5 = ex.InnerException?.Message ?? ex.Message;
         }
         finally
         {
             guardando = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -1160,68 +1139,6 @@ else
         catch (Exception ex)
         {
             errorMsg = ex.InnerException?.Message ?? ex.Message;
-        }
-        finally
-        {
-            guardando = false;
-        }
-    }
-
-    private async Task GuardarSeguimiento()
-    {
-        if (guardando) return;
-        guardando = true;
-        errorMsg = null;
-
-        try
-        {
-            if (hallazgo is null) return;
-
-            if (!HallazgoLiberadoPorSgc)
-            {
-                errorMsg = "El hallazgo debe ser aprobado por SGC antes de registrar seguimiento operativo.";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(vm.Comentario))
-            {
-                errorMsg = "El comentario es obligatorio.";
-                return;
-            }
-
-            if (EsNcMenor &&
-                string.Equals(vm.EstatusNuevo, "Cerrado", StringComparison.OrdinalIgnoreCase) &&
-                !CincoPorQueAprobado)
-            {
-                errorMsg = "No puedes cerrar una NC Menor hasta que los 5 porqués estén aprobados.";
-                return;
-            }
-
-            var seg = new HallazgoSeguimiento
-            {
-                HallazgoId = hallazgoId,
-                UsuarioId = usuarioActualId,
-                Comentario = vm.Comentario.Trim(),
-                Evidencia = string.IsNullOrWhiteSpace(vm.Evidencia) ? null : vm.Evidencia.Trim(),
-                EstatusNuevo = string.IsNullOrWhiteSpace(vm.EstatusNuevo) ? null : vm.EstatusNuevo
-            };
-
-            Db.HallazgoSeguimientos.Add(seg);
-
-            if (!string.IsNullOrWhiteSpace(seg.EstatusNuevo))
-                hallazgo.Estatus = seg.EstatusNuevo!;
-
-            await Db.SaveChangesAsync();
-
-            vm.Comentario = null;
-            vm.Evidencia = null;
-            vm.EstatusNuevo = null;
-
-            await CargarPantalla();
-        }
-        catch (Exception ex)
-        {
-            errorMsg = ex.Message;
         }
         finally
         {

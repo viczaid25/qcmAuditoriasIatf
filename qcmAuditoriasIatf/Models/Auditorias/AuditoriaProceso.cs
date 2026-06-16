@@ -16,7 +16,6 @@ public class AuditoriaProceso
     public int ProcesoId { get; set; }
     public Proceso Proceso { get; set; } = default!;
 
-    // por ahora string (cuando metas Identity puede ser el UserId)
     [StringLength(100)]
     public string? AuditorAsignadoId { get; set; }
 
@@ -26,13 +25,20 @@ public class AuditoriaProceso
     [StringLength(100)]
     public string? ObservadorId { get; set; }
 
+    [StringLength(100)]
+    public string? AuditadoId { get; set; }
+
     public int? UnidadNegocioId { get; set; }
     public UnidadNegocio? UnidadNegocio { get; set; }
 
     [DataType(DataType.Date)]
-    public DateTime? FechaProgramada { get; set; }  // null mientras no se programe
+    public DateTime? FechaProgramada { get; set; }
 
-
-    // solo aplica para Producción (o cuando UnidadNegocioId != null)
     public string? LineaNombre { get; set; }
+
+    public string? ReclamosAuditoriasPasadas { get; set; }
+    public string? ResultadosAuditoriasInternasPrevias { get; set; }
+    public string? SeguimientoAccionesCorrectivasIatf { get; set; }
+    public string? ClausulasIatfTop3NcmMayoresPasadas { get; set; }
+    public string? ClausulasIatfTop3NcmMenoresPasadas { get; set; }
 }

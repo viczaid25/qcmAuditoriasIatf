@@ -171,3 +171,4 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\ne
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\qcmAuditoriasIatf.pdb
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\qcmAuditoriasIatf.genruntimeconfig.cache
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\ref\qcmAuditoriasIatf.dll
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\MisCosas.razor.rz.scp.css

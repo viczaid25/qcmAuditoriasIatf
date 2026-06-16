@@ -22,7 +22,6 @@
             <div class="asignacion-skeleton asignacion-skeleton-form"></div>
             <div class="asignacion-skeleton asignacion-skeleton-side"></div>
         </div>
-        <div class="asignacion-skeleton asignacion-skeleton-pickers"></div>
     </div>
 }
 else if (ap is null || auditoria is null)
@@ -274,118 +273,6 @@ else
                         Una misma persona no puede ocupar más de un rol dentro del mismo proceso.
                     </div>
                 </section>
-            </div>
-
-            <div class="picker-grid">
-                @if (auditoresDisponibles.Count > 0)
-                {
-                    <section class="panel-card">
-                        <div class="panel-head">
-                            <div>
-                                <h2>Auditores disponibles</h2>
-                                <p class="panel-subtitle">Selección rápida para auditor principal o segundo auditor.</p>
-                            </div>
-
-                            <span class="panel-badge">@auditoresDisponibles.Count auditor(es)</span>
-                        </div>
-
-                        <div class="table-wrap">
-                            <table class="picker-table">
-                                <thead>
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Tipo</th>
-                                        <th>Departamento</th>
-                                        <th>Función</th>
-                                        <th>Login</th>
-                                        <th class="text-end">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var a in auditoresDisponibles)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <div class="cell-title">@GetNombrePreferido(a)</div>
-                                                <div class="cell-subtitle">@GetCorreoPreferido(a)</div>
-                                            </td>
-                                            <td>@a.Tipo</td>
-                                            <td>@GetDepartamentoPreferido(a)</td>
-                                            <td>@GetFuncionPreferida(a)</td>
-                                            <td>@(string.IsNullOrWhiteSpace(a.PcLoginId) ? "—" : a.PcLoginId)</td>
-                                            <td class="text-end">
-                                                <div class="picker-actions">
-                                                    <button type="button"
-                                                            class="table-btn table-btn-primary"
-                                                            @onclick="() => SeleccionarAuditorPrincipal(a)">
-                                                        Principal
-                                                    </button>
-
-                                                    <button type="button"
-                                                            class="table-btn"
-                                                            @onclick="() => SeleccionarSegundoAuditor(a)">
-                                                        Segundo
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                }
-
-                @if (observadoresDisponibles.Count > 0)
-                {
-                    <section class="panel-card">
-                        <div class="panel-head">
-                            <div>
-                                <h2>Observadores disponibles</h2>
-                                <p class="panel-subtitle">Selección rápida del observador del proceso.</p>
-                            </div>
-
-                            <span class="panel-badge">@observadoresDisponibles.Count observador(es)</span>
-                        </div>
-
-                        <div class="table-wrap">
-                            <table class="picker-table">
-                                <thead>
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Tipo</th>
-                                        <th>Departamento</th>
-                                        <th>Función</th>
-                                        <th>Login</th>
-                                        <th class="text-end">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var o in observadoresDisponibles)
-                                    {
-                                        <tr>
-                                            <td>
-                                                <div class="cell-title">@GetNombrePreferido(o)</div>
-                                                <div class="cell-subtitle">@GetCorreoPreferido(o)</div>
-                                            </td>
-                                            <td>@o.Tipo</td>
-                                            <td>@GetDepartamentoPreferido(o)</td>
-                                            <td>@GetFuncionPreferida(o)</td>
-                                            <td>@(string.IsNullOrWhiteSpace(o.PcLoginId) ? "—" : o.PcLoginId)</td>
-                                            <td class="text-end">
-                                                <button type="button"
-                                                        class="table-btn table-btn-info"
-                                                        @onclick="() => SeleccionarObservador(o)">
-                                                    Usar
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                }
             </div>
 
             <section class="panel-card action-panel">

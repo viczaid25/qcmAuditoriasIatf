@@ -40,11 +40,11 @@ else
                     </span>
 
                     <span class="meta-chip">
-                        Activos: <strong>@lista.Count(x => x.Activo)</strong>
+                        Tipos: <strong>@TiposDisponibles.Count()</strong>
                     </span>
 
                     <span class="meta-chip">
-                        Inactivos: <strong>@lista.Count(x => !x.Activo)</strong>
+                        Con PC Login: <strong>@lista.Count(x => !string.IsNullOrWhiteSpace(x.PcLoginId))</strong>
                     </span>
 
                     <span class="meta-chip">
@@ -114,19 +114,19 @@ else
         <section class="auditores-metrics">
             <div class="metric-card">
                 <div class="metric-label">Auditores</div>
-                <div class="metric-value">@lista.Count(x => x.Tipo == "Auditor")</div>
+                <div class="metric-value">@lista.Count(x => string.Equals(x.Tipo, "Auditor", StringComparison.OrdinalIgnoreCase))</div>
                 <div class="metric-note">Perfil principal</div>
             </div>
 
             <div class="metric-card">
                 <div class="metric-label">Entrenamiento</div>
-                <div class="metric-value">@lista.Count(x => x.Tipo == "Entrenamiento")</div>
+                <div class="metric-value">@lista.Count(x => string.Equals(x.Tipo, "Entrenamiento", StringComparison.OrdinalIgnoreCase))</div>
                 <div class="metric-note">En formación</div>
             </div>
 
             <div class="metric-card">
                 <div class="metric-label">Observadores</div>
-                <div class="metric-value">@lista.Count(x => x.Tipo == "Observador")</div>
+                <div class="metric-value">@lista.Count(x => string.Equals(x.Tipo, "Observador", StringComparison.OrdinalIgnoreCase))</div>
                 <div class="metric-note">Apoyo en auditoría</div>
             </div>
 
@@ -148,7 +148,7 @@ else
             </div>
 
             <div class="row g-3">
-                <div class="col-md-5">
+                <div class="col-md-8">
                     <label class="form-label">Buscar</label>
                     <input class="form-control"
                            @bind="textoBusqueda"
@@ -156,7 +156,7 @@ else
                            placeholder="Nombre, email, login, departamento..." />
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Tipo</label>
                     <InputSelect class="form-select" @bind-Value="tipoSeleccionado">
                         <option value="">-- Todos --</option>
@@ -164,15 +164,6 @@ else
                         {
                             <option value="@tipo">@tipo</option>
                         }
-                    </InputSelect>
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label">Estatus</label>
-                    <InputSelect class="form-select" @bind-Value="filtroActivo">
-                        <option value="todos">Todos</option>
-                        <option value="activos">Activos</option>
-                        <option value="inactivos">Inactivos</option>
                     </InputSelect>
                 </div>
 
@@ -190,13 +181,13 @@ else
             <div class="panel-head">
                 <div>
                     <h2>Bandeja de auditores</h2>
-                    <p class="panel-subtitle">Edita o elimina registros del catálogo.</p>
+                    <p class="panel-subtitle">Agrupados por tipo de auditor.</p>
                 </div>
 
                 <span class="panel-badge">@AuditoresFiltrados.Count() registro(s)</span>
             </div>
 
-            @if (!AuditoresFiltrados.Any())
+            @if (!AuditoresAgrupados.Any())
             {
                 <div class="empty-state compact">
                     No hay auditores para los filtros seleccionados.
@@ -204,97 +195,102 @@ else
             }
             else
             {
-                <div class="table-wrap">
-                    <table class="auditores-table">
-                        <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Tipo</th>
-                                <th>Departamento</th>
-                                <th>Función</th>
-                                <th>PC Login</th>
-                                <th>Estatus</th>
-                                <th class="text-end">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var a in AuditoresFiltrados)
-                            {
-                                <tr>
-                                    <td>
-                                        <div class="cell-title">@a.Nombre</div>
+                @foreach (var grupo in AuditoresAgrupados)
+                {
+                    <div class="group-block">
+                        <div class="panel-head group-head">
+                            <div>
+                                <h2>@grupo.Key</h2>
+                                <p class="panel-subtitle">@DescripcionTipo(grupo.Key)</p>
+                            </div>
 
-                                        @if (!string.IsNullOrWhiteSpace(a.Email))
-                                        {
-                                            <div class="cell-subtitle">@a.Email</div>
-                                        }
-                                    </td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="tipo-pill @GetTipoClass(grupo.Key)">
+                                    @grupo.Key
+                                </span>
+                                <span class="panel-badge">@grupo.Count() registro(s)</span>
+                            </div>
+                        </div>
 
-                                    <td>
-                                        <span class="tipo-pill @GetTipoClass(a.Tipo)">
-                                            @a.Tipo
-                                        </span>
-                                    </td>
+                        <div class="table-wrap">
+                            <table class="auditores-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Departamento</th>
+                                        <th>Función</th>
+                                        <th>PC Login</th>
+                                        <th class="text-end">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var a in grupo.OrderBy(x => x.Nombre))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="cell-title">@a.Nombre</div>
 
-                                    <td>
-                                        @if (string.IsNullOrWhiteSpace(a.Departamento))
-                                        {
-                                            <span class="empty-inline">Sin capturar</span>
-                                        }
-                                        else
-                                        {
-                                            <span>@a.Departamento</span>
-                                        }
-                                    </td>
+                                                @if (!string.IsNullOrWhiteSpace(a.Email))
+                                                {
+                                                    <div class="cell-subtitle">@a.Email</div>
+                                                }
+                                            </td>
 
-                                    <td>
-                                        @if (string.IsNullOrWhiteSpace(a.Funcion))
-                                        {
-                                            <span class="empty-inline">Sin capturar</span>
-                                        }
-                                        else
-                                        {
-                                            <span>@a.Funcion</span>
-                                        }
-                                    </td>
+                                            <td>
+                                                @if (string.IsNullOrWhiteSpace(a.Departamento))
+                                                {
+                                                    <span class="empty-inline">Sin capturar</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>@a.Departamento</span>
+                                                }
+                                            </td>
 
-                                    <td>
-                                        @if (string.IsNullOrWhiteSpace(a.PcLoginId))
-                                        {
-                                            <span class="empty-inline">Sin PC Login</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="login-pill">@a.PcLoginId</span>
-                                        }
-                                    </td>
+                                            <td>
+                                                @if (string.IsNullOrWhiteSpace(a.Funcion))
+                                                {
+                                                    <span class="empty-inline">Sin capturar</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>@a.Funcion</span>
+                                                }
+                                            </td>
 
-                                    <td>
-                                        <span class="status-pill @(a.Activo ? "open" : "closed")">
-                                            @(a.Activo ? "Activo" : "Inactivo")
-                                        </span>
-                                    </td>
+                                            <td>
+                                                @if (string.IsNullOrWhiteSpace(a.PcLoginId))
+                                                {
+                                                    <span class="empty-inline">Sin PC Login</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="login-pill">@a.PcLoginId</span>
+                                                }
+                                            </td>
 
-                                    <td class="text-end">
-                                        <div class="action-stack">
-                                            <button type="button"
-                                                    class="table-btn"
-                                                    @onclick='() => Nav.NavigateTo($"auditores/{a.AuditorId}")'>
-                                                Editar
-                                            </button>
+                                            <td class="text-end">
+                                                <div class="action-stack">
+                                                    <button type="button"
+                                                            class="table-btn"
+                                                            @onclick='() => Nav.NavigateTo($"auditores/{a.AuditorId}")'>
+                                                        Editar
+                                                    </button>
 
-                                            <button type="button"
-                                                    class="table-btn table-btn-danger"
-                                                    @onclick="() => PrepararEliminar(a)">
-                                                Eliminar
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                                                    <button type="button"
+                                                            class="table-btn table-btn-danger"
+                                                            @onclick="() => PrepararEliminar(a)">
+                                                        Eliminar
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
             }
         </section>
     </div>
@@ -307,7 +303,6 @@ else
 
     private string textoBusqueda = "";
     private string tipoSeleccionado = "";
-    private string filtroActivo = "todos";
 
     private Auditor? auditorPendienteEliminar;
     private List<Auditor> lista = new();
@@ -315,15 +310,23 @@ else
     private IEnumerable<string> TiposDisponibles =>
         lista.Select(x => x.Tipo)
             .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct()
-            .OrderBy(x => x);
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => OrdenTipo(x))
+            .ThenBy(x => x);
 
     private IEnumerable<Auditor> AuditoresFiltrados =>
         lista
             .Where(CumpleFiltroBusqueda)
             .Where(CumpleFiltroTipo)
-            .Where(CumpleFiltroActivo)
-            .OrderBy(x => x.Nombre);
+            .OrderBy(x => OrdenTipo(x.Tipo))
+            .ThenBy(x => x.Nombre);
+
+    private IEnumerable<IGrouping<string, Auditor>> AuditoresAgrupados =>
+        AuditoresFiltrados
+            .GroupBy(x => string.IsNullOrWhiteSpace(x.Tipo) ? "Sin tipo" : x.Tipo.Trim())
+            .OrderBy(x => OrdenTipo(x.Key))
+            .ThenBy(x => x.Key);
 
     protected override async Task OnInitializedAsync()
     {
@@ -339,7 +342,8 @@ else
         {
             lista = await Db.Auditores
                 .AsNoTracking()
-                .OrderBy(x => x.Nombre)
+                .OrderBy(x => x.Tipo)
+                .ThenBy(x => x.Nombre)
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -375,21 +379,10 @@ else
         return string.Equals(a.Tipo, tipoSeleccionado, StringComparison.OrdinalIgnoreCase);
     }
 
-    private bool CumpleFiltroActivo(Auditor a)
-    {
-        return filtroActivo switch
-        {
-            "activos" => a.Activo,
-            "inactivos" => !a.Activo,
-            _ => true
-        };
-    }
-
     private void LimpiarFiltros()
     {
         textoBusqueda = "";
         tipoSeleccionado = "";
-        filtroActivo = "todos";
     }
 
     private void PrepararEliminar(Auditor auditor)
@@ -436,6 +429,38 @@ else
         {
             eliminando = false;
         }
+    }
+
+    private static int OrdenTipo(string? tipo)
+    {
+        var valor = tipo?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor == "auditor")
+            return 1;
+
+        if (valor.Contains("entrenamiento"))
+            return 2;
+
+        if (valor.Contains("observador"))
+            return 3;
+
+        return 99;
+    }
+
+    private static string DescripcionTipo(string? tipo)
+    {
+        var valor = tipo?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (valor == "auditor")
+            return "Perfil principal de auditoría.";
+
+        if (valor.Contains("entrenamiento"))
+            return "Personal en formación dentro del equipo auditor.";
+
+        if (valor.Contains("observador"))
+            return "Personal de apoyo u observación.";
+
+        return "Tipo no clasificado.";
     }
 
     private static string GetTipoClass(string? tipo)

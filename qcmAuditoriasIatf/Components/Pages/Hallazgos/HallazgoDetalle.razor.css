@@ -524,3 +524,31 @@
         align-items: flex-start;
     }
 }
+
+.hallazgo-grid,
+.hallazgo-grid-top {
+    align-items: start;
+}
+
+    .hallazgo-grid .panel-card {
+        position: relative;
+        overflow: visible;
+    }
+
+.hallazgo-action-zone {
+    position: relative;
+    z-index: 50;
+    overflow: visible;
+}
+
+.hallazgo-btn-clickable {
+    position: relative;
+    z-index: 60;
+    pointer-events: auto;
+}
+
+.panel-card::before,
+.panel-head::before,
+.hallazgo-hero::before {
+    pointer-events: none;
+}

@@ -33,6 +33,9 @@ public class HallazgoCincoPorQue
     [Required, MaxLength(2000)]
     public string PorQue5 { get; set; } = string.Empty;
 
+    [MaxLength(2000)]
+    public string? Acciones { get; set; }
+
     [Required, MaxLength(50)]
     public string Estatus { get; set; } = "Pendiente"; // Pendiente / Aprobado / Rechazado
 
