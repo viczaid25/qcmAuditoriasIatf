@@ -11,7 +11,7 @@
     gap: 1rem;
     padding: 1.6rem 1.75rem;
     border-radius: 28px;
-    background: linear-gradient(135deg, rgba(6,11,41,0.97) 0%, rgba(58,6,71,0.97) 100%);
+    background: var(--color-primary-gradient);
     color: #fff;
     box-shadow: 0 24px 45px rgba(15,23,42,0.16);
 }
@@ -85,9 +85,9 @@
     }
 
     .hero-btn.primary {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        background: linear-gradient(135deg, var(--mo-blue-deep), var(--mo-blue));
         border-color: transparent;
-        box-shadow: 0 12px 24px rgba(59,130,246,0.25);
+        box-shadow: 0 12px 24px rgba(37,99,235,0.28);
     }
 
 .panel-card {
@@ -122,8 +122,8 @@
 .panel-badge {
     padding: 0.38rem 0.75rem;
     border-radius: 999px;
-    background: #eff6ff;
-    color: #1d4ed8;
+    background: rgba(37,99,235,0.10);
+    color: var(--mo-blue-deep);
     font-size: 0.82rem;
     font-weight: 700;
     white-space: nowrap;
@@ -282,8 +282,8 @@
     }
 
     .calendar-day.today {
-        border-color: #60a5fa;
-        box-shadow: 0 0 0 2px rgba(59,130,246,0.12);
+        border-color: var(--mo-blue);
+        box-shadow: 0 0 0 2px rgba(37,99,235,0.14);
     }
 
 .calendar-day-head {
@@ -304,8 +304,8 @@
     min-height: 26px;
     padding: 0.1rem 0.4rem;
     border-radius: 999px;
-    background: #eff6ff;
-    color: #1d4ed8;
+    background: rgba(37,99,235,0.10);
+    color: var(--mo-blue-deep);
     font-size: 0.76rem;
     font-weight: 800;
     display: inline-flex;
@@ -334,20 +334,20 @@
     text-align: left;
     padding: 0.75rem;
     border-radius: 16px;
-    border: 1px solid #dbeafe;
-    background: #eff6ff;
+    border: 1px solid rgba(37,99,235,0.18);
+    background: rgba(37,99,235,0.08);
     color: #0f172a;
     transition: all 0.18s ease;
 }
 
     .event-card:hover {
-        background: #dbeafe;
-        border-color: #93c5fd;
+        background: rgba(37,99,235,0.14);
+        border-color: rgba(37,99,235,0.35);
         transform: translateY(-1px);
     }
 
 .event-code {
-    color: #1d4ed8;
+    color: var(--mo-blue-deep);
     font-size: 0.78rem;
     font-weight: 800;
     text-transform: uppercase;
@@ -418,14 +418,14 @@
     }
 
 .table-btn-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--mo-blue-deep), var(--mo-blue));
     border-color: transparent;
     color: #fff;
-    box-shadow: 0 10px 18px rgba(59,130,246,0.2);
+    box-shadow: 0 10px 18px rgba(37,99,235,0.24);
 }
 
     .table-btn-primary:hover {
-        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        background: linear-gradient(135deg, var(--mo-blue-darker), var(--mo-blue-deep));
         color: #fff;
         border-color: transparent;
     }
@@ -466,7 +466,7 @@
     gap: 1.5rem;
     padding: 1.1rem 1.6rem;
     border-radius: 18px;
-    background: #0f172a;
+    background: var(--color-secondary);
     color: #fff;
 }
 

@@ -7,13 +7,13 @@
 <h2>Procesos</h2>
 
 <div class="d-flex gap-2 align-items-center mb-3">
-    <button class="btn btn-primary" @onclick="IrNuevo">Nuevo</button>
+    <button class="mo-btn mo-btn-primary" @onclick="IrNuevo">Nuevo</button>
 
-    <input class="form-control" style="max-width:360px"
+    <input class="mo-form-control" style="max-width:360px"
            placeholder="Buscar por código o nombre..."
            @bind="q" @bind:event="oninput" />
 
-    <div class="form-check ms-2">
+    <div class="mo-form-check ms-2">
         <input class="form-check-input" type="checkbox" id="soloActivos" @bind="soloActivos" />
         <label class="form-check-label" for="soloActivos">Solo activos</label>
     </div>
@@ -29,7 +29,8 @@ else if (lista.Count == 0)
 }
 else
 {
-    <table class="table table-bordered table-hover align-middle">
+    <div class="mo-table-wrap" data-mo-table data-page-size="10">
+    <table class="mo-table">
         <thead>
             <tr>
                 <th style="width:140px;">Código</th>
@@ -39,6 +40,21 @@ else
                 <th style="width:200px;">Línea</th>
                 <th style="width:90px;">Activo</th>
                 <th style="width:180px;"></th>
+            </tr>
+            <tr class="mo-table-filter-row">
+                <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
+                <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
+                <th><input class="mo-th-filter" data-mo-filter-col="4" placeholder="Filtrar…"></th>
+                <th>
+                    <select class="mo-th-filter" data-mo-filter-col="5">
+                        <option value="">Todos</option>
+                        <option>Sí</option>
+                        <option>No</option>
+                    </select>
+                </th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -52,25 +68,68 @@ else
                     <td>@(p.LineaNombre ?? "-")</td>
                     <td>@(p.Activo ? "Sí" : "No")</td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary me-2"
+                        <button class="mo-btn mo-btn-primary-outline mo-btn-sm me-2"
                                 @onclick="() => IrEditar(p.ProcesoId)">
                             Editar
                         </button>
-                        <button class="btn btn-sm btn-outline-danger"
+                        <button class="@(p.Activo ? "mo-btn mo-btn-danger-outline mo-btn-sm me-2" : "mo-btn mo-btn-success-outline mo-btn-sm me-2")"
                                 @onclick="() => ToggleActivo(p)">
                             @(p.Activo ? "Desactivar" : "Activar")
+                        </button>
+                        <button class="mo-btn mo-btn-danger mo-btn-sm"
+                                @onclick="() => PedirEliminar(p)">
+                            Eliminar
                         </button>
                     </td>
                 </tr>
             }
         </tbody>
     </table>
+    </div>
+    <div class="mo-table-pagination" data-mo-pagination></div>
+}
+
+@if (procesoPendienteEliminar is not null)
+{
+    <div style="position:fixed;inset:0;background:rgba(15,23,42,0.45);display:flex;align-items:center;justify-content:center;padding:1.5rem;z-index:1100;">
+        <div class="mo-panel" style="max-width:480px;width:100%;">
+            <h3 style="margin-top:0;">Confirmar eliminación</h3>
+            <p>
+                Esta acción eliminará el proceso
+                <strong>@procesoPendienteEliminar.Codigo - @procesoPendienteEliminar.Nombre</strong>
+                del catálogo. No se puede deshacer.
+            </p>
+
+            @if (!string.IsNullOrWhiteSpace(eliminarErrorMsg))
+            {
+                <div class="mo-alert mo-alert-danger mb-3">@eliminarErrorMsg</div>
+            }
+
+            <div class="mo-alert mo-alert-warning mb-3">
+                Si el proceso tiene auditorías, checklist o unidades de negocio asociadas, no podrá eliminarse.
+                En ese caso, desactívalo en su lugar.
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="mo-btn mo-btn-secondary-outline" @onclick="CancelarEliminar" disabled="@eliminando">
+                    Cancelar
+                </button>
+                <button type="button" class="mo-btn mo-btn-danger" @onclick="EliminarProceso" disabled="@eliminando">
+                    @(eliminando ? "Eliminando..." : "Eliminar proceso")
+                </button>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
     private List<Proceso>? lista;
     private string q = "";
     private bool soloActivos = true;
+
+    private Proceso? procesoPendienteEliminar;
+    private bool eliminando;
+    private string? eliminarErrorMsg;
 
     protected override async Task OnInitializedAsync()
     {
@@ -108,5 +167,67 @@ else
     {
         p.Activo = !p.Activo;
         await Db.SaveChangesAsync();
+    }
+
+    void PedirEliminar(Proceso p)
+    {
+        procesoPendienteEliminar = p;
+        eliminarErrorMsg = null;
+    }
+
+    void CancelarEliminar()
+    {
+        procesoPendienteEliminar = null;
+        eliminarErrorMsg = null;
+    }
+
+    async Task EliminarProceso()
+    {
+        if (procesoPendienteEliminar is null || eliminando)
+            return;
+
+        eliminando = true;
+        eliminarErrorMsg = null;
+
+        try
+        {
+            // El DbContext de Blazor Server vive por circuito, no por página: si otra pantalla
+            // (p.ej. "Nueva auditoría") ya cargó las UnidadNegocio de este proceso, quedan
+            // trackeadas y EF lanza un error de "relación cortada" antes de tocar la base.
+            // Las destrackeamos para que la validación real la haga la restricción de la BD.
+            var unidadesTrackeadas = Db.ChangeTracker.Entries<UnidadNegocio>()
+                .Where(e => e.Entity.ProcesoId == procesoPendienteEliminar.ProcesoId)
+                .ToList();
+
+            foreach (var entry in unidadesTrackeadas)
+                entry.State = EntityState.Detached;
+
+            var entity = await Db.Procesos.FirstOrDefaultAsync(x => x.ProcesoId == procesoPendienteEliminar.ProcesoId);
+
+            if (entity is not null)
+            {
+                Db.Procesos.Remove(entity);
+                await Db.SaveChangesAsync();
+                lista?.RemoveAll(x => x.ProcesoId == entity.ProcesoId);
+            }
+
+            procesoPendienteEliminar = null;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sql && sql.Number == 547)
+        {
+            eliminarErrorMsg = "No se puede eliminar: el proceso tiene información asociada (auditorías, checklist o unidades de negocio). Desactívalo en su lugar.";
+        }
+        catch (InvalidOperationException)
+        {
+            eliminarErrorMsg = "No se puede eliminar: el proceso tiene información asociada (auditorías, checklist o unidades de negocio). Desactívalo en su lugar.";
+        }
+        catch (Exception ex)
+        {
+            eliminarErrorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            eliminando = false;
+        }
     }
 }

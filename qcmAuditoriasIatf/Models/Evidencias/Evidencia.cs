@@ -18,6 +18,9 @@ public class Evidencia
     public string RutaArchivo { get; set; } = string.Empty;
 
     [Required]
+    public string NombreOriginal { get; set; } = string.Empty;
+
+    [Required]
     public string TipoArchivo { get; set; } = string.Empty;
 
     public DateTime FechaCarga { get; set; } = DateTime.Now;

@@ -198,7 +198,7 @@ else
                         <div class="calendar-grid">
                             @foreach (var dia in diasCalendario)
                             {
-                                <div class="calendar-day @(dia.EsMesActual ? "current" : "outside") @(dia.EsHoy ? "today" : "") @(dia.EnRangoAuditoria ? "" : "out-of-range")">
+                                <div class="calendar-day @(dia.EsMesActual ? "current" : "outside") @(dia.EsHoy ? "today" : "") @(dia.EnRangoAuditoria ? "" : "out-of-range")" @key="dia.Fecha">
                                     <div class="calendar-day-head">
                                         <span class="day-number">@dia.Fecha.Day</span>
 
@@ -226,6 +226,7 @@ else
                                             {
                                                 <button type="button"
                                                         class="event-card"
+                                                        @key="ev.AuditoriaProcesoId"
                                                         @onclick="() => IrProceso(ev.AuditoriaProcesoId)">
                                                     <div class="event-code">@ev.ProcesoCodigo</div>
                                                     <div class="event-name">@ev.ProcesoNombre</div>
@@ -270,7 +271,7 @@ else
                 <div class="pending-list">
                     @foreach (var p in procesosSinFecha)
                     {
-                        <div class="pending-item">
+                        <div class="pending-item" @key="p.AuditoriaProcesoId">
                             <div class="pending-copy">
                                 <div class="pending-title">@p.Proceso?.Codigo - @p.Proceso?.Nombre</div>
 

@@ -9,11 +9,6 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\ne
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\qcmAuditoriasIatf.pdb
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\Azure.Core.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\Azure.Identity.dll
-C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\ClosedXML.dll
-C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\ClosedXML.Parser.dll
-C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\DocumentFormat.OpenXml.dll
-C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\DocumentFormat.OpenXml.Framework.dll
-C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\ExcelNumberFormat.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\Humanizer.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\Microsoft.Bcl.AsyncInterfaces.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\Microsoft.Bcl.Cryptography.dll
@@ -44,8 +39,6 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\ne
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\Microsoft.SqlServer.Server.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\Mono.TextTemplating.dll
-C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\RBush.dll
-C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\SixLabors.Fonts.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.ClientModel.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.CodeDom.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.Composition.AttributedModel.dll
@@ -60,7 +53,6 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\ne
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.DirectoryServices.Protocols.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.Formats.Asn1.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.IdentityModel.Tokens.Jwt.dll
-C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.IO.Packaging.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.Memory.Data.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.Runtime.Caching.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.Security.Cryptography.ProtectedData.dll
@@ -143,8 +135,6 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\ne
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\rjimswa.dswa.cache.json
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\rjsmrazor.dswa.cache.json
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\rjsmcshtml.dswa.cache.json
-C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Layout\MainLayout.razor.rz.scp.css
-C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Layout\NavMenu.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Auditores\AuditorEditar.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Auditores\AuditoresListado.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Auditorias\AuditoriaCalendario.razor.rz.scp.css
@@ -172,3 +162,15 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\ne
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\qcmAuditoriasIatf.genruntimeconfig.cache
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\ref\qcmAuditoriasIatf.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\MisCosas.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Hallazgos\HallazgosGlobal.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\swae.build.ex.cache
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\ClosedXML.dll
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\ClosedXML.Parser.dll
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\DocumentFormat.OpenXml.dll
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\DocumentFormat.OpenXml.Framework.dll
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\ExcelNumberFormat.dll
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\RBush.dll
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\SixLabors.Fonts.dll
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\net8.0\System.IO.Packaging.dll
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Interfaces\InterfacesSgcCincoPorques.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Procesos\ChecklistPreguntas.razor.rz.scp.css

@@ -1,16 +1,76 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject NavigationManager Nav
 
-<div class="page @(sidebarCollapsed ? "sidebar-collapsed" : "")">
-    <aside class="sidebar">
-        <NavMenu IsCollapsed="sidebarCollapsed"
-                 OnToggleSidebar="ToggleSidebar" />
-    </aside>
+<div id="mo-app">
+    <nav id="mo-navbar">
+        <div id="mo-stripe"></div>
 
-    <main>
-        <article class="content">
-            @Body
-        </article>
-    </main>
+        <button id="mo-hamburger" @onclick="ToggleSidebar" aria-label="Menú">
+            <span></span><span></span><span></span>
+        </button>
+
+        <a id="mo-logo" href="">
+            <img id="mo-logo-img" src="images/logo.png" alt="Logo" onerror="this.style.display='none'" />
+            <div>
+                <div id="mo-logo-text">Auditorías IATF</div>
+                <div id="mo-logo-sub">Parte de MEAX One</div>
+            </div>
+        </a>
+
+        <div class="mo-spacer"></div>
+
+        <AuthorizeView>
+            <Authorized>
+                <div id="mo-user-wrap">
+                    <button id="mo-user-btn" type="button" @onclick="ToggleUserMenu">
+                        <div id="mo-user-avatar">@Iniciales(context.User)</div>
+                        <span id="mo-user-name">@NombreUsuario(context.User)</span>
+                        <svg id="mo-user-chevron" class="@(userMenuOpen ? "rotated" : "")" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m6 9 6 6 6-6" />
+                        </svg>
+                    </button>
+
+                    <div id="mo-user-dropdown" class="@(userMenuOpen ? "open" : "")">
+                        <div id="mo-user-dropdown-header">
+                            <div class="mo-dd-avatar">@Iniciales(context.User)</div>
+                            <div>
+                                <div class="mo-dd-name">@NombreUsuario(context.User)</div>
+                                <div class="mo-dd-login">@LoginUsuario(context.User)</div>
+                            </div>
+                        </div>
+                        <div class="mo-dd-divider"></div>
+                        <a class="mo-dd-item" href="http://10.228.25.13/">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+                            </svg>
+                            <span>Volver al Hub</span>
+                        </a>
+                        <div class="mo-dd-divider"></div>
+                        <button type="button" class="mo-dd-item mo-dd-logout" @onclick="Salir">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                            <span>Cerrar sesión</span>
+                        </button>
+                    </div>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </nav>
+
+    <div id="mo-content-area">
+        <aside id="mo-sidebar" class="@(sidebarCollapsed ? "collapsed" : "")">
+            <NavMenu />
+        </aside>
+
+        <main id="mo-main" class="@(sidebarCollapsed ? "sb-collapsed" : "")">
+            <article class="mo-page-wrap">
+                @Body
+            </article>
+        </main>
+    </div>
 </div>
 
 <div id="blazor-error-ui">
@@ -21,10 +81,39 @@
 
 @code {
     private bool sidebarCollapsed = false;
+    private bool userMenuOpen = false;
 
-    private Task ToggleSidebar()
+    private void ToggleSidebar()
     {
         sidebarCollapsed = !sidebarCollapsed;
-        return Task.CompletedTask;
+    }
+
+    private void ToggleUserMenu()
+    {
+        userMenuOpen = !userMenuOpen;
+    }
+
+    private static string NombreUsuario(ClaimsPrincipal user) =>
+        user.Identity?.Name ?? user.FindFirst(ClaimTypes.Name)?.Value ?? "Usuario";
+
+    private static string LoginUsuario(ClaimsPrincipal user) =>
+        user.FindFirst("pc_login_id")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+    private static string Iniciales(ClaimsPrincipal user)
+    {
+        var nombre = NombreUsuario(user);
+        var partes = nombre.Split(new[] { ' ', '.', '_' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (partes.Length == 0)
+            return "?";
+
+        return partes.Length == 1
+            ? partes[0][..Math.Min(2, partes[0].Length)].ToUpperInvariant()
+            : $"{partes[0][0]}{partes[1][0]}".ToUpperInvariant();
+    }
+
+    private void Salir()
+    {
+        Nav.NavigateTo("Account/Logout", forceLoad: true);
     }
 }

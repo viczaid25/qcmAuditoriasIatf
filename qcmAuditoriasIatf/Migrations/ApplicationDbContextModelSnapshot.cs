@@ -124,8 +124,8 @@ namespace qcmAuditoriasIatf.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AuditoriaProcesoId"));
 
                     b.Property<string>("AuditadoId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("AuditorAsignadoId")
                         .HasMaxLength(100)
@@ -242,7 +242,7 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
-                    b.Property<int>("ClausulaId")
+                    b.Property<int?>("ClausulaId")
                         .HasColumnType("int");
 
                     b.Property<string>("Pregunta")
@@ -305,8 +305,8 @@ namespace qcmAuditoriasIatf.Migrations
 
                     b.Property<string>("Codigo")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Descripcion")
                         .HasColumnType("nvarchar(max)");
@@ -390,6 +390,10 @@ namespace qcmAuditoriasIatf.Migrations
 
                     b.Property<DateTime>("FechaCarga")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("NombreOriginal")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ReferenciaId")
                         .HasColumnType("int");
@@ -501,12 +505,7 @@ namespace qcmAuditoriasIatf.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AccionCorrectivaId"));
 
-                    b.Property<string>("AccionDefinida")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("AnalisisCausa")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool?>("Eficaz")
@@ -514,9 +513,6 @@ namespace qcmAuditoriasIatf.Migrations
 
                     b.Property<string>("Estatus")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EvidenciaImplementacion")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("FechaImplementacion")
@@ -553,7 +549,7 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<int>("AuditoriaProcesoId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ClausulaId")
+                    b.Property<int?>("ClausulaId")
                         .HasColumnType("int");
 
                     b.Property<string>("ComentarioRevisionSgc")
@@ -645,25 +641,7 @@ namespace qcmAuditoriasIatf.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
-                    b.Property<bool?>("AprobacionAuditorAsignado")
-                        .HasColumnType("bit");
-
-                    b.Property<bool?>("AprobacionSegundoAuditor")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("AprobadoPorAuditorAsignadoId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("AprobadoPorSegundoAuditorId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ComentarioAuditorAsignado")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<string>("ComentarioSegundoAuditor")
+                    b.Property<string>("ComentarioSgc")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
@@ -672,13 +650,10 @@ namespace qcmAuditoriasIatf.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<DateTime?>("FechaAprobacionAuditorAsignado")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaAprobacionSegundoAuditor")
-                        .HasColumnType("datetime2");
-
                     b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaRevisionSgc")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("HallazgoId")
@@ -708,6 +683,10 @@ namespace qcmAuditoriasIatf.Migrations
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("RevisadoPorSgcId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("UsuarioRegistroId")
                         .IsRequired()
@@ -844,8 +823,7 @@ namespace qcmAuditoriasIatf.Migrations
                     b.HasOne("qcmAuditoriasIatf.Models.Catalogos.ClausulaIATF", "Clausula")
                         .WithMany("ChecklistPreguntas")
                         .HasForeignKey("ClausulaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("qcmAuditoriasIatf.Models.Catalogos.Proceso", "Proceso")
                         .WithMany()
@@ -897,8 +875,7 @@ namespace qcmAuditoriasIatf.Migrations
                     b.HasOne("qcmAuditoriasIatf.Models.Catalogos.ClausulaIATF", "Clausula")
                         .WithMany()
                         .HasForeignKey("ClausulaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("qcmAuditoriasIatf.Models.Catalogos.ChecklistPregunta", "Pregunta")
                         .WithMany()

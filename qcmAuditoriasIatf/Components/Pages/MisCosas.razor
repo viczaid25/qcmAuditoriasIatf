@@ -102,7 +102,7 @@ else
             <div class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label">Vista</label>
-                    <InputSelect class="form-select" @bind-Value="vistaSeleccionada">
+                    <InputSelect class="mo-form-select" @bind-Value="vistaSeleccionada">
                         <option value="Todo">Todo</option>
                         <option value="Pendientes">Solo pendientes</option>
                         <option value="Procesos">Solo procesos</option>
@@ -110,19 +110,9 @@ else
                     </InputSelect>
                 </div>
 
-                <div class="col-md-3">
-                    <label class="form-label">Prioridad</label>
-                    <InputSelect class="form-select" @bind-Value="prioridadSeleccionada">
-                        <option value="">-- Todas --</option>
-                        <option value="Alta">Alta</option>
-                        <option value="Media">Media</option>
-                        <option value="Baja">Baja</option>
-                    </InputSelect>
-                </div>
-
-                <div class="col-md-6">
+                <div class="col-md-9">
                     <label class="form-label">Buscar</label>
-                    <input class="form-control"
+                    <input class="mo-form-control"
                            @bind="textoBusqueda"
                            @bind:event="oninput" />
                 </div>
@@ -170,14 +160,12 @@ else
                     <div class="pending-list">
                         @foreach (var p in pendientesFiltrados)
                         {
-                            <div class="pending-item-card">
+                            <div class="pending-item-card" @key="p.Url">
                                 <div class="pending-top">
                                     <div>
                                         <div class="pending-title">@p.Titulo</div>
                                         <div class="pending-subtitle">@p.Subtitulo</div>
                                     </div>
-
-                                    <span class="priority-pill @p.PrioridadCss">@p.Prioridad</span>
                                 </div>
 
                                 <div class="pending-tags">
@@ -232,23 +220,37 @@ else
                 }
                 else
                 {
-                    <div class="table-wrap">
-                        <table class="mis-table">
+                    <div class="mo-table-wrap" data-mo-table data-page-size="10">
+                        <table class="mo-table">
                             <thead>
                                 <tr>
                                     <th>Auditoría</th>
                                     <th>Proceso</th>
                                     <th>Mi rol</th>
-                                    <th>Prioridad</th>
                                     <th>Fecha</th>
                                     <th>Línea</th>
-                                    <th class="text-end">Acción</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                                <tr class="mo-table-filter-row">
+                                    <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                                    <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                                    <th>
+                                        <select class="mo-th-filter" data-mo-filter-col="2">
+                                            <option value="">Todos</option>
+                                            <option>Auditor principal</option>
+                                            <option>Segundo auditor</option>
+                                            <option>Observador</option>
+                                        </select>
+                                    </th>
+                                    <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
+                                    <th><input class="mo-th-filter" data-mo-filter-col="4" placeholder="Filtrar…"></th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var item in procesosFiltrados)
                                 {
-                                    <tr>
+                                    <tr @key="item.AuditoriaProcesoId">
                                         <td>
                                             <div class="cell-title">#@item.AuditoriaId</div>
                                             <div class="cell-subtitle">@item.TipoAuditoria</div>
@@ -266,10 +268,6 @@ else
 
                                         <td>
                                             <span class="role-pill">@item.Rol</span>
-                                        </td>
-
-                                        <td>
-                                            <span class="priority-pill @item.PrioridadCss">@item.Prioridad</span>
                                         </td>
 
                                         <td>
@@ -295,17 +293,26 @@ else
                                         </td>
 
                                         <td class="text-end">
-                                            <button type="button"
-                                                    class="table-btn"
-                                                    @onclick="() => IrProceso(item.AuditoriaId, item.AuditoriaProcesoId)">
-                                                Abrir
-                                            </button>
+                                            <div class="action-stack">
+                                                <button type="button"
+                                                        class="table-btn"
+                                                        @onclick="() => IrProceso(item.AuditoriaId, item.AuditoriaProcesoId)">
+                                                    Abrir
+                                                </button>
+
+                                                <button type="button"
+                                                        class="table-btn table-btn-primary"
+                                                        @onclick="() => IrChecklist(item.AuditoriaId, item.AuditoriaProcesoId)">
+                                                    Checklist
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
+                    <div class="mo-table-pagination" data-mo-pagination></div>
                 }
             </section>
         }
@@ -330,24 +337,38 @@ else
                 }
                 else
                 {
-                    <div class="table-wrap">
-                        <table class="mis-table">
+                    <div class="mo-table-wrap" data-mo-table data-page-size="10">
+                        <table class="mo-table">
                             <thead>
                                 <tr>
                                     <th>Hallazgo</th>
                                     <th>Proceso</th>
                                     <th>Mi rol</th>
-                                    <th>Prioridad</th>
                                     <th>Validación SGC</th>
                                     <th>Estatus</th>
                                     <th>Compromiso</th>
                                     <th class="text-end">Acción</th>
                                 </tr>
+                                <tr class="mo-table-filter-row">
+                                    <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                                    <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                                    <th>
+                                        <select class="mo-th-filter" data-mo-filter-col="2">
+                                            <option value="">Todos</option>
+                                            <option>Responsable</option>
+                                            <option>Responsable de cierre</option>
+                                        </select>
+                                    </th>
+                                    <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
+                                    <th><input class="mo-th-filter" data-mo-filter-col="4" placeholder="Filtrar…"></th>
+                                    <th><input class="mo-th-filter" data-mo-filter-col="5" placeholder="Filtrar…"></th>
+                                    <th></th>
+                                </tr>
                             </thead>
                             <tbody>
                                 @foreach (var item in hallazgosFiltrados)
                                 {
-                                    <tr>
+                                    <tr @key="item.HallazgoId">
                                         <td>
                                             <div class="cell-title">#@item.HallazgoId</div>
                                             <div class="cell-subtitle">Auditoría #@item.AuditoriaId</div>
@@ -364,10 +385,6 @@ else
 
                                         <td>
                                             <span class="role-pill">@item.Rol</span>
-                                        </td>
-
-                                        <td>
-                                            <span class="priority-pill @item.PrioridadCss">@item.Prioridad</span>
                                         </td>
 
                                         <td>
@@ -398,6 +415,7 @@ else
                             </tbody>
                         </table>
                     </div>
+                    <div class="mo-table-pagination" data-mo-pagination></div>
                 }
             </section>
         }
@@ -412,7 +430,6 @@ else
     private string usuarioActualNombre = "sistema";
 
     private string vistaSeleccionada = "Todo";
-    private string prioridadSeleccionada = "";
     private string textoBusqueda = "";
     private bool soloVencidos;
     private bool soloEstaSemana;
@@ -575,18 +592,39 @@ else
         var inicioSemana = ObtenerInicioSemana(hoy);
         var finSemana = inicioSemana.AddDays(6);
 
+        // CoincideLogin/NormalizarLogin hacen limpieza de dominio\usuario y usuario@dominio
+        // que EF Core no puede traducir a SQL. Para evitar traer TODAS las filas con sus
+        // Include (Auditoria/Proceso/UnidadNegocio) y filtrar en memoria, primero se hace una
+        // proyección ligera (solo ids + logins) para resolver el filtro en cliente, y luego se
+        // vuelve a consultar en SQL únicamente por los ids que coinciden, ya con los Include.
+        var candidatosProceso = await Db.AuditoriaProcesos
+            .AsNoTracking()
+            .Select(x => new
+            {
+                x.AuditoriaProcesoId,
+                x.AuditorAsignadoId,
+                x.SegundoAuditorId,
+                x.ObservadorId
+            })
+            .ToListAsync();
+
+        var idsProcesoFiltrados = candidatosProceso
+            .Where(x =>
+                CoincideLogin(x.AuditorAsignadoId, login) ||
+                CoincideLogin(x.SegundoAuditorId, login) ||
+                CoincideLogin(x.ObservadorId, login))
+            .Select(x => x.AuditoriaProcesoId)
+            .ToList();
+
         var procesosDb = await Db.AuditoriaProcesos
             .AsNoTracking()
+            .Where(x => idsProcesoFiltrados.Contains(x.AuditoriaProcesoId))
             .Include(x => x.Auditoria)
             .Include(x => x.Proceso)
             .Include(x => x.UnidadNegocio)
             .ToListAsync();
 
         misProcesos = procesosDb
-            .Where(x =>
-                CoincideLogin(x.AuditorAsignadoId, login) ||
-                CoincideLogin(x.SegundoAuditorId, login) ||
-                CoincideLogin(x.ObservadorId, login))
             .Select(x =>
             {
                 var prioridad = ResolverPrioridadProceso(x, hoy);
@@ -632,16 +670,34 @@ else
         var inicioSemana = ObtenerInicioSemana(hoy);
         var finSemana = inicioSemana.AddDays(6);
 
+        // Mismo motivo que CargarProcesos: CoincideLogin no es traducible a SQL, así que
+        // primero se resuelve el filtro con una proyección ligera (sin Include) y luego se
+        // consulta en SQL solo por los ids que coinciden, ya con los Include necesarios.
+        var candidatosHallazgo = await Db.Hallazgos
+            .AsNoTracking()
+            .Select(x => new
+            {
+                x.HallazgoId,
+                x.ResponsableId,
+                x.ResponsableCierreId
+            })
+            .ToListAsync();
+
+        var idsHallazgoFiltrados = candidatosHallazgo
+            .Where(x =>
+                CoincideLogin(x.ResponsableId, login) ||
+                CoincideLogin(x.ResponsableCierreId, login))
+            .Select(x => x.HallazgoId)
+            .ToList();
+
         var hallazgosDb = await Db.Hallazgos
             .AsNoTracking()
+            .Where(x => idsHallazgoFiltrados.Contains(x.HallazgoId))
             .Include(x => x.Proceso)
             .Include(x => x.TipoHallazgo)
             .ToListAsync();
 
         misHallazgos = hallazgosDb
-            .Where(x =>
-                CoincideLogin(x.ResponsableId, login) ||
-                CoincideLogin(x.ResponsableCierreId, login))
             .Select(x =>
             {
                 var prioridad = ResolverPrioridadHallazgo(x, hoy);
@@ -695,20 +751,6 @@ else
                 vencido: vencido);
         }
 
-        foreach (var h in misHallazgos.Where(x =>
-                     x.Rol == "Responsable de cierre" &&
-                     !string.Equals(x.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase)))
-        {
-            AgregarPendiente(
-                tipo: "Hallazgo a atender",
-                titulo: $"Hallazgo #{h.HallazgoId}",
-                subtitulo: $"{h.ProcesoCodigo} - {h.ProcesoNombre}",
-                descripcion: $"Estatus: {h.Estatus}. Compromiso: {h.FechaCompromiso:yyyy-MM-dd}.",
-                url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
-                fechaReferencia: h.FechaCompromiso,
-                vencido: h.FechaCompromiso.Date < hoy);
-        }
-
         var ncMenorResponsableCierre = misHallazgos
             .Where(x =>
                 x.Rol == "Responsable de cierre" &&
@@ -720,6 +762,8 @@ else
             .Select(x => x.HallazgoId)
             .ToList();
 
+        var idsCincoPorquesPendientes = new List<int>();
+
         if (idsNcMenor.Count > 0)
         {
             var idsCincoPorques = await Db.HallazgosCincoPorQue
@@ -728,17 +772,36 @@ else
                 .Select(x => x.HallazgoId)
                 .ToListAsync();
 
-            foreach (var h in ncMenorResponsableCierre.Where(x => !idsCincoPorques.Contains(x.HallazgoId)))
-            {
-                AgregarPendiente(
-                    tipo: "Capturar 5 porqués",
-                    titulo: $"Hallazgo #{h.HallazgoId}",
-                    subtitulo: $"{h.ProcesoCodigo} - {h.ProcesoNombre}",
-                    descripcion: "NC Menor aprobada por SGC pendiente de captura de 5 porqués.",
-                    url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
-                    fechaReferencia: h.FechaCompromiso,
-                    vencido: h.FechaCompromiso.Date < hoy);
-            }
+            idsCincoPorquesPendientes = idsNcMenor.Except(idsCincoPorques).ToList();
+        }
+
+        // Cada hallazgo genera un solo pendiente para el responsable de cierre: si ya le toca
+        // capturar los 5 porqués, no se repite además como "Hallazgo a atender" genérico.
+        foreach (var h in misHallazgos.Where(x =>
+                     x.Rol == "Responsable de cierre" &&
+                     !string.Equals(x.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase) &&
+                     !idsCincoPorquesPendientes.Contains(x.HallazgoId)))
+        {
+            AgregarPendiente(
+                tipo: "Hallazgo a atender",
+                titulo: $"Hallazgo #{h.HallazgoId}",
+                subtitulo: $"{h.ProcesoCodigo} - {h.ProcesoNombre}",
+                descripcion: $"Estatus: {h.Estatus}. Compromiso: {h.FechaCompromiso:yyyy-MM-dd}.",
+                url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
+                fechaReferencia: h.FechaCompromiso,
+                vencido: h.FechaCompromiso.Date < hoy);
+        }
+
+        foreach (var h in ncMenorResponsableCierre.Where(x => idsCincoPorquesPendientes.Contains(x.HallazgoId)))
+        {
+            AgregarPendiente(
+                tipo: "Capturar 5 porqués",
+                titulo: $"Hallazgo #{h.HallazgoId}",
+                subtitulo: $"{h.ProcesoCodigo} - {h.ProcesoNombre}",
+                descripcion: "NC Menor aprobada por SGC pendiente de captura de 5 porqués.",
+                url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
+                fechaReferencia: h.FechaCompromiso,
+                vencido: h.FechaCompromiso.Date < hoy);
         }
 
         foreach (var h in misHallazgos.Where(x =>
@@ -753,67 +816,6 @@ else
                 url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
                 fechaReferencia: h.FechaCompromiso,
                 vencido: false);
-        }
-
-        var procesosRevisor = misProcesos
-            .Where(x => x.Rol == "Auditor principal" || x.Rol == "Segundo auditor")
-            .Select(x => x.AuditoriaProcesoId)
-            .Distinct()
-            .ToList();
-
-        if (procesosRevisor.Count > 0)
-        {
-            var hallazgosRevisables = await Db.Hallazgos
-                .AsNoTracking()
-                .Include(x => x.Proceso)
-                .Include(x => x.TipoHallazgo)
-                .Include(x => x.AuditoriaProceso)
-                .Where(x => procesosRevisor.Contains(x.AuditoriaProcesoId))
-                .ToListAsync();
-
-            var ncMenorRevisables = hallazgosRevisables
-                .Where(x =>
-                    string.Equals(x.EstatusValidacionSgc, "Aprobado", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(x.TipoHallazgo?.Nombre, "NC Menor", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            var idsRevisables = ncMenorRevisables
-                .Select(x => x.HallazgoId)
-                .ToList();
-
-            if (idsRevisables.Count > 0)
-            {
-                var registrosCincoPorques = await Db.HallazgosCincoPorQue
-                    .AsNoTracking()
-                    .Where(x => idsRevisables.Contains(x.HallazgoId))
-                    .ToListAsync();
-
-                foreach (var h in ncMenorRevisables)
-                {
-                    var registro = registrosCincoPorques.FirstOrDefault(x => x.HallazgoId == h.HallazgoId);
-                    if (registro is null)
-                        continue;
-
-                    var esPrincipal = CoincideLogin(h.AuditoriaProceso?.AuditorAsignadoId, login);
-                    var esSegundo = CoincideLogin(h.AuditoriaProceso?.SegundoAuditorId, login);
-
-                    var pendienteRevision =
-                        (esPrincipal && registro.AprobacionAuditorAsignado == null) ||
-                        (esSegundo && registro.AprobacionSegundoAuditor == null);
-
-                    if (!pendienteRevision)
-                        continue;
-
-                    AgregarPendiente(
-                        tipo: "Revisar 5 porqués",
-                        titulo: $"Hallazgo #{h.HallazgoId}",
-                        subtitulo: $"{h.Proceso?.Codigo} - {h.Proceso?.Nombre}",
-                        descripcion: "Ya se capturaron los 5 porqués y están pendientes de tu revisión.",
-                        url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
-                        fechaReferencia: h.FechaCompromiso,
-                        vencido: h.FechaCompromiso.Date < hoy);
-                }
-            }
         }
 
         misPendientes = misPendientes
@@ -853,9 +855,6 @@ else
 
     private bool CumpleFiltroPendiente(MiPendienteVm item)
     {
-        if (!CumpleFiltroPrioridad(item.Prioridad))
-            return false;
-
         if (soloVencidos && !item.Vencido)
             return false;
 
@@ -870,9 +869,6 @@ else
 
     private bool CumpleFiltroProceso(MiProcesoVm item)
     {
-        if (!CumpleFiltroPrioridad(item.Prioridad))
-            return false;
-
         if (soloVencidos && !item.Vencido)
             return false;
 
@@ -887,9 +883,6 @@ else
 
     private bool CumpleFiltroHallazgo(MiHallazgoVm item)
     {
-        if (!CumpleFiltroPrioridad(item.Prioridad))
-            return false;
-
         if (soloVencidos && !item.Vencido)
             return false;
 
@@ -900,14 +893,6 @@ else
             return false;
 
         return true;
-    }
-
-    private bool CumpleFiltroPrioridad(string prioridad)
-    {
-        if (string.IsNullOrWhiteSpace(prioridadSeleccionada))
-            return true;
-
-        return string.Equals(prioridadSeleccionada, prioridad, StringComparison.OrdinalIgnoreCase);
     }
 
     private bool CumpleTexto(params string?[] valores)
@@ -925,7 +910,6 @@ else
     private void LimpiarFiltros()
     {
         vistaSeleccionada = "Todo";
-        prioridadSeleccionada = "";
         textoBusqueda = "";
         soloVencidos = false;
         soloEstaSemana = false;
@@ -1086,6 +1070,9 @@ else
 
     private void IrProceso(int auditoriaId, int auditoriaProcesoId) =>
         Nav.NavigateTo($"auditorias/{auditoriaId}/procesos/{auditoriaProcesoId}");
+
+    private void IrChecklist(int auditoriaId, int auditoriaProcesoId) =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/procesos/{auditoriaProcesoId}/checklist");
 
     private void IrHallazgo(int auditoriaId, int hallazgoId) =>
         Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}");

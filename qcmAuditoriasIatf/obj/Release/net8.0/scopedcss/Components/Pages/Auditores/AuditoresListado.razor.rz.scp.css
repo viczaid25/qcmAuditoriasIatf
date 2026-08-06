@@ -11,7 +11,7 @@
     gap: 1rem;
     padding: 1.6rem 1.75rem;
     border-radius: 28px;
-    background: linear-gradient(135deg, rgba(6,11,41,0.97) 0%, rgba(58,6,71,0.97) 100%);
+    background: linear-gradient(135deg, rgba(6,11,41,0.97) 0%, rgba(28,51,117,0.97) 100%);
     color: #fff;
     box-shadow: 0 24px 45px rgba(15,23,42,0.16);
 }
@@ -136,6 +136,28 @@
 .danger-panel[b-yhgpgky71d] {
     border-color: #fecaca;
     background: linear-gradient(180deg, #fff 0%, #fff7f7 100%);
+}
+
+/* Antes este panel se insertaba en el flujo normal de la página, cerca del
+   encabezado — si el usuario daba clic en "Eliminar" en una fila más abajo
+   en la tabla (fuera de la vista), la confirmación aparecía fuera de pantalla
+   y parecía que el botón no hacía nada. Ahora es un overlay fijo, siempre visible. */
+.confirm-modal-backdrop[b-yhgpgky71d] {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1100;
+}
+
+.confirm-modal-dialog[b-yhgpgky71d] {
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .confirm-box[b-yhgpgky71d] {

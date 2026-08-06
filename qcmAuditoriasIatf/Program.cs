@@ -73,6 +73,28 @@ app.UseAntiforgery();
 
 app.MapRazorPages();
 
+app.MapGet("/evidencias/{id:int}", async (int id, ApplicationDbContext db, IWebHostEnvironment env) =>
+{
+    var evidencia = await db.Evidencias
+        .AsNoTracking()
+        .FirstOrDefaultAsync(e => e.EvidenciaId == id);
+
+    if (evidencia is null)
+        return Results.NotFound();
+
+    var carpetaBase = Path.Combine(env.ContentRootPath, "App_Data", "evidencias");
+    var rutaCompleta = Path.GetFullPath(Path.Combine(carpetaBase, evidencia.RutaArchivo));
+
+    if (!rutaCompleta.StartsWith(carpetaBase, StringComparison.OrdinalIgnoreCase) || !File.Exists(rutaCompleta))
+        return Results.NotFound();
+
+    var tipoContenido = string.IsNullOrWhiteSpace(evidencia.TipoArchivo)
+        ? "application/octet-stream"
+        : evidencia.TipoArchivo;
+
+    return Results.File(rutaCompleta, tipoContenido, evidencia.NombreOriginal);
+}).RequireAuthorization();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .RequireAuthorization();

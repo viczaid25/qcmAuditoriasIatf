@@ -1,9 +1,12 @@
 ﻿@page "/auditorias/{id:int}"
 @using System.Globalization
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Auditorias
 @using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.Hallazgos
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
@@ -44,74 +47,131 @@ else
 {
     <div class="auditoria-page">
         <section class="auditoria-hero">
-            <div class="auditoria-hero-copy">
-                <span class="auditoria-kicker">Detalle de auditoría</span>
-                <h1>Auditoría #@id</h1>
+            <div class="auditoria-hero-top">
+                <div class="auditoria-hero-copy">
+                    <span class="auditoria-kicker">Detalle de auditoría</span>
+                    <h1>Auditoría #@id</h1>
 
-                <div class="auditoria-meta">
-                    <span class="meta-chip">
-                        Tipo: <strong>@auditoria.TipoAuditoria</strong>
-                    </span>
+                    <div class="auditoria-meta">
+                        <span class="meta-chip">
+                            Tipo: <strong>@auditoria.TipoAuditoria</strong>
+                        </span>
 
-                    <span class="status-pill @GetStatusClass(auditoria.Estatus)">
-                        @auditoria.Estatus
-                    </span>
+                        <span class="status-pill @GetStatusClass(auditoria.Estatus)">
+                            @auditoria.Estatus
+                        </span>
 
-                    <span class="meta-chip">
-                        Inicio: <strong>@auditoria.FechaInicio.ToString("yyyy-MM-dd")</strong>
-                    </span>
+                        <span class="meta-chip">
+                            Inicio: <strong>@auditoria.FechaInicio.ToString("yyyy-MM-dd")</strong>
+                        </span>
 
-                    <span class="meta-chip">
-                        Fin: <strong>@auditoria.FechaFin.ToString("yyyy-MM-dd")</strong>
-                    </span>
+                        <span class="meta-chip">
+                            Fin: <strong>@auditoria.FechaFin.ToString("yyyy-MM-dd")</strong>
+                        </span>
+                    </div>
                 </div>
 
-                <div class="auditoria-text-grid">
-                    <div class="text-card">
-                        <div class="text-card-label">Objetivo</div>
-                        <div class="text-card-value">
-                            @(string.IsNullOrWhiteSpace(auditoria.Objetivo) ? "Sin objetivo capturado." : auditoria.Objetivo)
-                        </div>
-                    </div>
+                <div class="auditoria-hero-actions">
+                    <button type="button" class="hero-btn primary" @onclick="IrHallazgos">
+                        Ver hallazgos
+                    </button>
 
-                    <div class="text-card">
-                        <div class="text-card-label">Alcance</div>
-                        <div class="text-card-value">
-                            @(string.IsNullOrWhiteSpace(auditoria.Alcance) ? "Sin alcance capturado." : auditoria.Alcance)
-                        </div>
-                    </div>
+                    <button type="button" class="hero-btn" @onclick="IrCalendario">
+                        Calendario
+                    </button>
 
-                    <div class="text-card">
-                        <div class="text-card-label">Criterios</div>
-                        <div class="text-card-value">
-                            @(string.IsNullOrWhiteSpace(auditoria.Criterios) ? "Sin criterios capturados." : auditoria.Criterios)
-                        </div>
-                    </div>
+                    <button type="button" class="hero-btn" @onclick="Volver">
+                        Volver
+                    </button>
 
-                    <div class="text-card">
-                        <div class="text-card-label">Método</div>
-                        <div class="text-card-value">
-                            @(string.IsNullOrWhiteSpace(auditoria.Metodos) ? "Sin método capturado." : auditoria.Metodos)
-                        </div>
-                    </div>
+                    @if (usuarioEsSgc)
+                    {
+                        <button type="button" class="hero-btn danger" @onclick="PrepararEliminarAuditoria">
+                            Eliminar auditoría
+                        </button>
+                    }
                 </div>
             </div>
 
-            <div class="auditoria-hero-actions">
-                <button type="button" class="hero-btn primary" @onclick="IrHallazgos">
-                    Ver hallazgos
-                </button>
+            <div class="auditoria-text-grid">
+                <div class="text-card">
+                    <div class="text-card-label">Objetivo</div>
+                    <div class="text-card-value">
+                        @(string.IsNullOrWhiteSpace(auditoria.Objetivo) ? "Sin objetivo capturado." : auditoria.Objetivo)
+                    </div>
+                </div>
 
-                <button type="button" class="hero-btn" @onclick="IrCalendario">
-                    Calendario
-                </button>
+                <div class="text-card">
+                    <div class="text-card-label">Alcance</div>
+                    <div class="text-card-value">
+                        @(string.IsNullOrWhiteSpace(auditoria.Alcance) ? "Sin alcance capturado." : auditoria.Alcance)
+                    </div>
+                </div>
 
+                <div class="text-card">
+                    <div class="text-card-label">Criterios</div>
+                    <div class="text-card-value">
+                        @(string.IsNullOrWhiteSpace(auditoria.Criterios) ? "Sin criterios capturados." : auditoria.Criterios)
+                    </div>
+                </div>
 
-                <button type="button" class="hero-btn" @onclick="Volver">
-                    Volver
-                </button>
+                <div class="text-card">
+                    <div class="text-card-label">Método</div>
+                    <div class="text-card-value">
+                        @(string.IsNullOrWhiteSpace(auditoria.Metodos) ? "Sin método capturado." : auditoria.Metodos)
+                    </div>
+                </div>
             </div>
         </section>
+
+        @if (mostrarConfirmEliminar)
+        {
+            <div class="confirm-modal-backdrop">
+                <section class="panel-card danger-panel confirm-modal-dialog">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Confirmar eliminación</h2>
+                            <p class="panel-subtitle">
+                                Esta acción eliminará la auditoría junto con todos sus procesos, checklist, hallazgos y su
+                                historial. No se puede deshacer.
+                            </p>
+                        </div>
+
+                        <span class="panel-badge danger">Pendiente</span>
+                    </div>
+
+                    <div class="confirm-box">
+                        <div class="confirm-name">Auditoría #@id</div>
+
+                        <div class="confirm-meta">
+                            <span>Tipo: <strong>@auditoria.TipoAuditoria</strong></span>
+                            <span>Procesos: <strong>@procesos.Count</strong></span>
+                            <span>Hallazgos: <strong>@hallazgosTotal</strong></span>
+                        </div>
+
+                        <div class="confirm-warning">
+                            Confirma solo si realmente deseas eliminar por completo esta auditoría y toda su información asociada.
+                        </div>
+
+                        <div class="confirm-actions">
+                            <button type="button"
+                                    class="mo-btn mo-btn-secondary-outline"
+                                    @onclick="CancelarEliminarAuditoria"
+                                    disabled="@eliminando">
+                                Cancelar
+                            </button>
+
+                            <button type="button"
+                                    class="mo-btn mo-btn-danger"
+                                    @onclick="EliminarAuditoria"
+                                    disabled="@eliminando">
+                                @(eliminando ? "Eliminando..." : "Eliminar auditoría")
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        }
 
         <section class="auditoria-metrics">
             <div class="metric-card">
@@ -146,7 +206,12 @@ else
                     <p class="panel-subtitle">Asignación de equipo auditor y acceso al checklist por proceso.</p>
                 </div>
 
-                <span class="panel-badge">@procesos.Count proceso(s)</span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="panel-badge">@procesos.Count proceso(s)</span>
+                    <button type="button" class="mo-btn mo-btn-primary mo-btn-sm" @onclick="IrAgregarProceso">
+                        Agregar proceso
+                    </button>
+                </div>
             </div>
 
             @if (procesos.Count == 0)
@@ -157,22 +222,32 @@ else
             }
             else
             {
-                <div class="table-wrap">
-                    <table class="procesos-table">
+                <div class="mo-table-wrap" data-mo-table data-page-size="10">
+                    <table class="mo-table">
                         <thead>
                             <tr>
                                 <th>Proceso</th>
                                 <th>Unidad negocio</th>
                                 <th>Fecha programada</th>
                                 <th>Línea</th>
+                                <th>Información del proceso</th>
                                 <th>Equipo auditor</th>
                                 <th class="text-end">Acciones</th>
+                            </tr>
+                            <tr class="mo-table-filter-row">
+                                <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="4" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="5" placeholder="Filtrar…"></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var ap in procesos)
                             {
-                                <tr>
+                                <tr @key="ap.AuditoriaProcesoId">
                                     <td>
                                         <div class="cell-title">@ap.Proceso?.Codigo</div>
                                         <div class="cell-subtitle">@ap.Proceso?.Nombre</div>
@@ -202,13 +277,76 @@ else
                                     </td>
 
                                     <td>
-                                        @if (string.IsNullOrWhiteSpace(ap.LineaNombre))
+                                        @if (ap.UnidadNegocio is null)
+                                        {
+                                            <span class="empty-inline">No aplica</span>
+                                        }
+                                        else if (string.IsNullOrWhiteSpace(ap.LineaNombre))
                                         {
                                             <span class="status-pill progress">Pendiente</span>
                                         }
                                         else
                                         {
                                             <span class="linea-pill">@ap.LineaNombre</span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @if (!TieneInformacionProceso(ap))
+                                        {
+                                            <span class="empty-inline">Sin información</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="team-stack">
+                                                @if (!string.IsNullOrWhiteSpace(ap.AuditadoId))
+                                                {
+                                                    <div>
+                                                        <span class="team-label">Persona a auditar:</span>
+                                                        <span class="team-value">@MostrarPersonas(ap.AuditadoId)</span>
+                                                    </div>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(ap.ReclamosAuditoriasPasadas))
+                                                {
+                                                    <div>
+                                                        <span class="team-label">Reclamos:</span>
+                                                        <span class="team-value">@ap.ReclamosAuditoriasPasadas</span>
+                                                    </div>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(ap.ResultadosAuditoriasInternasPrevias))
+                                                {
+                                                    <div>
+                                                        <span class="team-label">Auditorías internas previas:</span>
+                                                        <span class="team-value">@ap.ResultadosAuditoriasInternasPrevias</span>
+                                                    </div>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(ap.SeguimientoAccionesCorrectivasIatf))
+                                                {
+                                                    <div>
+                                                        <span class="team-label">Seguimiento AC IATF:</span>
+                                                        <span class="team-value">@ap.SeguimientoAccionesCorrectivasIatf</span>
+                                                    </div>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(ap.ClausulasIatfTop3NcmMayoresPasadas))
+                                                {
+                                                    <div>
+                                                        <span class="team-label">TOP 3 NCM:</span>
+                                                        <span class="team-value">@ap.ClausulasIatfTop3NcmMayoresPasadas</span>
+                                                    </div>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(ap.ClausulasIatfTop3NcmMenoresPasadas))
+                                                {
+                                                    <div>
+                                                        <span class="team-label">TOP 3 NCm:</span>
+                                                        <span class="team-value">@ap.ClausulasIatfTop3NcmMenoresPasadas</span>
+                                                    </div>
+                                                }
+                                            </div>
                                         }
                                     </td>
 
@@ -257,6 +395,7 @@ else
                         </tbody>
                     </table>
                 </div>
+                <div class="mo-table-pagination" data-mo-pagination></div>
             }
         </section>
     </div>
@@ -265,12 +404,20 @@ else
 @code {
     [Parameter] public int id { get; set; }
 
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
     private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
 
     private bool cargando = true;
     private Auditoria? auditoria;
     private List<AuditoriaProceso> procesos = new();
     private string? errorMsg;
+
+    private string usuarioActualId = "sistema";
+    private bool usuarioEsSgc;
+    private bool mostrarConfirmEliminar;
+    private bool eliminando;
 
     private List<Auditor> personasAuditoria = new();
 
@@ -292,6 +439,14 @@ else
     private int procesosConFecha => procesos.Count(x => x.FechaProgramada.HasValue);
     private int procesosSinFecha => procesos.Count(x => !x.FechaProgramada.HasValue);
 
+    private static bool TieneInformacionProceso(AuditoriaProceso ap) =>
+    !string.IsNullOrWhiteSpace(ap.AuditadoId) ||
+    !string.IsNullOrWhiteSpace(ap.ReclamosAuditoriasPasadas) ||
+    !string.IsNullOrWhiteSpace(ap.ResultadosAuditoriasInternasPrevias) ||
+    !string.IsNullOrWhiteSpace(ap.SeguimientoAccionesCorrectivasIatf) ||
+    !string.IsNullOrWhiteSpace(ap.ClausulasIatfTop3NcmMayoresPasadas) ||
+    !string.IsNullOrWhiteSpace(ap.ClausulasIatfTop3NcmMenoresPasadas);
+
     protected override async Task OnParametersSetAsync()
     {
         cargando = true;
@@ -299,6 +454,8 @@ else
 
         try
         {
+            await CargarUsuarioActual();
+
             auditoria = await Db.Auditorias
                 .FirstOrDefaultAsync(a => a.AuditoriaId == id);
 
@@ -316,27 +473,48 @@ else
                     x.AuditorAsignadoId,
                     x.SegundoAuditorId,
                     x.ObservadorId
-                }));
+                })
+                .Concat(procesos.SelectMany(x => (x.AuditadoId ?? "")
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))));
 
             personasAuditoria = await Db.Auditores
                 .AsNoTracking()
                 .OrderBy(x => x.Nombre)
                 .ToListAsync();
 
-            hallazgosTotal = await Db.Hallazgos.CountAsync(h => h.AuditoriaId == id);
-            hallazgosCerrados = await Db.Hallazgos.CountAsync(h => h.AuditoriaId == id && h.Estatus == "Cerrado");
+            var hallazgosStats = await Db.Hallazgos
+                .Where(h => h.AuditoriaId == id)
+                .GroupBy(h => 1)
+                .Select(g => new
+                {
+                    Total = g.Count(),
+                    Cerrados = g.Count(h => h.Estatus == "Cerrado")
+                })
+                .FirstOrDefaultAsync();
+
+            hallazgosTotal = hallazgosStats?.Total ?? 0;
+            hallazgosCerrados = hallazgosStats?.Cerrados ?? 0;
             hallazgosAbiertos = hallazgosTotal - hallazgosCerrados;
 
-            var checklistQuery =
+            var checklistStats = await (
                 from c in Db.AuditoriaChecklists
                 join ap in Db.AuditoriaProcesos on c.AuditoriaProcesoId equals ap.AuditoriaProcesoId
                 where ap.AuditoriaId == id
-                select c.Cumple;
+                select c.Cumple)
+                .GroupBy(x => 1)
+                .Select(g => new
+                {
+                    Total = g.Count(),
+                    Cumple = g.Count(x => x == "Cumple"),
+                    NoCumple = g.Count(x => x == "No Cumple"),
+                    NoAplica = g.Count(x => x == "No Aplica" || x == "N/A")
+                })
+                .FirstOrDefaultAsync();
 
-            checklistTotal = await checklistQuery.CountAsync();
-            checklistCumple = await checklistQuery.CountAsync(x => x == "Cumple");
-            checklistNoCumple = await checklistQuery.CountAsync(x => x == "No Cumple");
-            checklistNoAplica = await checklistQuery.CountAsync(x => x == "No Aplica" || x == "N/A");
+            checklistTotal = checklistStats?.Total ?? 0;
+            checklistCumple = checklistStats?.Cumple ?? 0;
+            checklistNoCumple = checklistStats?.NoCumple ?? 0;
+            checklistNoAplica = checklistStats?.NoAplica ?? 0;
 
             decimal pct(int n) => checklistTotal == 0 ? 0 : Math.Round((decimal)n * 100m / checklistTotal, 2);
 
@@ -351,6 +529,112 @@ else
         finally
         {
             cargando = false;
+        }
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+        }
+
+        var loginNormalizado = usuarioActualId.Trim().ToUpper();
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == loginNormalizado &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
+    }
+
+    private void PrepararEliminarAuditoria()
+    {
+        if (!usuarioEsSgc) return;
+        mostrarConfirmEliminar = true;
+        errorMsg = null;
+    }
+
+    private void CancelarEliminarAuditoria()
+    {
+        mostrarConfirmEliminar = false;
+    }
+
+    private async Task EliminarAuditoria()
+    {
+        if (eliminando || !usuarioEsSgc) return;
+
+        eliminando = true;
+        errorMsg = null;
+
+        try
+        {
+            var procesoIds = await Db.AuditoriaProcesos
+                .Where(x => x.AuditoriaId == id)
+                .Select(x => x.AuditoriaProcesoId)
+                .ToListAsync();
+
+            var hallazgoIds = await Db.Hallazgos
+                .Where(x => x.AuditoriaId == id)
+                .Select(x => x.HallazgoId)
+                .ToListAsync();
+
+            if (hallazgoIds.Count > 0)
+            {
+                var acciones = await Db.AccionesCorrectivas
+                    .Where(x => hallazgoIds.Contains(x.HallazgoId))
+                    .ToListAsync();
+                Db.AccionesCorrectivas.RemoveRange(acciones);
+
+                var hallazgos = await Db.Hallazgos
+                    .Where(x => hallazgoIds.Contains(x.HallazgoId))
+                    .ToListAsync();
+                Db.Hallazgos.RemoveRange(hallazgos);
+
+                await Db.SaveChangesAsync();
+            }
+
+            var checklist = await Db.AuditoriaChecklists
+                .Where(x => procesoIds.Contains(x.AuditoriaProcesoId))
+                .ToListAsync();
+            Db.AuditoriaChecklists.RemoveRange(checklist);
+
+            var procesosEntity = await Db.AuditoriaProcesos
+                .Where(x => x.AuditoriaId == id)
+                .ToListAsync();
+            Db.AuditoriaProcesos.RemoveRange(procesosEntity);
+
+            await Db.SaveChangesAsync();
+
+            var auditoriaEntity = await Db.Auditorias
+                .FirstOrDefaultAsync(x => x.AuditoriaId == id);
+
+            if (auditoriaEntity is not null)
+            {
+                Db.Auditorias.Remove(auditoriaEntity);
+                await Db.SaveChangesAsync();
+            }
+
+            Nav.NavigateTo("auditorias");
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+            mostrarConfirmEliminar = false;
+        }
+        finally
+        {
+            eliminando = false;
         }
     }
 
@@ -403,6 +687,9 @@ else
 
     private void IrAsignar(int auditoriaProcesoId) =>
         Nav.NavigateTo($"auditorias/{id}/procesos/{auditoriaProcesoId}");
+
+    private void IrAgregarProceso() =>
+        Nav.NavigateTo($"auditorias/{id}/procesos/agregar");
 
     private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
     {
@@ -480,5 +767,18 @@ else
 
         var clave = valor.Trim();
         return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
+
+    private string MostrarPersonas(string? valorCombinado, string fallback = "Sin capturar")
+    {
+        if (string.IsNullOrWhiteSpace(valorCombinado))
+            return fallback;
+
+        var logins = valorCombinado
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return logins.Length == 0
+            ? fallback
+            : string.Join(", ", logins.Select(l => MostrarPersona(l, l)));
     }
 }

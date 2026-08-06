@@ -1,4 +1,5 @@
-﻿@page "/auditorias/{auditoriaId:int}/procesos/{auditoriaProcesoId:int}"
+﻿@page "/auditorias/{auditoriaId:int}/procesos/agregar"
+@page "/auditorias/{auditoriaId:int}/procesos/{auditoriaProcesoId:int}"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Auditorias
@@ -24,7 +25,7 @@
         </div>
     </div>
 }
-else if (ap is null || auditoria is null)
+else if (auditoria is null || (!EsNuevo && ap is null))
 {
     <section class="panel-card">
         <div class="empty-state">
@@ -45,7 +46,7 @@ else
         <section class="asignacion-hero">
             <div>
                 <span class="asignacion-kicker">Planeación de proceso</span>
-                <h1>Asignar equipo auditor</h1>
+                <h1>@(EsNuevo ? "Agregar proceso a la auditoría" : "Asignar equipo auditor")</h1>
 
                 <div class="hero-meta">
                     <span class="meta-chip">
@@ -58,26 +59,31 @@ else
                         <strong>@TextoRangoAuditoria</strong>
                     </span>
 
-                    <span class="meta-chip">
-                        Proceso:
-                        <strong>@(ap.Proceso?.Codigo ?? "Sin código")</strong>
-                    </span>
-
-                    @if (ap.UnidadNegocio is not null)
+                    @if (!EsNuevo)
                     {
                         <span class="meta-chip">
-                            Unidad:
-                            <strong>@ap.UnidadNegocio.Codigo</strong>
+                            Proceso:
+                            <strong>@(ap?.Proceso?.Codigo ?? "Sin código")</strong>
                         </span>
-                    }
-                    else
-                    {
-                        <span class="meta-chip">Sin unidad de negocio</span>
+
+                        @if (ap?.UnidadNegocio is not null)
+                        {
+                            <span class="meta-chip">
+                                Unidad:
+                                <strong>@ap.UnidadNegocio.Codigo</strong>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="meta-chip">Sin unidad de negocio</span>
+                        }
                     }
                 </div>
 
                 <p class="hero-text">
-                    Define el equipo auditor, la fecha programada del proceso y la línea aplicable dentro del rango de la auditoría.
+                    @(EsNuevo
+                        ? "Selecciona el proceso a agregar y define su equipo auditor y fecha programada."
+                        : "Define el equipo auditor, la fecha programada del proceso y la línea aplicable dentro del rango de la auditoría.")
                 </p>
             </div>
 
@@ -102,10 +108,30 @@ else
                     </div>
 
                     <div class="row g-3">
+                        @if (EsNuevo)
+                        {
+                            <div class="col-12">
+                                <label class="form-label">Proceso a agregar</label>
+
+                                <InputSelect class="mo-form-select" @bind-Value="procesoIdSeleccionado">
+                                    <option value="0">-- Selecciona --</option>
+                                    @foreach (var p in procesosDisponibles)
+                                    {
+                                        <option value="@p.ProcesoId">@p.Codigo - @p.Nombre</option>
+                                    }
+                                </InputSelect>
+
+                                @if (procesosDisponibles.Count == 0)
+                                {
+                                    <div class="field-help">Todos los procesos activos ya están incluidos en esta auditoría.</div>
+                                }
+                            </div>
+                        }
+
                         <div class="col-md-4">
                             <label class="form-label">Auditor principal</label>
 
-                            <InputSelect class="form-select" @bind-Value="vm.AuditorAsignadoId">
+                            <InputSelect class="mo-form-select" @bind-Value="vm.AuditorAsignadoId">
                                 <option value="">-- Selecciona --</option>
                                 @foreach (var a in auditoresDisponibles)
                                 {
@@ -130,7 +156,7 @@ else
                         <div class="col-md-4">
                             <label class="form-label">Segundo auditor</label>
 
-                            <InputSelect class="form-select" @bind-Value="vm.SegundoAuditorId">
+                            <InputSelect class="mo-form-select" @bind-Value="vm.SegundoAuditorId">
                                 <option value="">-- Opcional --</option>
                                 @foreach (var a in auditoresDisponibles)
                                 {
@@ -155,7 +181,7 @@ else
                         <div class="col-md-4">
                             <label class="form-label">Observador</label>
 
-                            <InputSelect class="form-select" @bind-Value="vm.ObservadorId">
+                            <InputSelect class="mo-form-select" @bind-Value="vm.ObservadorId">
                                 <option value="">-- Opcional --</option>
                                 @foreach (var o in observadoresDisponibles)
                                 {
@@ -179,7 +205,7 @@ else
 
                         <div class="col-md-6">
                             <label class="form-label">Fecha programada del proceso</label>
-                            <InputDate class="form-control"
+                            <InputDate class="mo-form-control"
                                        @bind-Value="vm.FechaProgramada"
                                        min="@FechaMin"
                                        max="@FechaMax" />
@@ -192,7 +218,7 @@ else
 
                         <div class="col-md-6">
                             <label class="form-label">Línea</label>
-                            <InputText class="form-control"
+                            <InputText class="mo-form-control"
                                        @bind-Value="vm.LineaNombre"
                                        disabled="@(!requiereLinea)" />
 
@@ -285,11 +311,11 @@ else
                     </div>
 
                     <div class="action-buttons">
-                        <button type="submit" class="btn btn-primary btn-lg" disabled="@guardando">
+                        <button type="submit" class="mo-btn mo-btn-primary mo-btn-lg" disabled="@guardando">
                             @(guardando ? "Guardando..." : "Guardar")
                         </button>
 
-                        <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="Volver" disabled="@guardando">
+                        <button type="button" class="mo-btn mo-btn-secondary-outline mo-btn-lg" @onclick="Volver" disabled="@guardando">
                             Cancelar
                         </button>
                     </div>
@@ -301,7 +327,9 @@ else
 
 @code {
     [Parameter] public int auditoriaId { get; set; }
-    [Parameter] public int auditoriaProcesoId { get; set; }
+    [Parameter] public int? auditoriaProcesoId { get; set; }
+
+    private bool EsNuevo => !auditoriaProcesoId.HasValue;
 
     private bool cargando = true;
     private bool guardando;
@@ -310,6 +338,9 @@ else
     private Auditoria? auditoria;
     private AuditoriaProceso? ap;
     private bool requiereLinea;
+
+    private List<Proceso> procesosDisponibles = new();
+    private int procesoIdSeleccionado;
 
     private List<Auditor> auditoresDisponibles = new();
     private List<Auditor> observadoresDisponibles = new();
@@ -334,10 +365,21 @@ else
             ? "Sin rango"
             : $"{auditoria.FechaInicio:yyyy-MM-dd} a {auditoria.FechaFin:yyyy-MM-dd}";
 
-    private string TextoProceso =>
-        ap?.Proceso is null
-            ? "Sin proceso"
-            : $"{ap.Proceso.Codigo} - {ap.Proceso.Nombre}";
+    private string TextoProceso
+    {
+        get
+        {
+            if (EsNuevo)
+            {
+                var seleccionado = procesosDisponibles.FirstOrDefault(p => p.ProcesoId == procesoIdSeleccionado);
+                return seleccionado is null ? "Sin proceso seleccionado" : $"{seleccionado.Codigo} - {seleccionado.Nombre}";
+            }
+
+            return ap?.Proceso is null
+                ? "Sin proceso"
+                : $"{ap.Proceso.Codigo} - {ap.Proceso.Nombre}";
+        }
+    }
 
     private string TextoUnidad =>
         ap?.UnidadNegocio is null
@@ -369,11 +411,6 @@ else
         auditoria = await Db.Auditorias
             .FirstOrDefaultAsync(a => a.AuditoriaId == auditoriaId);
 
-        ap = await Db.AuditoriaProcesos
-            .Include(x => x.Proceso)
-            .Include(x => x.UnidadNegocio)
-            .FirstOrDefaultAsync(x => x.AuditoriaProcesoId == auditoriaProcesoId && x.AuditoriaId == auditoriaId);
-
         auditoresDisponibles = await Db.Auditores
             .Where(a => a.Activo && (a.Tipo == "Auditor" || a.Tipo == "Entrenamiento"))
             .OrderBy(a => a.Nombre)
@@ -386,17 +423,39 @@ else
 
         await CargarUsuariosDirectorio();
 
-        if (ap is not null)
+        if (EsNuevo)
         {
-            vm.AuditorAsignadoId = ap.AuditorAsignadoId;
-            vm.SegundoAuditorId = ap.SegundoAuditorId;
-            vm.ObservadorId = ap.ObservadorId;
-            vm.LineaNombre = ap.LineaNombre;
-            vm.FechaProgramada = ap.FechaProgramada ?? auditoria?.FechaInicio;
+            var procesoIdsExistentes = await Db.AuditoriaProcesos
+                .Where(x => x.AuditoriaId == auditoriaId)
+                .Select(x => x.ProcesoId)
+                .ToListAsync();
 
-            requiereLinea = ap.UnidadNegocioId is not null;
-            if (!requiereLinea)
-                vm.LineaNombre = null;
+            procesosDisponibles = await Db.Procesos
+                .Where(p => p.Activo && !procesoIdsExistentes.Contains(p.ProcesoId))
+                .OrderBy(p => p.Codigo)
+                .ToListAsync();
+
+            vm.FechaProgramada = auditoria?.FechaInicio;
+        }
+        else
+        {
+            ap = await Db.AuditoriaProcesos
+                .Include(x => x.Proceso)
+                .Include(x => x.UnidadNegocio)
+                .FirstOrDefaultAsync(x => x.AuditoriaProcesoId == auditoriaProcesoId && x.AuditoriaId == auditoriaId);
+
+            if (ap is not null)
+            {
+                vm.AuditorAsignadoId = ap.AuditorAsignadoId;
+                vm.SegundoAuditorId = ap.SegundoAuditorId;
+                vm.ObservadorId = ap.ObservadorId;
+                vm.LineaNombre = ap.LineaNombre;
+                vm.FechaProgramada = ap.FechaProgramada ?? auditoria?.FechaInicio;
+
+                requiereLinea = ap.UnidadNegocioId is not null;
+                if (!requiereLinea)
+                    vm.LineaNombre = null;
+            }
         }
 
         cargando = false;
@@ -574,6 +633,12 @@ else
         if (guardando) return;
         errorMsg = null;
 
+        if (EsNuevo && procesoIdSeleccionado <= 0)
+        {
+            errorMsg = "Selecciona el proceso que quieres agregar.";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(vm.AuditorAsignadoId))
         {
             errorMsg = "El auditor principal es obligatorio.";
@@ -619,13 +684,38 @@ else
 
         try
         {
-            var entity = await Db.AuditoriaProcesos
-                .FirstOrDefaultAsync(x => x.AuditoriaProcesoId == auditoriaProcesoId && x.AuditoriaId == auditoriaId);
+            AuditoriaProceso? entity;
 
-            if (entity is null)
+            if (EsNuevo)
             {
-                errorMsg = "No se encontró el registro a actualizar.";
-                return;
+                var procesoSeleccionado = await Db.Procesos
+                    .FirstOrDefaultAsync(p => p.ProcesoId == procesoIdSeleccionado);
+
+                if (procesoSeleccionado is null)
+                {
+                    errorMsg = "El proceso seleccionado ya no está disponible.";
+                    return;
+                }
+
+                entity = new AuditoriaProceso
+                {
+                    AuditoriaId = auditoriaId,
+                    ProcesoId = procesoSeleccionado.ProcesoId,
+                    UnidadNegocioId = null
+                };
+
+                Db.AuditoriaProcesos.Add(entity);
+            }
+            else
+            {
+                entity = await Db.AuditoriaProcesos
+                    .FirstOrDefaultAsync(x => x.AuditoriaProcesoId == auditoriaProcesoId && x.AuditoriaId == auditoriaId);
+
+                if (entity is null)
+                {
+                    errorMsg = "No se encontró el registro a actualizar.";
+                    return;
+                }
             }
 
             entity.AuditorAsignadoId = vm.AuditorAsignadoId?.Trim();
@@ -641,6 +731,7 @@ else
             await Db.SaveChangesAsync();
 
             var procesoId = entity.ProcesoId;
+            var auditoriaProcesoIdGuardado = entity.AuditoriaProcesoId;
 
             var preguntasIds = await Db.ChecklistPreguntas
                 .Where(p => p.ProcesoId == procesoId && p.Activo)
@@ -648,7 +739,7 @@ else
                 .ToListAsync();
 
             var existentesIds = await Db.AuditoriaChecklists
-                .Where(x => x.AuditoriaProcesoId == auditoriaProcesoId)
+                .Where(x => x.AuditoriaProcesoId == auditoriaProcesoIdGuardado)
                 .Select(x => x.PreguntaId)
                 .ToListAsync();
 
@@ -660,7 +751,7 @@ else
                 .Where(pid => !existentesSet.Contains(pid))
                 .Select(pid => new AuditoriaChecklist
                 {
-                    AuditoriaProcesoId = auditoriaProcesoId,
+                    AuditoriaProcesoId = auditoriaProcesoIdGuardado,
                     PreguntaId = pid,
                     Cumple = "Pendiente",
                     AuditorId = auditorId!,

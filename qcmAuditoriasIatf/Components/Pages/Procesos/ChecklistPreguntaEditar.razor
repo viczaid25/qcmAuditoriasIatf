@@ -1,0 +1,193 @@
+@page "/procesos/checklist-preguntas/nueva"
+@page "/procesos/checklist-preguntas/{Id:int}/editar"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+@attribute [Authorize]
+
+<div class="mo-page-header">
+    <div>
+        <h2>@(Id > 0 ? "Editar pregunta de checklist" : "Nueva pregunta de checklist")</h2>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="mo-alert mo-alert-danger mb-3">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="mo-panel">Cargando...</div>
+}
+else
+{
+    <div class="mo-panel">
+        <EditForm Model="model" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="mo-form-label">Proceso</label>
+                    <InputSelect class="mo-form-select" @bind-Value="model.ProcesoId">
+                        <option value="0">-- Selecciona un proceso --</option>
+                        @foreach (var p in procesos)
+                        {
+                            <option value="@p.ProcesoId">@p.Codigo - @p.Nombre</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="mo-form-label">Cláusula del catálogo (opcional)</label>
+                    <InputSelect class="mo-form-select" @bind-Value="clausulaIdSeleccionada">
+                        <option value="0">-- Sin cláusula --</option>
+                        @foreach (var c in clausulas)
+                        {
+                            <option value="@c.ClausulaId">@c.Codigo - @c.Descripcion</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-12">
+                    <label class="mo-form-label">Requisito / Cláusula (texto libre)</label>
+                    <InputTextArea class="mo-form-control" rows="2" @bind-Value="model.Requisito" />
+                    <div class="mo-form-hint">Puedes anotar aquí varias cláusulas juntas tal como aparecen en el documento fuente.</div>
+                </div>
+
+                <div class="col-12">
+                    <label class="mo-form-label">Pregunta</label>
+                    <InputTextArea class="mo-form-control" rows="4" @bind-Value="model.Pregunta" />
+                </div>
+
+                <div class="col-12">
+                    <div class="mo-form-check">
+                        <InputCheckbox class="form-check-input" @bind-Value="model.Activo" />
+                        <label class="form-check-label">Activa</label>
+                    </div>
+                </div>
+
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="mo-btn mo-btn-primary" disabled="@guardando">
+                        @(guardando ? "Guardando..." : "Guardar")
+                    </button>
+                    <button type="button" class="mo-btn mo-btn-secondary-outline" @onclick="Cancelar">Cancelar</button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private bool cargando = true;
+    private bool guardando;
+    private string? errorMsg;
+
+    private List<Proceso> procesos = new();
+    private List<ClausulaIATF> clausulas = new();
+
+    private int clausulaIdSeleccionada;
+
+    private ChecklistPregunta model = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            procesos = await Db.Procesos
+                .AsNoTracking()
+                .Where(p => p.Activo)
+                .OrderBy(p => p.Nombre)
+                .ToListAsync();
+
+            clausulas = await Db.ClausulasIATF
+                .AsNoTracking()
+                .Where(c => c.Activo)
+                .OrderBy(c => c.Codigo)
+                .ToListAsync();
+
+            if (Id > 0)
+            {
+                var existente = await Db.ChecklistPreguntas
+                    .FirstOrDefaultAsync(x => x.PreguntaId == Id);
+
+                if (existente is null)
+                {
+                    errorMsg = "No se encontró la pregunta.";
+                    return;
+                }
+
+                model = existente;
+                clausulaIdSeleccionada = model.ClausulaId ?? 0;
+            }
+            else
+            {
+                model = new ChecklistPregunta();
+                clausulaIdSeleccionada = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task Guardar()
+    {
+        if (guardando) return;
+        guardando = true;
+        errorMsg = null;
+
+        try
+        {
+            if (model.ProcesoId <= 0)
+            {
+                errorMsg = "Selecciona un proceso.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(model.Pregunta))
+            {
+                errorMsg = "La pregunta es obligatoria.";
+                return;
+            }
+
+            model.ClausulaId = clausulaIdSeleccionada > 0 ? clausulaIdSeleccionada : null;
+
+            if (Id > 0)
+            {
+                await Db.SaveChangesAsync();
+            }
+            else
+            {
+                Db.ChecklistPreguntas.Add(model);
+                await Db.SaveChangesAsync();
+            }
+
+            Nav.NavigateTo("procesos/checklist-preguntas");
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private void Cancelar() => Nav.NavigateTo("procesos/checklist-preguntas");
+}

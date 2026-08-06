@@ -12,18 +12,12 @@ public class AccionCorrectiva
     public int HallazgoId { get; set; }
     public Hallazgo? Hallazgo { get; set; }
 
-    [Required]
-    public string AnalisisCausa { get; set; } = string.Empty;
-
-    [Required]
-    public string AccionDefinida { get; set; } = string.Empty;
+    public string? AnalisisCausa { get; set; }
 
     [Required]
     public string ResponsableId { get; set; } = "sistema";
 
     public DateTime FechaImplementacion { get; set; } = DateTime.Today;
-
-    public string? EvidenciaImplementacion { get; set; }
 
     public DateTime? FechaVerificacion { get; set; }
     public bool? Eficaz { get; set; }

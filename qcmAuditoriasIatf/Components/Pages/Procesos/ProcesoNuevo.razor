@@ -5,6 +5,11 @@
 
 <h2>Nuevo Proceso</h2>
 
+@if (!string.IsNullOrWhiteSpace(msg))
+{
+    <div class="mo-alert mo-alert-success mb-3">@msg</div>
+}
+
 <EditForm Model="model" OnValidSubmit="Guardar">
     <DataAnnotationsValidator />
     <ValidationSummary />
@@ -12,22 +17,22 @@
     <div class="row g-3">
         <div class="col-md-3">
             <label class="form-label">Código</label>
-            <InputText class="form-control" @bind-Value="model.Codigo" />
+            <InputText class="mo-form-control" @bind-Value="model.Codigo" />
         </div>
 
         <div class="col-md-6">
             <label class="form-label">Nombre</label>
-            <InputText class="form-control" @bind-Value="model.Nombre" />
+            <InputText class="mo-form-control" @bind-Value="model.Nombre" />
         </div>
 
         <div class="col-md-3">
             <label class="form-label">Área</label>
-            <InputText class="form-control" @bind-Value="model.Area" />
+            <InputText class="mo-form-control" @bind-Value="model.Area" />
         </div>
 
         <div class="col-md-6">
             <label class="form-label">Unidad de negocio (solo Producción)</label>
-            <InputSelect class="form-select" @bind-Value="model.UnidadNegocio">
+            <InputSelect class="mo-form-select" @bind-Value="model.UnidadNegocio">
                 <option value="">(N/A)</option>
                 @foreach (var u in UnidadesProduccion)
                 {
@@ -38,25 +43,25 @@
 
         <div class="col-md-6">
             <label class="form-label">Nombre de línea (manual)</label>
-            <InputText class="form-control" @bind-Value="model.LineaNombre" />
+            <InputText class="mo-form-control" @bind-Value="model.LineaNombre" />
             <small class="text-muted">Úsalo cuando aplique (Producción por unidad).</small>
         </div>
 
         <div class="col-12">
             <label class="form-label">Descripción</label>
-            <InputTextArea class="form-control" rows="3" @bind-Value="model.Descripcion" />
+            <InputTextArea class="mo-form-control" rows="3" @bind-Value="model.Descripcion" />
         </div>
 
         <div class="col-12">
-            <div class="form-check">
+            <div class="mo-form-check">
                 <InputCheckbox class="form-check-input" @bind-Value="model.Activo" />
                 <label class="form-check-label">Activo</label>
             </div>
         </div>
 
         <div class="col-12 d-flex gap-2">
-            <button type="submit" class="btn btn-success">Guardar</button>
-            <button type="button" class="btn btn-outline-secondary" @onclick="Cancelar">Cancelar</button>
+            <button type="submit" class="mo-btn mo-btn-primary">Guardar</button>
+            <button type="button" class="mo-btn mo-btn-secondary-outline" @onclick="Cancelar">Cancelar</button>
         </div>
     </div>
 </EditForm>
@@ -73,11 +78,20 @@
         Area = "QMS"
     };
 
+    private string? msg;
+
     private async Task Guardar()
     {
         Db.Procesos.Add(model);
         await Db.SaveChangesAsync();
-        Nav.NavigateTo("procesos");
+
+        msg = $"El proceso \"{model.Codigo} - {model.Nombre}\" se creó correctamente.";
+
+        model = new()
+        {
+            Activo = true,
+            Area = "QMS"
+        };
     }
 
     private void Cancelar() => Nav.NavigateTo("procesos");

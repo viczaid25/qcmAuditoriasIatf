@@ -124,7 +124,7 @@ else
                     <div class="row g-3 align-items-end">
                         <div class="col-lg-9">
                             <label class="form-label">Buscar usuario</label>
-                            <InputText class="form-control"
+                            <InputText class="mo-form-control"
                                        @bind-Value="lookupVm.Query"
                                        placeholder="Ej. DM45207, nombre o correo" />
                             <div class="field-help">
@@ -133,7 +133,7 @@ else
                         </div>
 
                         <div class="col-lg-3">
-                            <button type="submit" class="btn btn-primary w-100" disabled="@buscando">
+                            <button type="submit" class="mo-btn mo-btn-primary w-100" disabled="@buscando">
                                 @(buscando ? "Buscando..." : "Buscar")
                             </button>
                         </div>
@@ -147,8 +147,8 @@ else
                             Resultados encontrados: <b>@resultados.Count</b>
                         </div>
 
-                        <div class="table-wrap">
-                            <table class="search-table">
+                        <div class="mo-table-wrap" data-mo-table data-page-size="10">
+                            <table class="mo-table">
                                 <thead>
                                     <tr>
                                         <th>PC Login</th>
@@ -157,6 +157,14 @@ else
                                         <th>Departamento</th>
                                         <th>Puesto</th>
                                         <th class="text-end">Acción</th>
+                                    </tr>
+                                    <tr class="mo-table-filter-row">
+                                        <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                                        <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                                        <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
+                                        <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
+                                        <th><input class="mo-th-filter" data-mo-filter-col="4" placeholder="Filtrar…"></th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -190,6 +198,7 @@ else
                                 </tbody>
                             </table>
                         </div>
+                        <div class="mo-table-pagination" data-mo-pagination></div>
                     </div>
                 }
             </section>
@@ -284,12 +293,12 @@ else
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Nombre</label>
-                        <InputText class="form-control" @bind-Value="vm.Nombre" />
+                        <InputText class="mo-form-control" @bind-Value="vm.Nombre" />
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label">Tipo</label>
-                        <InputSelect class="form-select" @bind-Value="vm.Tipo">
+                        <InputSelect class="mo-form-select" @bind-Value="vm.Tipo">
                             <option value="Auditor">Auditor</option>
                             <option value="Entrenamiento">Auditor en entrenamiento</option>
                             <option value="Observador">Observador</option>
@@ -298,22 +307,22 @@ else
 
                     <div class="col-md-6">
                         <label class="form-label">Departamento</label>
-                        <InputText class="form-control" @bind-Value="vm.Departamento" />
+                        <InputText class="mo-form-control" @bind-Value="vm.Departamento" />
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label">Función</label>
-                        <InputText class="form-control" @bind-Value="vm.Funcion" />
+                        <InputText class="mo-form-control" @bind-Value="vm.Funcion" />
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label">Email</label>
-                        <InputText class="form-control" @bind-Value="vm.Email" />
+                        <InputText class="mo-form-control" @bind-Value="vm.Email" />
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label">PC Login ID</label>
-                        <InputText class="form-control" @bind-Value="vm.PcLoginId" />
+                        <InputText class="mo-form-control" @bind-Value="vm.PcLoginId" />
                     </div>
 
                     <div class="col-md-4">
@@ -335,13 +344,13 @@ else
                     </div>
 
                     <div class="action-buttons">
-                        <button class="btn btn-primary btn-lg"
+                        <button class="mo-btn mo-btn-primary mo-btn-lg"
                                 type="submit"
                                 disabled="@guardando">
                             @(guardando ? "Guardando..." : "Guardar")
                         </button>
 
-                        <button class="btn btn-outline-secondary btn-lg"
+                        <button class="mo-btn mo-btn-secondary-outline mo-btn-lg"
                                 type="button"
                                 @onclick='() => Nav.NavigateTo("auditores")'
                                 disabled="@guardando">

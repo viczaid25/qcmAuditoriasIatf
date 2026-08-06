@@ -1,0 +1,263 @@
+@page "/procesos/importar-checklist"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Services
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+
+@attribute [Authorize]
+
+<div class="mo-page-header">
+    <div>
+        <h2>Importar checklist desde Excel</h2>
+        <p>Carga el archivo de checklist (formato MX-6100-F6) y crea las preguntas para un proceso.</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="mo-alert mo-alert-danger mb-3">@errorMsg</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(msg))
+{
+    <div class="mo-alert mo-alert-success mb-3">@msg</div>
+}
+
+<div class="mo-panel mb-3">
+    <div class="mo-form-group">
+        <label class="mo-form-label">Proceso destino</label>
+        <select class="mo-form-select" @bind="procesoIdSeleccionado">
+            <option value="0">-- Selecciona un proceso --</option>
+            @foreach (var p in procesos)
+            {
+                <option value="@p.ProcesoId">@p.Codigo - @p.Nombre</option>
+            }
+        </select>
+        <div class="mo-form-hint">Las preguntas que se importen quedarán asociadas a este proceso.</div>
+    </div>
+
+    <div class="mo-form-group">
+        <label class="mo-form-label">Archivo Excel (.xlsx)</label>
+        <InputFile OnChange="OnFileSelected" accept=".xlsx" />
+    </div>
+
+    @if (resultado is not null && !string.IsNullOrWhiteSpace(resultado.ProcesoTexto))
+    {
+        <div class="mo-form-hint">
+            El archivo indica "Proceso a auditar: <strong>@resultado.ProcesoTexto</strong>" — verifica que coincida con el proceso seleccionado arriba.
+        </div>
+    }
+</div>
+
+@if (resultado is not null)
+{
+    <div class="mo-panel">
+        <div class="mo-page-header">
+            <div>
+                <h2>Vista previa</h2>
+                <p>@resultado.Preguntas.Count pregunta(s) detectada(s). Revisa antes de confirmar.</p>
+            </div>
+        </div>
+
+        @if (resultado.Preguntas.Count == 0)
+        {
+            <div class="mo-alert mo-alert-warning">No se detectaron preguntas en el archivo. Verifica que sea el formato de checklist correcto.</div>
+        }
+        else
+        {
+            <div class="mo-table-wrap">
+                <table class="mo-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Requisito / Cláusula</th>
+                            <th>Cláusula detectada</th>
+                            <th>Pregunta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var fila in filasPreview)
+                        {
+                            <tr @key="fila.Parseada">
+                                <td>@fila.Parseada.Numero</td>
+                                <td style="white-space:pre-wrap">@fila.Parseada.RequisitoTexto</td>
+                                <td>
+                                    @if (fila.ClausulaCodigo is not null)
+                                    {
+                                        <span class="mo-badge mo-badge-primary">@fila.ClausulaCodigo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="mo-badge mo-badge-secondary">Sin coincidencia</span>
+                                    }
+                                </td>
+                                <td style="white-space:pre-wrap">@fila.Parseada.PreguntaTexto</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (existentesActivas > 0)
+            {
+                <div class="mo-alert mo-alert-warning mt-3">
+                    Este proceso ya tiene @existentesActivas pregunta(s) activa(s). Al confirmar, se marcarán como inactivas y se reemplazarán por las de este archivo.
+                </div>
+            }
+
+            <div class="mt-3">
+                <button class="mo-btn mo-btn-primary" type="button" @onclick="ConfirmarImportacion" disabled="@(guardando || procesoIdSeleccionado == 0)">
+                    @(guardando ? "Importando..." : "Confirmar importación")
+                </button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Proceso> procesos = new();
+    private int procesoIdSeleccionado;
+    private string? errorMsg;
+    private string? msg;
+    private bool guardando;
+    private int existentesActivas;
+
+    private ChecklistExcelParseResult? resultado;
+    private List<FilaPreview> filasPreview = new();
+    private List<ClausulaIATF> clausulasCatalogo = new();
+
+    private class FilaPreview
+    {
+        public ChecklistPreguntaParseada Parseada { get; set; } = null!;
+        public int? ClausulaId { get; set; }
+        public string? ClausulaCodigo { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        procesos = await Db.Procesos
+            .AsNoTracking()
+            .Where(p => p.Activo)
+            .OrderBy(p => p.Nombre)
+            .ToListAsync();
+
+        clausulasCatalogo = await Db.ClausulasIATF
+            .AsNoTracking()
+            .Where(c => c.Activo)
+            .ToListAsync();
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        errorMsg = null;
+        msg = null;
+        resultado = null;
+        filasPreview = new();
+
+        try
+        {
+            var file = e.File;
+            if (file is null)
+                return;
+
+            await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var memoria = new MemoryStream();
+            await stream.CopyToAsync(memoria);
+            memoria.Position = 0;
+
+            resultado = ChecklistExcelParser.Parse(memoria);
+
+            filasPreview = resultado.Preguntas
+                .Select(p =>
+                {
+                    var (clausulaId, codigo) = ResolverClausula(p.RequisitoTexto);
+                    return new FilaPreview
+                    {
+                        Parseada = p,
+                        ClausulaId = clausulaId,
+                        ClausulaCodigo = codigo
+                    };
+                })
+                .ToList();
+
+            if (procesoIdSeleccionado > 0)
+            {
+                existentesActivas = await Db.ChecklistPreguntas
+                    .CountAsync(x => x.ProcesoId == procesoIdSeleccionado && x.Activo);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"No se pudo leer el archivo: {ex.Message}";
+        }
+    }
+
+    private (int? ClausulaId, string? Codigo) ResolverClausula(string? requisitoTexto)
+    {
+        if (string.IsNullOrWhiteSpace(requisitoTexto))
+            return (null, null);
+
+        var tokens = requisitoTexto
+            .Split(new[] { '\n', '\r', ',', '/' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (tokens.Count != 1)
+            return (null, null);
+
+        var match = clausulasCatalogo.FirstOrDefault(c =>
+            string.Equals(c.Codigo.Trim(), tokens[0], StringComparison.OrdinalIgnoreCase));
+
+        return match is null ? (null, null) : (match.ClausulaId, match.Codigo);
+    }
+
+    private async Task ConfirmarImportacion()
+    {
+        if (guardando || resultado is null || procesoIdSeleccionado == 0) return;
+
+        guardando = true;
+        errorMsg = null;
+        msg = null;
+
+        try
+        {
+            var existentes = await Db.ChecklistPreguntas
+                .Where(x => x.ProcesoId == procesoIdSeleccionado && x.Activo)
+                .ToListAsync();
+
+            foreach (var e in existentes)
+            {
+                e.Activo = false;
+            }
+
+            foreach (var fila in filasPreview)
+            {
+                Db.ChecklistPreguntas.Add(new ChecklistPregunta
+                {
+                    ProcesoId = procesoIdSeleccionado,
+                    ClausulaId = fila.ClausulaId,
+                    Requisito = fila.Parseada.RequisitoTexto,
+                    Pregunta = fila.Parseada.PreguntaTexto,
+                    Activo = true
+                });
+            }
+
+            await Db.SaveChangesAsync();
+
+            msg = $"Se importaron {filasPreview.Count} pregunta(s) para el proceso seleccionado.";
+            resultado = null;
+            filasPreview = new();
+            existentesActivas = 0;
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+}

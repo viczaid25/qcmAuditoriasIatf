@@ -39,23 +39,11 @@ public class HallazgoCincoPorQue
     [Required, MaxLength(50)]
     public string Estatus { get; set; } = "Pendiente"; // Pendiente / Aprobado / Rechazado
 
-    public bool? AprobacionAuditorAsignado { get; set; }
-
     [MaxLength(100)]
-    public string? AprobadoPorAuditorAsignadoId { get; set; }
+    public string? RevisadoPorSgcId { get; set; }
 
-    public DateTime? FechaAprobacionAuditorAsignado { get; set; }
+    public DateTime? FechaRevisionSgc { get; set; }
 
     [MaxLength(2000)]
-    public string? ComentarioAuditorAsignado { get; set; }
-
-    public bool? AprobacionSegundoAuditor { get; set; }
-
-    [MaxLength(100)]
-    public string? AprobadoPorSegundoAuditorId { get; set; }
-
-    public DateTime? FechaAprobacionSegundoAuditor { get; set; }
-
-    [MaxLength(2000)]
-    public string? ComentarioSegundoAuditor { get; set; }
+    public string? ComentarioSgc { get; set; }
 }

@@ -1,0 +1,18 @@
+.mo-table-wrap table.mo-table[b-l8wzk2qqwx] {
+    min-width: 1300px;
+}
+
+.mo-table-wrap table.mo-table th:nth-child(1)[b-l8wzk2qqwx],
+.mo-table-wrap table.mo-table td:nth-child(1)[b-l8wzk2qqwx] {
+    min-width: 200px;
+}
+
+.mo-table-wrap table.mo-table th:nth-child(2)[b-l8wzk2qqwx],
+.mo-table-wrap table.mo-table td:nth-child(2)[b-l8wzk2qqwx] {
+    min-width: 320px;
+}
+
+.mo-table-wrap table.mo-table th:nth-child(3)[b-l8wzk2qqwx],
+.mo-table-wrap table.mo-table td:nth-child(3)[b-l8wzk2qqwx] {
+    min-width: 480px;
+}

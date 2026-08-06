@@ -68,47 +68,49 @@ else
 
         @if (auditorPendienteEliminar is not null)
         {
-            <section class="panel-card danger-panel">
-                <div class="panel-head">
-                    <div>
-                        <h2>Confirmar eliminación</h2>
-                        <p class="panel-subtitle">
-                            Esta acción eliminará el auditor del catálogo.
-                        </p>
+            <div class="confirm-modal-backdrop">
+                <section class="panel-card danger-panel confirm-modal-dialog">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Confirmar eliminación</h2>
+                            <p class="panel-subtitle">
+                                Esta acción eliminará el auditor del catálogo.
+                            </p>
+                        </div>
+
+                        <span class="panel-badge danger">Pendiente</span>
                     </div>
 
-                    <span class="panel-badge danger">Pendiente</span>
-                </div>
+                    <div class="confirm-box">
+                        <div class="confirm-name">@auditorPendienteEliminar.Nombre</div>
 
-                <div class="confirm-box">
-                    <div class="confirm-name">@auditorPendienteEliminar.Nombre</div>
+                        <div class="confirm-meta">
+                            <span>Tipo: <strong>@auditorPendienteEliminar.Tipo</strong></span>
+                            <span>PC Login: <strong>@(string.IsNullOrWhiteSpace(auditorPendienteEliminar.PcLoginId) ? "Sin capturar" : auditorPendienteEliminar.PcLoginId)</strong></span>
+                        </div>
 
-                    <div class="confirm-meta">
-                        <span>Tipo: <strong>@auditorPendienteEliminar.Tipo</strong></span>
-                        <span>PC Login: <strong>@(string.IsNullOrWhiteSpace(auditorPendienteEliminar.PcLoginId) ? "Sin capturar" : auditorPendienteEliminar.PcLoginId)</strong></span>
+                        <div class="confirm-warning">
+                            Confirma solo si realmente deseas quitar este registro del catálogo.
+                        </div>
+
+                        <div class="confirm-actions">
+                            <button type="button"
+                                    class="mo-btn mo-btn-secondary-outline"
+                                    @onclick="CancelarEliminar"
+                                    disabled="@eliminando">
+                                Cancelar
+                            </button>
+
+                            <button type="button"
+                                    class="mo-btn mo-btn-danger"
+                                    @onclick="EliminarAuditor"
+                                    disabled="@eliminando">
+                                @(eliminando ? "Eliminando..." : "Eliminar auditor")
+                            </button>
+                        </div>
                     </div>
-
-                    <div class="confirm-warning">
-                        Confirma solo si realmente deseas quitar este registro del catálogo.
-                    </div>
-
-                    <div class="confirm-actions">
-                        <button type="button"
-                                class="btn btn-outline-secondary"
-                                @onclick="CancelarEliminar"
-                                disabled="@eliminando">
-                            Cancelar
-                        </button>
-
-                        <button type="button"
-                                class="btn btn-danger"
-                                @onclick="EliminarAuditor"
-                                disabled="@eliminando">
-                            @(eliminando ? "Eliminando..." : "Eliminar auditor")
-                        </button>
-                    </div>
-                </div>
-            </section>
+                </section>
+            </div>
         }
 
         <section class="auditores-metrics">
@@ -150,7 +152,7 @@ else
             <div class="row g-3">
                 <div class="col-md-8">
                     <label class="form-label">Buscar</label>
-                    <input class="form-control"
+                    <input class="mo-form-control"
                            @bind="textoBusqueda"
                            @bind:event="oninput"
                            placeholder="Nombre, email, login, departamento..." />
@@ -158,7 +160,7 @@ else
 
                 <div class="col-md-2">
                     <label class="form-label">Tipo</label>
-                    <InputSelect class="form-select" @bind-Value="tipoSeleccionado">
+                    <InputSelect class="mo-form-select" @bind-Value="tipoSeleccionado">
                         <option value="">-- Todos --</option>
                         @foreach (var tipo in TiposDisponibles)
                         {
@@ -169,7 +171,7 @@ else
 
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="button"
-                            class="btn btn-outline-secondary w-100"
+                            class="mo-btn mo-btn-secondary-outline w-100"
                             @onclick="LimpiarFiltros">
                         Limpiar
                     </button>
@@ -197,7 +199,7 @@ else
             {
                 @foreach (var grupo in AuditoresAgrupados)
                 {
-                    <div class="group-block">
+                    <div class="group-block" @key="grupo.Key">
                         <div class="panel-head group-head">
                             <div>
                                 <h2>@grupo.Key</h2>
@@ -212,8 +214,8 @@ else
                             </div>
                         </div>
 
-                        <div class="table-wrap">
-                            <table class="auditores-table">
+                        <div class="mo-table-wrap" data-mo-table data-page-size="10">
+                            <table class="mo-table">
                                 <thead>
                                     <tr>
                                         <th>Nombre</th>
@@ -222,11 +224,18 @@ else
                                         <th>PC Login</th>
                                         <th class="text-end">Acciones</th>
                                     </tr>
+                                    <tr class="mo-table-filter-row">
+                                        <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                                        <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                                        <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
+                                        <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
+                                        <th></th>
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var a in grupo.OrderBy(x => x.Nombre))
                                     {
-                                        <tr>
+                                        <tr @key="a.AuditorId">
                                             <td>
                                                 <div class="cell-title">@a.Nombre</div>
 
@@ -289,6 +298,7 @@ else
                                 </tbody>
                             </table>
                         </div>
+                        <div class="mo-table-pagination" data-mo-pagination></div>
                     </div>
                 }
             }

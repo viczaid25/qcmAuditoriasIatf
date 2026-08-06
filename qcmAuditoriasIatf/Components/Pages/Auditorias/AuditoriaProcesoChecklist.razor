@@ -130,8 +130,8 @@ else
                     <span class="panel-badge">@rows.Count registro(s)</span>
                 </div>
 
-                <div class="table-wrap">
-                    <table class="checklist-table">
+                <div class="mo-table-wrap" data-mo-table data-page-size="10">
+                    <table class="mo-table">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -139,6 +139,13 @@ else
                                 <th>Resultado</th>
                                 <th>Evidencia</th>
                                 <th class="text-end">Hallazgo</th>
+                            </tr>
+                            <tr class="mo-table-filter-row">
+                                <th></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -192,7 +199,7 @@ else
                                     </td>
 
                                     <td>
-                                        <InputTextArea class="form-control form-control-sm table-textarea"
+                                        <InputTextArea class="mo-form-control form-control-sm table-textarea"
                                                        rows="3"
                                                        @bind-Value="row.Evidencia"
                                                        disabled="@guardando" />
@@ -227,6 +234,7 @@ else
                         </tbody>
                     </table>
                 </div>
+                <div class="mo-table-pagination" data-mo-pagination></div>
             </section>
 
             <section class="panel-card action-panel">
@@ -239,11 +247,11 @@ else
                     </div>
 
                     <div class="action-buttons">
-                        <button type="button" class="btn btn-primary btn-lg" @onclick="Guardar" disabled="@guardando">
+                        <button type="button" class="mo-btn mo-btn-primary mo-btn-lg" @onclick="Guardar" disabled="@guardando">
                             @(guardando ? "Guardando..." : "Guardar checklist")
                         </button>
 
-                        <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="Volver" disabled="@guardando">
+                        <button type="button" class="mo-btn mo-btn-secondary-outline mo-btn-lg" @onclick="Volver" disabled="@guardando">
                             Volver
                         </button>
                     </div>

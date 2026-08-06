@@ -4,20 +4,23 @@
     <meta charset="utf-8" />
     <base href="/b/" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/meaxone-template.css" />
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="qcmAuditoriasIatf.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <HeadOutlet />
 </head>
 
-<body>
+<body class="mo-body">
     <Routes @rendermode="InteractiveServer" />
 
     <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
     <script src="js/calendar-export.js"></script>
+    <script src="js/meaxone-table.js"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 

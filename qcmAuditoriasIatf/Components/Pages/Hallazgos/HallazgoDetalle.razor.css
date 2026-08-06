@@ -10,7 +10,7 @@
     gap: 1rem;
     padding: 1.7rem;
     border-radius: 28px;
-    background: linear-gradient(135deg, rgba(6,11,41,0.97) 0%, rgba(58,6,71,0.97) 100%);
+    background: linear-gradient(135deg, rgba(6,11,41,0.97) 0%, rgba(28,51,117,0.97) 100%);
     color: #fff;
     box-shadow: 0 24px 45px rgba(15,23,42,0.16);
 }
@@ -295,21 +295,37 @@
     color: #7c2d12;
 }
 
-.solution-card {
+.evidencia-list {
+    display: grid;
+    gap: 0.65rem;
     margin-bottom: 1rem;
-    padding: 1rem;
-    border-radius: 20px;
+}
+
+.evidencia-item {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 16px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
 }
 
-.solution-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.85rem;
-    margin-top: 0.85rem;
+.evidencia-link {
+    font-weight: 700;
+    color: #1d4ed8;
+    text-decoration: none;
+}
+
+    .evidencia-link:hover {
+        text-decoration: underline;
+    }
+
+.evidencia-meta {
     color: #64748b;
-    font-size: 0.88rem;
+    font-size: 0.85rem;
+    margin-right: auto;
 }
 
 .history-list {
@@ -552,3 +568,21 @@
 .hallazgo-hero::before {
     pointer-events: none;
 }
+
+.acciones-edit-list,
+.acciones-registradas-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.accion-edit-card,
+.accion-registrada-card {
+    padding: 1rem;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+    .accion-registrada-card div + div {
+        margin-top: 0.35rem;
+    }

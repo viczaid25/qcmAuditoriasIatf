@@ -17,7 +17,7 @@ public class Hallazgo
     public int ProcesoId { get; set; }
     public Proceso? Proceso { get; set; }
 
-    public int ClausulaId { get; set; }
+    public int? ClausulaId { get; set; }
     public ClausulaIATF? Clausula { get; set; }
 
     public int TipoHallazgoId { get; set; }

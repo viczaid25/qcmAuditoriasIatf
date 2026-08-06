@@ -88,7 +88,7 @@ else
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Auditoría</label>
-                    <InputSelect class="form-select" @bind-Value="auditoriaIdSeleccionada">
+                    <InputSelect class="mo-form-select" @bind-Value="auditoriaIdSeleccionada">
                         <option value="0">-- Todas --</option>
                         @foreach (var a in auditoriasFiltro)
                         {
@@ -99,7 +99,7 @@ else
 
                 <div class="col-md-2">
                     <label class="form-label">Validación SGC</label>
-                    <InputSelect class="form-select" @bind-Value="validacionSeleccionada">
+                    <InputSelect class="mo-form-select" @bind-Value="validacionSeleccionada">
                         <option value="">-- Todas --</option>
                         <option value="Pendiente">Pendiente</option>
                         <option value="Aprobado">Aprobado</option>
@@ -109,7 +109,7 @@ else
 
                 <div class="col-md-2">
                     <label class="form-label">Estatus operativo</label>
-                    <InputSelect class="form-select" @bind-Value="estatusSeleccionado">
+                    <InputSelect class="mo-form-select" @bind-Value="estatusSeleccionado">
                         <option value="">-- Todos --</option>
                         <option value="Pendiente SGC">Pendiente SGC</option>
                         <option value="Abierto">Abierto</option>
@@ -120,14 +120,14 @@ else
 
                 <div class="col-md-4">
                     <label class="form-label">Buscar</label>
-                    <InputText class="form-control" @bind-Value="textoBusqueda" placeholder="Descripción, responsable..." />
+                    <InputText class="mo-form-control" @bind-Value="textoBusqueda" placeholder="Descripción, responsable..." />
                 </div>
 
                 <div class="col-12 d-flex gap-2 flex-wrap">
-                    <button type="button" class="btn btn-primary" @onclick="AplicarFiltros">
+                    <button type="button" class="mo-btn mo-btn-primary" @onclick="AplicarFiltros">
                         Aplicar filtros
                     </button>
-                    <button type="button" class="btn btn-outline-secondary" @onclick="LimpiarFiltros">
+                    <button type="button" class="mo-btn mo-btn-secondary-outline" @onclick="LimpiarFiltros">
                         Limpiar
                     </button>
                 </div>
@@ -151,8 +151,8 @@ else
             }
             else
             {
-                <div class="table-wrap">
-                    <table class="hallazgos-table">
+                <div class="mo-table-wrap" data-mo-table data-page-size="10">
+                        <table class="mo-table">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -165,11 +165,22 @@ else
                                 <th>Estatus</th>
                                 <th class="text-end">Acción</th>
                             </tr>
+                            <tr class="mo-table-filter-row">
+                                <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="4" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="5" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="6" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="7" placeholder="Filtrar…"></th>
+                                <th></th>
+                            </tr>
                         </thead>
                         <tbody>
                             @foreach (var h in hallazgos)
                             {
-                                <tr>
+                                <tr @key="h.HallazgoId">
                                     <td>
                                         <div class="id-pill">#@h.HallazgoId</div>
                                         <div class="cell-subtitle">@TextoClausula(h)</div>
@@ -261,8 +272,9 @@ else
                                 </tr>
                             }
                         </tbody>
-                    </table>
+                        </table>
                 </div>
+                <div class="mo-table-pagination" data-mo-pagination></div>
             }
         </section>
     </div>
@@ -326,12 +338,25 @@ else
         if (auditoriaIdSeleccionada > 0)
             q = q.Where(h => h.AuditoriaId == auditoriaIdSeleccionada);
 
-        total = await q.CountAsync();
-        pendientesSgc = await q.CountAsync(h => h.EstatusValidacionSgc == "Pendiente");
-        aprobadosSgc = await q.CountAsync(h => h.EstatusValidacionSgc == "Aprobado");
-        rechazadosSgc = await q.CountAsync(h => h.EstatusValidacionSgc == "Rechazado");
-        cerrados = await q.CountAsync(h => h.Estatus == "Cerrado");
-        abiertos = await q.CountAsync(h => h.Estatus == "Abierto" || h.Estatus == "En Proceso");
+        var stats = await q
+            .GroupBy(h => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                PendientesSgc = g.Count(h => h.EstatusValidacionSgc == "Pendiente"),
+                AprobadosSgc = g.Count(h => h.EstatusValidacionSgc == "Aprobado"),
+                RechazadosSgc = g.Count(h => h.EstatusValidacionSgc == "Rechazado"),
+                Cerrados = g.Count(h => h.Estatus == "Cerrado"),
+                Abiertos = g.Count(h => h.Estatus == "Abierto" || h.Estatus == "En Proceso")
+            })
+            .FirstOrDefaultAsync();
+
+        total = stats?.Total ?? 0;
+        pendientesSgc = stats?.PendientesSgc ?? 0;
+        aprobadosSgc = stats?.AprobadosSgc ?? 0;
+        rechazadosSgc = stats?.RechazadosSgc ?? 0;
+        cerrados = stats?.Cerrados ?? 0;
+        abiertos = stats?.Abiertos ?? 0;
     }
 
     private async Task CargarHallazgos()

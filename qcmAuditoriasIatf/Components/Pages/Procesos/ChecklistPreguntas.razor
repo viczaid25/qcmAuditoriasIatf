@@ -1,0 +1,207 @@
+@page "/procesos/checklist-preguntas"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+@attribute [Authorize]
+
+<div class="mo-page-header">
+    <div>
+        <h2>Preguntas de checklist</h2>
+        <p>Administra las preguntas del checklist de auditoría por proceso.</p>
+    </div>
+    <div class="mo-page-actions">
+        <button class="mo-btn mo-btn-primary" @onclick="IrNueva">Nueva pregunta</button>
+        <button class="mo-btn mo-btn-secondary-outline" @onclick="IrImportar">Importar desde Excel</button>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="mo-alert mo-alert-danger mb-3">@errorMsg</div>
+}
+
+<div class="mo-panel mb-3">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="mo-form-label">Proceso</label>
+            <select class="mo-form-select" @bind="procesoIdFiltro">
+                <option value="0">-- Todos --</option>
+                @foreach (var p in procesos)
+                {
+                    <option value="@p.ProcesoId">@p.Codigo - @p.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="mo-form-label">Estatus</label>
+            <select class="mo-form-select" @bind="estatusFiltro">
+                <option value="Activas">Solo activas</option>
+                <option value="Inactivas">Solo inactivas</option>
+                <option value="Todas">Todas</option>
+            </select>
+        </div>
+
+        <div class="col-md-5">
+            <label class="mo-form-label">Buscar</label>
+            <input class="mo-form-control" placeholder="Texto de la pregunta o del requisito..." @bind="textoBusqueda" @bind:event="oninput" />
+        </div>
+    </div>
+</div>
+
+@if (cargando)
+{
+    <div class="mo-panel">Cargando...</div>
+}
+else if (!preguntasFiltradas.Any())
+{
+    <div class="mo-panel">
+        <div class="empty-state compact">No hay preguntas que coincidan con el filtro.</div>
+    </div>
+}
+else
+{
+    <div class="mo-table-wrap" data-mo-table data-page-size="10">
+        <table class="mo-table">
+            <thead>
+                <tr>
+                    <th>Proceso</th>
+                    <th>Requisito / Cláusula</th>
+                    <th>Pregunta</th>
+                    <th>Activa</th>
+                    <th></th>
+                </tr>
+                <tr class="mo-table-filter-row">
+                    <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                    <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                    <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
+                    <th></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in preguntasFiltradas)
+                {
+                    <tr @key="p.PreguntaId">
+                        <td>
+                            <div class="cell-title">@p.Proceso?.Codigo</div>
+                            <div class="cell-subtitle">@p.Proceso?.Nombre</div>
+                        </td>
+
+                        <td style="white-space:pre-wrap">
+                            @(p.Clausula is not null ? $"[{p.Clausula.Codigo}] " : "")@p.Requisito
+                        </td>
+
+                        <td style="white-space:pre-wrap">@p.Pregunta</td>
+
+                        <td>
+                            @if (p.Activo)
+                            {
+                                <span class="mo-badge mo-badge-success">Activa</span>
+                            }
+                            else
+                            {
+                                <span class="mo-badge mo-badge-secondary">Inactiva</span>
+                            }
+                        </td>
+
+                        <td class="text-end">
+                            <button type="button" class="mo-btn mo-btn-primary-outline mo-btn-sm me-2" @onclick="() => IrEditar(p.PreguntaId)">
+                                Editar
+                            </button>
+
+                            <button type="button"
+                                    class="@(p.Activo ? "mo-btn mo-btn-danger-outline mo-btn-sm" : "mo-btn mo-btn-success-outline mo-btn-sm")"
+                                    @onclick="() => ToggleActivo(p)">
+                                @(p.Activo ? "Desactivar" : "Activar")
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="mo-table-pagination" data-mo-pagination></div>
+}
+
+@code {
+    private bool cargando = true;
+    private string? errorMsg;
+
+    private List<Proceso> procesos = new();
+    private List<ChecklistPregunta> preguntas = new();
+
+    private int procesoIdFiltro;
+    private string estatusFiltro = "Activas";
+    private string textoBusqueda = "";
+
+    private IEnumerable<ChecklistPregunta> preguntasFiltradas =>
+        preguntas.Where(p =>
+            (procesoIdFiltro == 0 || p.ProcesoId == procesoIdFiltro) &&
+            (estatusFiltro == "Todas" || (estatusFiltro == "Activas") == p.Activo) &&
+            (string.IsNullOrWhiteSpace(textoBusqueda) ||
+                p.Pregunta.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ||
+                (p.Requisito ?? "").Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            procesos = await Db.Procesos
+                .AsNoTracking()
+                .OrderBy(p => p.Nombre)
+                .ToListAsync();
+
+            preguntas = await Db.ChecklistPreguntas
+                .AsNoTracking()
+                .Include(p => p.Proceso)
+                .Include(p => p.Clausula)
+                .OrderBy(p => p.Proceso!.Nombre)
+                .ThenBy(p => p.PreguntaId)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task ToggleActivo(ChecklistPregunta p)
+    {
+        errorMsg = null;
+
+        try
+        {
+            var entity = await Db.ChecklistPreguntas.FirstOrDefaultAsync(x => x.PreguntaId == p.PreguntaId);
+            if (entity is null) return;
+
+            entity.Activo = !entity.Activo;
+            await Db.SaveChangesAsync();
+
+            p.Activo = entity.Activo;
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+    }
+
+    private void IrNueva() => Nav.NavigateTo("procesos/checklist-preguntas/nueva");
+    private void IrEditar(int id) => Nav.NavigateTo($"procesos/checklist-preguntas/{id}/editar");
+    private void IrImportar() => Nav.NavigateTo("procesos/importar-checklist");
+}

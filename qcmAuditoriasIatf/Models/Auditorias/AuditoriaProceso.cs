@@ -25,8 +25,8 @@ public class AuditoriaProceso
     [StringLength(100)]
     public string? ObservadorId { get; set; }
 
-    [StringLength(100)]
-    public string? AuditadoId { get; set; }
+    [StringLength(500)]
+    public string? AuditadoId { get; set; } // puede contener varios logins separados por coma
 
     public int? UnidadNegocioId { get; set; }
     public UnidadNegocio? UnidadNegocio { get; set; }

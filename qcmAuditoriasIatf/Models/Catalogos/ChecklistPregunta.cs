@@ -10,7 +10,7 @@ public class ChecklistPregunta
     [Key]
     public int PreguntaId { get; set; }
 
-    public int ClausulaId { get; set; }
+    public int? ClausulaId { get; set; }
     public ClausulaIATF? Clausula { get; set; }
 
     public int ProcesoId { get; set; }

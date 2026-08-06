@@ -10,7 +10,7 @@ public class Proceso
     [Key]
     public int ProcesoId { get; set; }
 
-    [Required, StringLength(20)]
+    [Required, StringLength(100)]
     public string Codigo { get; set; } = string.Empty; // MX-0100-D1
 
     [Required, StringLength(200)]

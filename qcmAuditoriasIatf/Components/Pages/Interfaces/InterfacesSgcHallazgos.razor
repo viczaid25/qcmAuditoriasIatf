@@ -127,8 +127,8 @@ else
             }
             else
             {
-                <div class="table-wrap">
-                    <table class="sgc-table">
+                <div class="mo-table-wrap" data-mo-table data-page-size="10">
+                        <table class="mo-table">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -140,11 +140,21 @@ else
                                 <th>Creación</th>
                                 <th>Revisión SGC</th>
                             </tr>
+                            <tr class="mo-table-filter-row">
+                                <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="4" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="5" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="6" placeholder="Filtrar…"></th>
+                                <th></th>
+                            </tr>
                         </thead>
                         <tbody>
                             @foreach (var row in pendientes)
                             {
-                                <tr>
+                                <tr @key="row.HallazgoId">
                                     <td>
                                         <span class="id-pill">#@row.HallazgoId</span>
                                     </td>
@@ -210,7 +220,7 @@ else
                                     <td>
                                         <div class="review-box">
                                             <label class="form-label small-label">Comentario SGC</label>
-                                            <InputTextArea class="form-control review-textarea"
+                                            <InputTextArea class="mo-form-control review-textarea"
                                                            @bind-Value="row.ComentarioSgc"
                                                            rows="3"
                                                            disabled="@(guardandoHallazgoId == row.HallazgoId)" />
@@ -242,8 +252,9 @@ else
                                 </tr>
                             }
                         </tbody>
-                    </table>
+                        </table>
                 </div>
+                <div class="mo-table-pagination" data-mo-pagination></div>
             }
         </section>
 
@@ -268,7 +279,7 @@ else
                 <div class="reviewed-list">
                     @foreach (var row in revisados)
                     {
-                        <div class="reviewed-item">
+                        <div class="reviewed-item" @key="row.HallazgoId">
                             <div class="reviewed-head">
                                 <div>
                                     <div class="reviewed-title">Hallazgo #@row.HallazgoId · Auditoría #@row.AuditoriaId</div>

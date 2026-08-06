@@ -4,68 +4,12 @@
     gap: 1.5rem;
 }
 
-.dashboard-hero[b-rktzq20osz] {
-    display: grid;
-    grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.8fr);
-    gap: 1.25rem;
-    padding: 1.8rem;
-    border-radius: 24px;
-    background: linear-gradient(135deg, rgba(6,11,41,0.96) 0%, rgba(58,6,71,0.96) 100%);
-    color: #fff;
-    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
-}
-
-.dashboard-badge[b-rktzq20osz] {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.35rem 0.8rem;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.12);
-    color: rgba(255,255,255,0.92);
-    font-size: 0.82rem;
-    font-weight: 600;
-    margin-bottom: 0.9rem;
-}
-
-.dashboard-hero h1[b-rktzq20osz] {
-    margin: 0 0 0.5rem;
-    font-size: clamp(1.9rem, 3vw, 2.7rem);
-    font-weight: 800;
-    line-height: 1.1;
-}
-
-.dashboard-hero p[b-rktzq20osz] {
-    margin: 0;
-    max-width: 700px;
-    color: rgba(255,255,255,0.80);
-    font-size: 1rem;
-}
-
-.dashboard-hero-side[b-rktzq20osz] {
-    display: flex;
-    align-items: stretch;
-}
-
-.dashboard-hero-card[b-rktzq20osz] {
-    width: 100%;
-    padding: 1.1rem 1.2rem;
-    border-radius: 18px;
-    background: rgba(255,255,255,0.10);
-    border: 1px solid rgba(255,255,255,0.12);
-    align-self: center;
-}
-
-.dashboard-hero-label[b-rktzq20osz] {
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(255,255,255,0.62);
-    margin-bottom: 0.4rem;
-}
-
-.dashboard-hero-value[b-rktzq20osz] {
-    font-size: 1.1rem;
-    font-weight: 700;
+/* #mo-banner viene con su propio margen (22px 24px 0) pensado para
+   sentarse directo en #mo-main; como esta página se renderiza dentro
+   de .mo-page-wrap (padding 24px), se cancela ese padding para que el
+   banner quede a ras del borde, igual que en el Hub. */
+#mo-banner[b-rktzq20osz] {
+    margin: -24px -24px 22px;
 }
 
 .dashboard-cards[b-rktzq20osz] {

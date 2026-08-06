@@ -24,6 +24,9 @@
 }
 else
 {
+    var procesosGenerales = ProcesosGenerales.ToList();
+    var procesosProduccion = ProcesosProduccion.ToList();
+
     <div class="nueva-page">
         <section class="nueva-hero">
             <div>
@@ -74,17 +77,17 @@ else
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label">Fecha inicio</label>
-                        <InputDate class="form-control" @bind-Value="model.FechaInicio" />
+                        <InputDate class="mo-form-control" @bind-Value="model.FechaInicio" />
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label">Fecha fin</label>
-                        <InputDate class="form-control" @bind-Value="model.FechaFin" />
+                        <InputDate class="mo-form-control" @bind-Value="model.FechaFin" />
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label">Tipo</label>
-                        <InputSelect class="form-select" @bind-Value="model.TipoAuditoria">
+                        <InputSelect class="mo-form-select" @bind-Value="model.TipoAuditoria">
                             <option value="Interna">Interna</option>
                             <option value="Externa">Externa</option>
                             <option value="Cliente">Cliente</option>
@@ -93,7 +96,7 @@ else
 
                     <div class="col-md-3">
                         <label class="form-label">Estatus</label>
-                        <InputSelect class="form-select" @bind-Value="model.Estatus">
+                        <InputSelect class="mo-form-select" @bind-Value="model.Estatus">
                             <option value="Planeada">Planeada</option>
                             <option value="En Proceso">En Proceso</option>
                             <option value="Cerrada">Cerrada</option>
@@ -102,7 +105,7 @@ else
 
                     <div class="col-md-6">
                         <label class="form-label">Auditor líder</label>
-                        <InputSelect class="form-select" @bind-Value="model.AuditorLiderId">
+                        <InputSelect class="mo-form-select" @bind-Value="model.AuditorLiderId">
                             <option value="">-- Selecciona auditor líder --</option>
                             @foreach (var a in auditoresDisponibles)
                             {
@@ -136,22 +139,22 @@ else
 
                     <div class="col-12">
                         <label class="form-label">Objetivo</label>
-                        <InputTextArea class="form-control" rows="3" @bind-Value="model.Objetivo" />
+                        <InputTextArea class="mo-form-control" rows="3" @bind-Value="model.Objetivo" />
                     </div>
 
                     <div class="col-12">
                         <label class="form-label">Alcance</label>
-                        <InputTextArea class="form-control" rows="3" @bind-Value="model.Alcance" />
+                        <InputTextArea class="mo-form-control" rows="3" @bind-Value="model.Alcance" />
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label">Criterios</label>
-                        <InputTextArea class="form-control" rows="3" @bind-Value="model.Criterios" />
+                        <InputTextArea class="mo-form-control" rows="3" @bind-Value="model.Criterios" />
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label">Métodos</label>
-                        <InputTextArea class="form-control" rows="3" @bind-Value="model.Metodos" />
+                        <InputTextArea class="mo-form-control" rows="3" @bind-Value="model.Metodos" />
                     </div>
                 </div>
             </section>
@@ -176,10 +179,18 @@ else
                     <button type="button" class="table-btn" @onclick="DeseleccionarTodos">
                         Limpiar selección
                     </button>
+
+                    <button type="button" class="table-btn" @onclick="ExpandirSeleccionados">
+                        Expandir seleccionados
+                    </button>
+
+                    <button type="button" class="table-btn" @onclick="ColapsarTodos">
+                        Colapsar todos
+                    </button>
                 </div>
 
                 <div class="notice-box mt-3">
-                    Solo se crearán los procesos marcados. Para procesos de producción puedes agregar varias líneas; se generará un registro por cada línea.
+                    Solo se crearán los procesos marcados. Para procesos de producción puedes agregar varias líneas; se generará un registro por cada línea capturada.
                 </div>
 
                 @if (procesosDisponibles.Count == 0)
@@ -190,160 +201,428 @@ else
                 }
                 else
                 {
-                    <div class="process-list mt-3">
-                        @foreach (var p in procesosDisponibles)
+                    <div class="process-groups mt-3">
+                        @if (procesosGenerales.Count > 0)
                         {
-                            <article class="process-card @(p.Seleccionado ? "selected" : "")" @key="p.Llave">
-                                <div class="process-card-head">
-                                    <div class="process-check-wrap">
-                                        <InputCheckbox class="form-check-input process-check" @bind-Value="p.Seleccionado" />
+                            <section class="process-group-card">
+                                <div class="group-head">
+                                    <div>
+                                        <div class="group-title-row">
+                                            <h3>Procesos generales</h3>
+                                            <span class="type-pill standard">Proceso general</span>
+                                        </div>
+
+                                        <p class="group-text">
+                                            Procesos que generan un solo registro y no requieren unidad de negocio ni líneas.
+                                        </p>
+
+                                        <div class="group-meta">
+                                            <span class="summary-chip">Disponibles: @procesosGenerales.Count</span>
+                                            <span class="summary-chip">Seleccionados: @procesosGenerales.Count(x => x.Seleccionado)</span>
+                                        </div>
                                     </div>
 
-                                    <div class="process-main">
-                                        <div class="process-top">
-                                            <div>
-                                                <div class="cell-title">@p.Codigo - @p.Nombre</div>
+                                    <div class="group-actions">
+                                        <button type="button" class="table-btn" @onclick="() => SeleccionarGrupo(false, true)">
+                                            Seleccionar grupo
+                                        </button>
 
-                                                @if (p.UnidadNegocioId.HasValue)
-                                                {
-                                                    <div class="cell-subtitle">
-                                                        Unidad: @p.UnidadCodigo - @p.UnidadNombre
-                                                    </div>
-                                                }
-                                                else
-                                                {
-                                                    <div class="cell-subtitle">Proceso general</div>
-                                                }
-                                            </div>
+                                        <button type="button" class="table-btn" @onclick="() => SeleccionarGrupo(false, false)">
+                                            Limpiar grupo
+                                        </button>
 
-                                            <div class="process-type-wrap">
-                                                @if (p.UnidadNegocioId.HasValue)
-                                                {
-                                                    <span class="type-pill production">Producción / Unidad</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="type-pill standard">Proceso general</span>
-                                                }
-                                            </div>
-                                        </div>
+                                        <button type="button" class="table-btn" @onclick="() => ExpandirGrupo(false)">
+                                            Expandir grupo
+                                        </button>
 
-                                        <div class="auditado-section">
-                                            <label class="form-label">Persona a auditar</label>
-                                            <input class="form-control"
-                                                   list="dl-@p.Llave"
-                                                   @bind="p.AuditadoId"
-                                                   placeholder="Buscar por nombre o login..." />
-                                            <datalist id="dl-@p.Llave">
-                                                @foreach (var u in meaxUsers)
-                                                {
-                                                    <option value="@u.pc_login_id">@(u.username ?? u.pc_login_id) — @u.department</option>
-                                                }
-                                            </datalist>
-                                            @if (!string.IsNullOrWhiteSpace(p.AuditadoId))
-                                            {
-                                                var found = meaxUsers.FirstOrDefault(x =>
-                                                    string.Equals(x.pc_login_id, p.AuditadoId, StringComparison.OrdinalIgnoreCase));
-                                                if (found is not null)
-                                                {
-                                                    <div class="field-help">
-                                                        <b>@(found.username ?? found.pc_login_id)</b>
-                                                        @if (!string.IsNullOrWhiteSpace(found.department))
-                                                        {
-                                                            <span> — @found.department</span>
-                                                        }
-                                                        @if (!string.IsNullOrWhiteSpace(found.position))
-                                                        {
-                                                            <span> | @found.position</span>
-                                                        }
-                                                    </div>
-                                                }
-                                            }
-                                        </div>
-
-                                        @if (p.EsProduccion)
-                                        {
-                                            <div class="lines-section">
-                                                <div class="lines-header">
-                                                    <label class="form-label mb-0">Líneas de producción</label>
-                                                    <button type="button"
-                                                            class="line-add-btn"
-                                                            @onclick="() => AgregarLinea(p)">
-                                                        + Agregar línea
-                                                    </button>
-                                                </div>
-                                                <div class="lines-hint">
-                                                    Se creará un registro de proceso por cada línea con nombre. Si no capturas ninguna se generará un registro sin línea asignada.
-                                                </div>
-                                                <div class="lines-list">
-                                                    @foreach (var linea in p.Lineas)
-                                                    {
-                                                        <div class="line-item" @key="linea">
-                                                            <input class="form-control line-input"
-                                                                   placeholder="Ej. Alt 1, Alt GX, Línea A..."
-                                                                   @bind="linea.Nombre" />
-                                                            @if (p.Lineas.Count > 1)
-                                                            {
-                                                                <button type="button"
-                                                                        class="line-remove-btn"
-                                                                        @onclick="() => RemoverLinea(p, linea)">
-                                                                    ×
-                                                                </button>
-                                                            }
-                                                        </div>
-                                                    }
-                                                </div>
-                                            </div>
-                                        }
-
-                                        <div class="process-note">
-                                            @if (p.EsProduccion)
-                                            {
-                                                var lineasValidas = p.Lineas.Count(l => !string.IsNullOrWhiteSpace(l.Nombre));
-                                                if (lineasValidas == 0)
-                                                {
-                                                    <span>Se creará 1 registro sin línea asignada (se puede editar después).</span>
-                                                }
-                                                else
-                                                {
-                                                    <span>Se crearán <b>@lineasValidas</b> registro(s) con las líneas capturadas.</span>
-                                                }
-                                            }
-                                            else
-                                            {
-                                                <span>Se creará como proceso general.</span>
-                                            }
-                                        </div>
-
-                                        <div class="process-fields-grid">
-                                            <div class="field-span-2">
-                                                <label class="form-label">Reclamos de auditorías pasadas</label>
-                                                <InputTextArea class="form-control" rows="3" @bind-Value="p.ReclamosAuditoriasPasadas" />
-                                            </div>
-
-                                            <div class="field-span-2">
-                                                <label class="form-label">Resultados de auditorías internas previas</label>
-                                                <InputTextArea class="form-control" rows="3" @bind-Value="p.ResultadosAuditoriasInternasPrevias" />
-                                            </div>
-
-                                            <div class="field-span-2">
-                                                <label class="form-label">Seguimiento de acciones correctivas IATF</label>
-                                                <InputTextArea class="form-control" rows="3" @bind-Value="p.SeguimientoAccionesCorrectivasIatf" />
-                                            </div>
-
-                                            <div>
-                                                <label class="form-label">Cláusulas de IATF con TOP 3 NCM</label>
-                                                <InputTextArea class="form-control" rows="3" @bind-Value="p.ClausulasIatfTop3NcmMayoresPasadas" />
-                                            </div>
-
-                                            <div>
-                                                <label class="form-label">Cláusulas de IATF con TOP 3 NCm</label>
-                                                <InputTextArea class="form-control" rows="3" @bind-Value="p.ClausulasIatfTop3NcmMenoresPasadas" />
-                                            </div>
-                                        </div>
+                                        <button type="button" class="table-btn" @onclick="() => ColapsarGrupo(false)">
+                                            Colapsar grupo
+                                        </button>
                                     </div>
                                 </div>
-                            </article>
+
+                                <div class="process-list compact">
+                                    @foreach (var p in procesosGenerales)
+                                    {
+
+                                        <article class="process-card compact @(p.Seleccionado ? "selected" : "") @(EstaExpandido(p) ? "expanded" : "")" @key="p.Llave">
+                                            <div class="process-summary">
+                                                <div class="process-summary-left">
+                                                    <input class="form-check-input process-check"
+                                                           type="checkbox"
+                                                           checked="@p.Seleccionado"
+                                                           @onchange="e => CambiarSeleccion(p, e)" />
+
+                                                    <div class="process-summary-copy">
+                                                        <div class="cell-title">@p.Codigo - @p.Nombre</div>
+                                                        <div class="cell-subtitle">Proceso general</div>
+
+                                                        <div class="process-summary-meta">
+                                                            <span class="summary-chip">Registro: 1</span>
+
+                                                            @if (!string.IsNullOrWhiteSpace(p.AuditadoId))
+                                                            {
+                                                                <span class="summary-chip">Auditado: @GetAuditadoTexto(p)</span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <button type="button"
+                                                        class="collapse-btn"
+                                                        @onclick="() => ToggleExpandido(p)">
+                                                    @(EstaExpandido(p) ? "Ocultar" : "Capturar")
+                                                </button>
+                                            </div>
+
+                                            @if (EstaExpandido(p))
+                                            {
+                                                <div class="process-card-body">
+                                                    <div class="auditado-section">
+                                                        <label class="form-label">Persona a auditar</label>
+
+                                                        <div class="auditado-combo">
+                                                            <div class="auditado-combo-head">
+                                                                <input class="mo-form-control auditado-search-input"
+                                                                       value="@p.AuditadoBusqueda"
+                                                                       @oninput="@(e => BuscarAuditadoEnProceso(p, e))"
+                                                                       @onfocus="@(() => MostrarOpcionesAuditado(p))"
+                                                                       placeholder="Buscar por nombre, login o correo..." />
+
+                                                                <button type="button"
+                                                                        class="auditado-toggle-btn"
+                                                                        @onclick="@(() => ToggleOpcionesAuditado(p))">
+                                                                    <span>▾</span>
+                                                                </button>
+                                                            </div>
+
+                                                            @if (p.MostrarAuditadoOpciones)
+                                                            {
+                                                                var opcionesAuditado = ObtenerAuditadosFiltrados(p).ToList();
+
+                                                                <div class="auditado-dropdown">
+                                                                    @if (opcionesAuditado.Count == 0)
+                                                                    {
+                                                                        <div class="auditado-empty">Sin resultados.</div>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        @foreach (var u in opcionesAuditado)
+                                                                        {
+                                                                            <button type="button"
+                                                                                    class="auditado-option"
+                                                                                    @onclick="@(() => SeleccionarAuditado(p, u))">
+                                                                                <div class="auditado-option-title">@GetAuditadoOptionTitle(u)</div>
+                                                                                <div class="auditado-option-meta">@GetAuditadoOptionMeta(u)</div>
+                                                                            </button>
+                                                                        }
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        </div>
+
+                                                        @{
+                                                            var auditadoIds = ObtenerAuditadoIds(p);
+                                                        }
+                                                        @if (auditadoIds.Count > 0)
+                                                        {
+                                                            <div class="auditado-chips">
+                                                                @foreach (var loginId in auditadoIds)
+                                                                {
+                                                                    <span class="auditado-chip" @key="loginId">
+                                                                        @GetNombreAuditado(loginId)
+                                                                        <button type="button"
+                                                                                class="auditado-chip-remove"
+                                                                                @onclick="@(() => QuitarAuditado(p, loginId))">
+                                                                            ×
+                                                                        </button>
+                                                                    </span>
+                                                                }
+
+                                                                @if (auditadoIds.Count > 1)
+                                                                {
+                                                                    <button type="button"
+                                                                            class="auditado-clear-btn"
+                                                                            @onclick="@(() => LimpiarAuditado(p))">
+                                                                        Limpiar todos
+                                                                    </button>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    </div>
+
+                                                    <div class="process-note">
+                                                        <span>Se creará como proceso general.</span>
+                                                    </div>
+
+                                                    <div class="process-fields-grid">
+                                                        <div class="field-span-2">
+                                                            <label class="form-label">Reclamos</label>
+                                                            <InputTextArea class="mo-form-control" rows="3" @bind-Value="p.ReclamosAuditoriasPasadas" />
+                                                        </div>
+
+                                                        <div class="field-span-2">
+                                                            <label class="form-label">Resultados de auditorías internas</label>
+                                                            <InputTextArea class="mo-form-control" rows="3" @bind-Value="p.ResultadosAuditoriasInternasPrevias" />
+                                                        </div>
+
+                                                        <div class="field-span-2">
+                                                            <label class="form-label">Seguimiento de acciones correctivas IATF</label>
+                                                            <InputTextArea class="mo-form-control" rows="3" @bind-Value="p.SeguimientoAccionesCorrectivasIatf" />
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="form-label">Cláusulas de IATF con TOP 3 NCM</label>
+                                                            <InputTextArea class="mo-form-control" rows="3" @bind-Value="p.ClausulasIatfTop3NcmMayoresPasadas" />
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="form-label">Cláusulas de IATF con TOP 3 NCm</label>
+                                                            <InputTextArea class="mo-form-control" rows="3" @bind-Value="p.ClausulasIatfTop3NcmMenoresPasadas" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </article>
+                                    }
+                                </div>
+                            </section>
+                        }
+
+                        @if (procesosProduccion.Count > 0)
+                        {
+                            <section class="process-group-card">
+                                <div class="group-head">
+                                    <div>
+                                        <div class="group-title-row">
+                                            <h3>Producción / unidad</h3>
+                                            <span class="type-pill production">Producción / Unidad</span>
+                                        </div>
+
+                                        <p class="group-text">
+                                            Procesos ligados a unidad de negocio. Puedes capturar varias líneas y se generará un registro por cada línea válida.
+                                        </p>
+
+                                        <div class="group-meta">
+                                            <span class="summary-chip">Disponibles: @procesosProduccion.Count</span>
+                                            <span class="summary-chip">Seleccionados: @procesosProduccion.Count(x => x.Seleccionado)</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="group-actions">
+                                        <button type="button" class="table-btn" @onclick="() => SeleccionarGrupo(true, true)">
+                                            Seleccionar grupo
+                                        </button>
+
+                                        <button type="button" class="table-btn" @onclick="() => SeleccionarGrupo(true, false)">
+                                            Limpiar grupo
+                                        </button>
+
+                                        <button type="button" class="table-btn" @onclick="() => ExpandirGrupo(true)">
+                                            Expandir grupo
+                                        </button>
+
+                                        <button type="button" class="table-btn" @onclick="() => ColapsarGrupo(true)">
+                                            Colapsar grupo
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="process-list compact">
+                                    @foreach (var p in procesosProduccion)
+                                    {
+
+                                        <article class="process-card compact @(p.Seleccionado ? "selected" : "") @(EstaExpandido(p) ? "expanded" : "")" @key="p.Llave">
+                                            <div class="process-summary">
+                                                <div class="process-summary-left">
+                                                    <input class="form-check-input process-check"
+                                                           type="checkbox"
+                                                           checked="@p.Seleccionado"
+                                                           @onchange="e => CambiarSeleccion(p, e)" />
+
+                                                    <div class="process-summary-copy">
+                                                        <div class="cell-title">@p.Codigo - @p.Nombre</div>
+                                                        <div class="cell-subtitle">Unidad: @p.UnidadCodigo - @p.UnidadNombre</div>
+
+                                                        <div class="process-summary-meta">
+                                                            <span class="summary-chip">Registros: @GetTotalRegistros(p)</span>
+                                                            <span class="summary-chip">Líneas: @GetLineasValidas(p)</span>
+
+                                                            @if (!string.IsNullOrWhiteSpace(p.AuditadoId))
+                                                            {
+                                                                <span class="summary-chip">Auditado: @GetAuditadoTexto(p)</span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <button type="button"
+                                                        class="collapse-btn"
+                                                        @onclick="() => ToggleExpandido(p)">
+                                                    @(EstaExpandido(p) ? "Ocultar" : "Capturar")
+                                                </button>
+                                            </div>
+
+                                            @if (EstaExpandido(p))
+                                            {
+                                                <div class="process-card-body">
+                                                    <div class="auditado-section">
+                                                        <label class="form-label">Persona a auditar</label>
+
+                                                        <div class="auditado-combo">
+                                                            <div class="auditado-combo-head">
+                                                                <input class="mo-form-control auditado-search-input"
+                                                                       value="@p.AuditadoBusqueda"
+                                                                       @oninput="@(e => BuscarAuditadoEnProceso(p, e))"
+                                                                       @onfocus="@(() => MostrarOpcionesAuditado(p))"
+                                                                       placeholder="Buscar por nombre, login o correo..." />
+
+                                                                <button type="button"
+                                                                        class="auditado-toggle-btn"
+                                                                        @onclick="@(() => ToggleOpcionesAuditado(p))">
+                                                                    <span>▾</span>
+                                                                </button>
+                                                            </div>
+
+                                                            @if (p.MostrarAuditadoOpciones)
+                                                            {
+                                                                var opcionesAuditado = ObtenerAuditadosFiltrados(p).ToList();
+
+                                                                <div class="auditado-dropdown">
+                                                                    @if (opcionesAuditado.Count == 0)
+                                                                    {
+                                                                        <div class="auditado-empty">Sin resultados.</div>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        @foreach (var u in opcionesAuditado)
+                                                                        {
+                                                                            <button type="button"
+                                                                                    class="auditado-option"
+                                                                                    @onclick="@(() => SeleccionarAuditado(p, u))">
+                                                                                <div class="auditado-option-title">@GetAuditadoOptionTitle(u)</div>
+                                                                                <div class="auditado-option-meta">@GetAuditadoOptionMeta(u)</div>
+                                                                            </button>
+                                                                        }
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        </div>
+
+                                                        @{
+                                                            var auditadoIds = ObtenerAuditadoIds(p);
+                                                        }
+                                                        @if (auditadoIds.Count > 0)
+                                                        {
+                                                            <div class="auditado-chips">
+                                                                @foreach (var loginId in auditadoIds)
+                                                                {
+                                                                    <span class="auditado-chip" @key="loginId">
+                                                                        @GetNombreAuditado(loginId)
+                                                                        <button type="button"
+                                                                                class="auditado-chip-remove"
+                                                                                @onclick="@(() => QuitarAuditado(p, loginId))">
+                                                                            ×
+                                                                        </button>
+                                                                    </span>
+                                                                }
+
+                                                                @if (auditadoIds.Count > 1)
+                                                                {
+                                                                    <button type="button"
+                                                                            class="auditado-clear-btn"
+                                                                            @onclick="@(() => LimpiarAuditado(p))">
+                                                                        Limpiar todos
+                                                                    </button>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    </div>
+
+                                                    <div class="lines-section">
+                                                        <div class="lines-header">
+                                                            <label class="form-label mb-0">Líneas de producción</label>
+                                                            <button type="button"
+                                                                    class="line-add-btn"
+                                                                    @onclick="() => AgregarLinea(p)">
+                                                                + Agregar línea
+                                                            </button>
+                                                        </div>
+
+                                                        <div class="lines-hint">
+                                                            Se creará un registro de proceso por cada línea con nombre. Si no capturas ninguna se generará un registro sin línea asignada.
+                                                        </div>
+
+                                                        <div class="lines-list">
+                                                            @foreach (var linea in p.Lineas)
+                                                            {
+                                                                <div class="line-card" @key="linea">
+                                                                    <div class="line-item">
+                                                                        <input class="mo-form-control line-input"
+                                                                               placeholder="Ej. Alt 1, Alt GX, Línea A..."
+                                                                               @bind="linea.Nombre" />
+
+                                                                        @if (p.Lineas.Count > 1)
+                                                                        {
+                                                                            <button type="button"
+                                                                                    class="line-remove-btn"
+                                                                                    @onclick="() => RemoverLinea(p, linea)">
+                                                                                ×
+                                                                            </button>
+                                                                        }
+                                                                    </div>
+
+                                                                    <div class="process-fields-grid">
+                                                                        <div class="field-span-2">
+                                                                            <label class="form-label">Reclamos</label>
+                                                                            <InputTextArea class="mo-form-control" rows="2" @bind-Value="linea.ReclamosAuditoriasPasadas" />
+                                                                        </div>
+
+                                                                        <div class="field-span-2">
+                                                                            <label class="form-label">Resultados de auditorías internas previas</label>
+                                                                            <InputTextArea class="mo-form-control" rows="2" @bind-Value="linea.ResultadosAuditoriasInternasPrevias" />
+                                                                        </div>
+
+                                                                        <div class="field-span-2">
+                                                                            <label class="form-label">Seguimiento de acciones correctivas IATF</label>
+                                                                            <InputTextArea class="mo-form-control" rows="2" @bind-Value="linea.SeguimientoAccionesCorrectivasIatf" />
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <label class="form-label">Cláusulas de IATF con TOP 3 NCM</label>
+                                                                            <InputTextArea class="mo-form-control" rows="2" @bind-Value="linea.ClausulasIatfTop3NcmMayoresPasadas" />
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <label class="form-label">Cláusulas de IATF con TOP 3 NCm</label>
+                                                                            <InputTextArea class="mo-form-control" rows="2" @bind-Value="linea.ClausulasIatfTop3NcmMenoresPasadas" />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="process-note">
+                                                        @{
+                                                            var lineasValidas = GetLineasValidas(p);
+                                                        }
+
+                                                        @if (lineasValidas == 0)
+                                                        {
+                                                            <span>Se creará 1 registro sin línea asignada (se puede editar después).</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>Se crearán <b>@lineasValidas</b> registro(s) con las líneas capturadas.</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        </article>
+                                    }
+                                </div>
+                            </section>
                         }
                     </div>
                 }
@@ -359,11 +638,11 @@ else
                     </div>
 
                     <div class="action-buttons">
-                        <button type="submit" class="btn btn-success btn-lg" disabled="@guardando">
+                        <button type="submit" class="mo-btn mo-btn-primary mo-btn-lg" disabled="@guardando">
                             @(guardando ? "Guardando..." : "Guardar auditoría")
                         </button>
 
-                        <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="Cancelar" disabled="@guardando">
+                        <button type="button" class="mo-btn mo-btn-secondary-outline mo-btn-lg" @onclick="Cancelar" disabled="@guardando">
                             Cancelar
                         </button>
                     </div>
@@ -391,6 +670,8 @@ else
     private bool guardando;
     private string? errorMsg;
 
+    private readonly HashSet<string> procesosExpandidos = new();
+
     private List<Auditor> auditoresDisponibles = new();
     private List<ProcesoSeleccionVm> procesosDisponibles = new();
     private List<MeaxAllUser> meaxUsers = new();
@@ -399,25 +680,51 @@ else
     private int totalProcesosSeleccionados => procesosDisponibles.Count(x => x.Seleccionado);
     private int totalProduccionSeleccionada => procesosDisponibles.Count(x => x.Seleccionado && x.UnidadNegocioId.HasValue);
 
+    private IEnumerable<ProcesoSeleccionVm> ProcesosOrdenados =>
+        procesosDisponibles
+            .OrderBy(x => x.EsProduccion ? 1 : 0)
+            .ThenBy(x => x.Codigo)
+            .ThenBy(x => x.UnidadCodigo)
+            .ThenBy(x => x.UnidadNombre);
+
+    private IEnumerable<ProcesoSeleccionVm> ProcesosGenerales =>
+        ProcesosOrdenados.Where(x => !x.EsProduccion);
+
+    private IEnumerable<ProcesoSeleccionVm> ProcesosProduccion =>
+        ProcesosOrdenados.Where(x => x.EsProduccion);
+
     private Auditor? AuditorLiderSeleccionado =>
         auditoresDisponibles.FirstOrDefault(x => GetAuditorKey(x) == model.AuditorLiderId);
 
     private class LineaVm
     {
         public string Nombre { get; set; } = "";
+
+        public string? ReclamosAuditoriasPasadas { get; set; }
+        public string? ResultadosAuditoriasInternasPrevias { get; set; }
+        public string? SeguimientoAccionesCorrectivasIatf { get; set; }
+        public string? ClausulasIatfTop3NcmMayoresPasadas { get; set; }
+        public string? ClausulasIatfTop3NcmMenoresPasadas { get; set; }
+    }
+
+    private class ProcesoRefVm
+    {
+        public int ProcesoId { get; set; }
+        public string Codigo { get; set; } = "";
+        public string Nombre { get; set; } = "";
     }
 
     private class ProcesoSeleccionVm
     {
-        public int ProcesoId { get; set; }
+        public List<ProcesoRefVm> Procesos { get; set; } = new();
         public int? UnidadNegocioId { get; set; }
-        public string Codigo { get; set; } = "";
-        public string Nombre { get; set; } = "";
         public string? UnidadCodigo { get; set; }
         public string? UnidadNombre { get; set; }
         public bool Seleccionado { get; set; } = true;
 
         public string AuditadoId { get; set; } = "";
+        public string AuditadoBusqueda { get; set; } = "";
+        public bool MostrarAuditadoOpciones { get; set; }
 
         public List<LineaVm> Lineas { get; set; } = new() { new LineaVm() };
 
@@ -429,7 +736,10 @@ else
         public string? ClausulasIatfTop3NcmMayoresPasadas { get; set; }
         public string? ClausulasIatfTop3NcmMenoresPasadas { get; set; }
 
-        public string Llave => $"{ProcesoId}_{UnidadNegocioId?.ToString() ?? "0"}";
+        public string Codigo => string.Join(" / ", Procesos.Select(x => x.Codigo));
+        public string Nombre => string.Join(" / ", Procesos.Select(x => x.Nombre));
+
+        public string Llave => $"{string.Join("-", Procesos.Select(x => x.ProcesoId))}_{UnidadNegocioId?.ToString() ?? "0"}";
     }
 
     protected override async Task OnInitializedAsync()
@@ -466,7 +776,7 @@ else
         meaxUsers = await Db.MeaxAllUsers
             .AsNoTracking()
             .Where(u => !string.IsNullOrEmpty(u.pc_login_id))
-            .OrderBy(u => u.username)
+            .OrderBy(u => u.username ?? u.pc_login_id)
             .ToListAsync();
     }
 
@@ -479,18 +789,27 @@ else
             .OrderBy(p => p.Codigo)
             .ToListAsync();
 
-        var procesoProduccion = procesos.FirstOrDefault(p => p.Codigo == "MX-7000-D1");
+        var unidades = await Db.UnidadesNegocio
+            .Where(u => u.Activo)
+            .OrderBy(u => u.Codigo)
+            .ToListAsync();
+
+        // Un proceso se expande por unidad de negocio si el catálogo tiene unidades
+        // capturadas contra él (p.ej. "MX-7000-D1 / MX-6000-D1 - PRODUCCIÓN / CALIDAD PROCESO").
+        // El resto son procesos generales de un solo registro.
+        var idsPorUnidad = unidades.Select(u => u.ProcesoId).ToHashSet();
 
         foreach (var p in procesos)
         {
-            if (procesoProduccion is not null && p.ProcesoId == procesoProduccion.ProcesoId)
+            if (idsPorUnidad.Contains(p.ProcesoId))
                 continue;
 
             procesosDisponibles.Add(new ProcesoSeleccionVm
             {
-                ProcesoId = p.ProcesoId,
-                Codigo = p.Codigo,
-                Nombre = p.Nombre,
+                Procesos = new List<ProcesoRefVm>
+                {
+                    new() { ProcesoId = p.ProcesoId, Codigo = p.Codigo, Nombre = p.Nombre }
+                },
                 UnidadNegocioId = null,
                 UnidadCodigo = null,
                 UnidadNombre = null,
@@ -498,20 +817,18 @@ else
             });
         }
 
-        if (procesoProduccion is not null)
+        foreach (var procesoUnidad in procesos.Where(p => idsPorUnidad.Contains(p.ProcesoId)))
         {
-            var unidades = await Db.UnidadesNegocio
-                .Where(u => u.ProcesoId == procesoProduccion.ProcesoId && u.Activo)
-                .OrderBy(u => u.Codigo)
-                .ToListAsync();
+            var refs = new List<ProcesoRefVm>
+            {
+                new() { ProcesoId = procesoUnidad.ProcesoId, Codigo = procesoUnidad.Codigo, Nombre = procesoUnidad.Nombre }
+            };
 
-            foreach (var u in unidades)
+            foreach (var u in unidades.Where(u => u.ProcesoId == procesoUnidad.ProcesoId))
             {
                 procesosDisponibles.Add(new ProcesoSeleccionVm
                 {
-                    ProcesoId = procesoProduccion.ProcesoId,
-                    Codigo = procesoProduccion.Codigo,
-                    Nombre = procesoProduccion.Nombre,
+                    Procesos = refs,
                     UnidadNegocioId = u.UnidadNegocioId,
                     UnidadCodigo = u.Codigo,
                     UnidadNombre = u.Nombre,
@@ -539,16 +856,244 @@ else
         return $"{a.Nombre} ({login}) - {a.Tipo}";
     }
 
+    private string GetMeaxUserDisplay(MeaxAllUser u)
+    {
+        var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username;
+        var depto = string.IsNullOrWhiteSpace(u.department) ? "" : $" - {u.department}";
+        return $"{nombre} ({u.pc_login_id}){depto}";
+    }
+
+    private bool EstaExpandido(ProcesoSeleccionVm p) =>
+        procesosExpandidos.Contains(p.Llave);
+
+    private void ToggleExpandido(ProcesoSeleccionVm p)
+    {
+        if (!procesosExpandidos.Add(p.Llave))
+            procesosExpandidos.Remove(p.Llave);
+    }
+
+    private void ExpandirSeleccionados()
+    {
+        procesosExpandidos.Clear();
+
+        foreach (var p in procesosDisponibles.Where(x => x.Seleccionado))
+            procesosExpandidos.Add(p.Llave);
+    }
+
+    private void ColapsarTodos() =>
+        procesosExpandidos.Clear();
+
+    private void ExpandirGrupo(bool esProduccion)
+    {
+        foreach (var p in procesosDisponibles.Where(x => x.EsProduccion == esProduccion && x.Seleccionado))
+            procesosExpandidos.Add(p.Llave);
+    }
+
+    private void ColapsarGrupo(bool esProduccion)
+    {
+        foreach (var p in procesosDisponibles.Where(x => x.EsProduccion == esProduccion))
+            procesosExpandidos.Remove(p.Llave);
+    }
+
+    private void CambiarSeleccion(ProcesoSeleccionVm p, ChangeEventArgs e)
+    {
+        var seleccionado = false;
+
+        if (e.Value is bool b)
+            seleccionado = b;
+        else
+            bool.TryParse(e.Value?.ToString(), out seleccionado);
+
+        p.Seleccionado = seleccionado;
+
+        if (seleccionado)
+            procesosExpandidos.Add(p.Llave);
+        else
+            procesosExpandidos.Remove(p.Llave);
+    }
+
+    private void SeleccionarGrupo(bool esProduccion, bool seleccionado)
+    {
+        foreach (var p in procesosDisponibles.Where(x => x.EsProduccion == esProduccion))
+        {
+            p.Seleccionado = seleccionado;
+
+            if (seleccionado)
+                procesosExpandidos.Add(p.Llave);
+            else
+                procesosExpandidos.Remove(p.Llave);
+        }
+    }
+
+    private int GetLineasValidas(ProcesoSeleccionVm p) =>
+        p.Lineas.Count(l => !string.IsNullOrWhiteSpace(l.Nombre));
+
+    private int GetTotalRegistros(ProcesoSeleccionVm p) =>
+        (p.EsProduccion ? Math.Max(1, GetLineasValidas(p)) : 1) * p.Procesos.Count;
+
+    private MeaxAllUser? BuscarAuditado(string? valor) =>
+        string.IsNullOrWhiteSpace(valor)
+            ? null
+            : meaxUsers.FirstOrDefault(x =>
+                string.Equals(x.pc_login_id, valor, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(x.username, valor, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<MeaxAllUser> ObtenerAuditadosFiltrados(ProcesoSeleccionVm p)
+    {
+        var texto = (p.AuditadoBusqueda ?? "").Trim();
+
+        IEnumerable<MeaxAllUser> query = meaxUsers;
+
+        if (!string.IsNullOrWhiteSpace(texto))
+        {
+            query = query.Where(u =>
+                (!string.IsNullOrWhiteSpace(u.pc_login_id) && u.pc_login_id.Contains(texto, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(u.username) && u.username.Contains(texto, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(u.email) && u.email.Contains(texto, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(u.department) && u.department.Contains(texto, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return query.Take(8);
+    }
+
+    private void MostrarOpcionesAuditado(ProcesoSeleccionVm p)
+    {
+        foreach (var item in procesosDisponibles)
+            item.MostrarAuditadoOpciones = false;
+
+        p.MostrarAuditadoOpciones = true;
+    }
+
+    private void ToggleOpcionesAuditado(ProcesoSeleccionVm p)
+    {
+        var abrir = !p.MostrarAuditadoOpciones;
+
+        foreach (var item in procesosDisponibles)
+            item.MostrarAuditadoOpciones = false;
+
+        p.MostrarAuditadoOpciones = abrir;
+    }
+
+    private void BuscarAuditadoEnProceso(ProcesoSeleccionVm p, ChangeEventArgs e)
+    {
+        p.AuditadoBusqueda = e.Value?.ToString() ?? "";
+        MostrarOpcionesAuditado(p);
+    }
+
+    private static List<string> ObtenerAuditadoIds(ProcesoSeleccionVm p) =>
+        (p.AuditadoId ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private MeaxAllUser? BuscarAuditadoExacto(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return null;
+
+        var texto = valor.Trim();
+
+        return meaxUsers.FirstOrDefault(x =>
+            string.Equals(x.pc_login_id, texto, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.username, texto, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.email, texto, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void SeleccionarAuditado(ProcesoSeleccionVm p, MeaxAllUser u)
+    {
+        if (string.IsNullOrWhiteSpace(u.pc_login_id))
+            return;
+
+        var actuales = ObtenerAuditadoIds(p);
+
+        if (!actuales.Contains(u.pc_login_id, StringComparer.OrdinalIgnoreCase))
+        {
+            actuales.Add(u.pc_login_id);
+            p.AuditadoId = string.Join(",", actuales);
+        }
+
+        p.AuditadoBusqueda = "";
+        p.MostrarAuditadoOpciones = false;
+    }
+
+    private void QuitarAuditado(ProcesoSeleccionVm p, string loginId)
+    {
+        var actuales = ObtenerAuditadoIds(p);
+        actuales.RemoveAll(x => string.Equals(x, loginId, StringComparison.OrdinalIgnoreCase));
+        p.AuditadoId = string.Join(",", actuales);
+    }
+
+    private void LimpiarAuditado(ProcesoSeleccionVm p)
+    {
+        p.AuditadoId = "";
+        p.AuditadoBusqueda = "";
+        p.MostrarAuditadoOpciones = false;
+    }
+
+    private string GetAuditadoOptionTitle(MeaxAllUser u) =>
+        string.IsNullOrWhiteSpace(u.username) ? (u.pc_login_id ?? "") : u.username!;
+
+    private string GetAuditadoOptionMeta(MeaxAllUser u)
+    {
+        var login = string.IsNullOrWhiteSpace(u.pc_login_id) ? "" : u.pc_login_id;
+        var depto = string.IsNullOrWhiteSpace(u.department) ? "" : $" - {u.department}";
+        var puesto = string.IsNullOrWhiteSpace(u.position) ? "" : $" | {u.position}";
+        return $"{login}{depto}{puesto}";
+    }
+
+    private string GetNombreAuditado(string loginId)
+    {
+        var usuario = BuscarAuditado(loginId);
+
+        if (usuario is null)
+            return loginId;
+
+        var nombre = string.IsNullOrWhiteSpace(usuario.username)
+            ? usuario.pc_login_id
+            : usuario.username;
+
+        if (!string.IsNullOrWhiteSpace(usuario.pc_login_id) &&
+            !string.Equals(nombre, usuario.pc_login_id, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{nombre} ({usuario.pc_login_id})";
+        }
+
+        return nombre ?? loginId;
+    }
+
+    private string GetAuditadoTexto(ProcesoSeleccionVm p)
+    {
+        var ids = ObtenerAuditadoIds(p);
+
+        return ids.Count == 0
+            ? "Sin capturar"
+            : string.Join(", ", ids.Select(GetNombreAuditado));
+    }
+
+    private string? ResolverAuditadoId(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return null;
+
+        // Ya vienen como logins resueltos (separados por coma) desde la selección en pantalla.
+        return valor.Trim();
+    }
+
     private void SeleccionarTodos()
     {
         foreach (var item in procesosDisponibles)
+        {
             item.Seleccionado = true;
+            procesosExpandidos.Add(item.Llave);
+        }
     }
 
     private void DeseleccionarTodos()
     {
         foreach (var item in procesosDisponibles)
             item.Seleccionado = false;
+
+        procesosExpandidos.Clear();
     }
 
     private static string? LimpiarTexto(string? valor) =>
@@ -599,59 +1144,36 @@ else
 
             foreach (var p in seleccionados)
             {
-                var auditadoId = LimpiarTexto(p.AuditadoId);
-                var camposContexto = new
-                {
-                    ReclamosAuditoriasPasadas = LimpiarTexto(p.ReclamosAuditoriasPasadas),
-                    ResultadosAuditoriasInternasPrevias = LimpiarTexto(p.ResultadosAuditoriasInternasPrevias),
-                    SeguimientoAccionesCorrectivasIatf = LimpiarTexto(p.SeguimientoAccionesCorrectivasIatf),
-                    ClausulasIatfTop3NcmMayoresPasadas = LimpiarTexto(p.ClausulasIatfTop3NcmMayoresPasadas),
-                    ClausulasIatfTop3NcmMenoresPasadas = LimpiarTexto(p.ClausulasIatfTop3NcmMenoresPasadas)
-                };
+                var auditadoId = ResolverAuditadoId(p.AuditadoId);
 
                 if (p.EsProduccion)
                 {
                     var lineasValidas = p.Lineas
-                        .Select(l => l.Nombre.Trim())
-                        .Where(n => !string.IsNullOrEmpty(n))
+                        .Where(l => !string.IsNullOrWhiteSpace(l.Nombre))
                         .ToList();
 
-                    if (lineasValidas.Count == 0)
+                    var lineasAProcesar = lineasValidas.Count == 0
+                        ? new List<LineaVm> { p.Lineas.FirstOrDefault() ?? new LineaVm() }
+                        : lineasValidas;
+
+                    foreach (var procesoRef in p.Procesos)
                     {
-                        auditoriaProcesos.Add(new AuditoriaProceso
-                        {
-                            AuditoriaId = auditoriaId,
-                            ProcesoId = p.ProcesoId,
-                            UnidadNegocioId = p.UnidadNegocioId,
-                            AuditorAsignadoId = "",
-                            AuditadoId = auditadoId,
-                            LineaNombre = "",
-                            FechaProgramada = null,
-                            ReclamosAuditoriasPasadas = camposContexto.ReclamosAuditoriasPasadas,
-                            ResultadosAuditoriasInternasPrevias = camposContexto.ResultadosAuditoriasInternasPrevias,
-                            SeguimientoAccionesCorrectivasIatf = camposContexto.SeguimientoAccionesCorrectivasIatf,
-                            ClausulasIatfTop3NcmMayoresPasadas = camposContexto.ClausulasIatfTop3NcmMayoresPasadas,
-                            ClausulasIatfTop3NcmMenoresPasadas = camposContexto.ClausulasIatfTop3NcmMenoresPasadas
-                        });
-                    }
-                    else
-                    {
-                        foreach (var linea in lineasValidas)
+                        foreach (var linea in lineasAProcesar)
                         {
                             auditoriaProcesos.Add(new AuditoriaProceso
                             {
                                 AuditoriaId = auditoriaId,
-                                ProcesoId = p.ProcesoId,
+                                ProcesoId = procesoRef.ProcesoId,
                                 UnidadNegocioId = p.UnidadNegocioId,
                                 AuditorAsignadoId = "",
                                 AuditadoId = auditadoId,
-                                LineaNombre = linea,
+                                LineaNombre = lineasValidas.Count == 0 ? "" : linea.Nombre.Trim(),
                                 FechaProgramada = null,
-                                ReclamosAuditoriasPasadas = camposContexto.ReclamosAuditoriasPasadas,
-                                ResultadosAuditoriasInternasPrevias = camposContexto.ResultadosAuditoriasInternasPrevias,
-                                SeguimientoAccionesCorrectivasIatf = camposContexto.SeguimientoAccionesCorrectivasIatf,
-                                ClausulasIatfTop3NcmMayoresPasadas = camposContexto.ClausulasIatfTop3NcmMayoresPasadas,
-                                ClausulasIatfTop3NcmMenoresPasadas = camposContexto.ClausulasIatfTop3NcmMenoresPasadas
+                                ReclamosAuditoriasPasadas = LimpiarTexto(linea.ReclamosAuditoriasPasadas),
+                                ResultadosAuditoriasInternasPrevias = LimpiarTexto(linea.ResultadosAuditoriasInternasPrevias),
+                                SeguimientoAccionesCorrectivasIatf = LimpiarTexto(linea.SeguimientoAccionesCorrectivasIatf),
+                                ClausulasIatfTop3NcmMayoresPasadas = LimpiarTexto(linea.ClausulasIatfTop3NcmMayoresPasadas),
+                                ClausulasIatfTop3NcmMenoresPasadas = LimpiarTexto(linea.ClausulasIatfTop3NcmMenoresPasadas)
                             });
                         }
                     }
@@ -661,17 +1183,17 @@ else
                     auditoriaProcesos.Add(new AuditoriaProceso
                     {
                         AuditoriaId = auditoriaId,
-                        ProcesoId = p.ProcesoId,
+                        ProcesoId = p.Procesos[0].ProcesoId,
                         UnidadNegocioId = null,
                         AuditorAsignadoId = "",
                         AuditadoId = auditadoId,
                         LineaNombre = null,
                         FechaProgramada = null,
-                        ReclamosAuditoriasPasadas = camposContexto.ReclamosAuditoriasPasadas,
-                        ResultadosAuditoriasInternasPrevias = camposContexto.ResultadosAuditoriasInternasPrevias,
-                        SeguimientoAccionesCorrectivasIatf = camposContexto.SeguimientoAccionesCorrectivasIatf,
-                        ClausulasIatfTop3NcmMayoresPasadas = camposContexto.ClausulasIatfTop3NcmMayoresPasadas,
-                        ClausulasIatfTop3NcmMenoresPasadas = camposContexto.ClausulasIatfTop3NcmMenoresPasadas
+                        ReclamosAuditoriasPasadas = LimpiarTexto(p.ReclamosAuditoriasPasadas),
+                        ResultadosAuditoriasInternasPrevias = LimpiarTexto(p.ResultadosAuditoriasInternasPrevias),
+                        SeguimientoAccionesCorrectivasIatf = LimpiarTexto(p.SeguimientoAccionesCorrectivasIatf),
+                        ClausulasIatfTop3NcmMayoresPasadas = LimpiarTexto(p.ClausulasIatfTop3NcmMayoresPasadas),
+                        ClausulasIatfTop3NcmMenoresPasadas = LimpiarTexto(p.ClausulasIatfTop3NcmMenoresPasadas)
                     });
                 }
             }

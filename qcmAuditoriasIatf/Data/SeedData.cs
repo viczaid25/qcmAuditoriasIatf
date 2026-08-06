@@ -7,6 +7,12 @@ public static class SeedData
 {
     public static async Task SeedAsync(ApplicationDbContext db)
     {
+        // El seed solo debe correr una vez, para inicializar un catálogo vacío.
+        // Si ya hay procesos (por poco que sea), es porque el catálogo ya lo administran
+        // los usuarios: no se debe volver a insertar ni reactivar nada en cada arranque.
+        if (await db.Procesos.AnyAsync())
+            return;
+
         // ===== PROCESOS (upsert por Codigo) =====
         var procesos = new List<(string Codigo, string Nombre)>
         {
@@ -19,8 +25,7 @@ public static class SeedData
             ("MX-7100-D1","PLANEACIÓN DE LA PRODUCCIÓN"),
             ("MX-4000-D1","COMPRAS / SELECCIÓN Y DESARROLLO DE PROVEEDORES"),
             ("MX-9000-D1","RECIBO, ALMACENAJE, SURTIMIENTO, PRODUCTO TERMINADO Y EMBARQUES"),
-            ("MX-6000-D1","CALIDAD PROCESO"),
-            ("MX-7000-D1","PRODUCCIÓN"),
+            ("MX-7000-D1 / MX-6000-D1","PRODUCCIÓN / CALIDAD PROCESO"),
             ("MX-8000-D1","INGENIERIA"),
             ("MX-6300-D1","CALIDAD PROVEEDORES"),
             ("MX-6500-D1","GESTION DE CAMBIOS"),
@@ -53,8 +58,8 @@ public static class SeedData
 
         await db.SaveChangesAsync();
 
-        // ===== UNIDADES DE NEGOCIO (solo para PRODUCCIÓN) =====
-        var prod = await db.Procesos.FirstOrDefaultAsync(x => x.Codigo == "MX-7000-D1");
+        // ===== UNIDADES DE NEGOCIO (solo para PRODUCCIÓN / CALIDAD PROCESO) =====
+        var prod = await db.Procesos.FirstOrDefaultAsync(x => x.Codigo == "MX-7000-D1 / MX-6000-D1");
         if (prod != null)
         {
             var unidades = new List<(string Codigo, string Nombre)>

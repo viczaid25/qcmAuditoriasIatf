@@ -85,8 +85,8 @@
                 <div class="panel-count">@lista.Count registro(s)</div>
             </div>
 
-            <div class="table-wrap">
-                <table class="auditorias-table">
+            <div class="mo-table-wrap" data-mo-table data-page-size="10">
+                <table class="mo-table">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -96,11 +96,19 @@
                             <th>Estatus</th>
                             <th class="text-end">Acción</th>
                         </tr>
+                        <tr class="mo-table-filter-row">
+                            <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                            <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                            <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
+                            <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
+                            <th><input class="mo-th-filter" data-mo-filter-col="4" placeholder="Filtrar…"></th>
+                            <th></th>
+                        </tr>
                     </thead>
                     <tbody>
                         @foreach (var a in lista)
                         {
-                            <tr>
+                            <tr @key="a.AuditoriaId">
                                 <td>
                                     <span class="id-pill">#@a.AuditoriaId</span>
                                 </td>
@@ -125,6 +133,7 @@
                     </tbody>
                 </table>
             </div>
+            <div class="mo-table-pagination" data-mo-pagination></div>
         </section>
     }
 </div>
