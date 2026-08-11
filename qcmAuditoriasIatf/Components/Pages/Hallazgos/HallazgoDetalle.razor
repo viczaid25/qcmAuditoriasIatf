@@ -170,11 +170,6 @@ else
 
                 <div class="summary-stack">
                     <div class="summary-item">
-                        <span>Responsable</span>
-                        <strong>@MostrarPersona(hallazgo.ResponsableId)</strong>
-                    </div>
-
-                    <div class="summary-item">
                         <span>Responsable de cierre</span>
                         <strong>@MostrarPersona(hallazgo.ResponsableCierreId, "Sin asignar")</strong>
                     </div>
@@ -191,11 +186,6 @@ else
                             <strong>@MostrarPersona(SegundoAuditorId, "Sin asignar")</strong>
                         </div>
                     }
-
-                    <div class="summary-item">
-                        <span>Creado por</span>
-                        <strong>@MostrarPersona(hallazgo.CreadoPorId, "No registrado")</strong>
-                    </div>
 
                     <div class="summary-item">
                         <span>Fecha creación</span>
@@ -316,6 +306,8 @@ else
                         </div>
                     }
 
+                    @if (!CincoPorQueAprobado)
+                    {
                     @if (!UsuarioActualEsResponsableCierre)
                     {
                         <div class="alert alert-warning mt-3">
@@ -447,6 +439,7 @@ else
                             </button>
                         </div>
                     </div>
+                    }
                 </div>
 
                 <div class="panel-card">
@@ -569,7 +562,7 @@ else
                                     @ev.FechaCarga.ToString("yyyy-MM-dd HH:mm") · @MostrarPersona(ev.UsuarioId, ev.UsuarioId)
                                 </span>
 
-                                @if (UsuarioActualEsResponsableCierre)
+                                @if (UsuarioActualEsResponsableCierre && !HallazgoCerrado)
                                 {
                                     <button type="button"
                                             class="mo-btn mo-btn-danger-outline mo-btn-sm"
@@ -715,6 +708,9 @@ else
         hallazgo is not null &&
         !string.IsNullOrWhiteSpace(hallazgo.ResponsableCierreId) &&
         NormalizarLogin(usuarioActualId) == NormalizarLogin(hallazgo.ResponsableCierreId);
+
+    private bool HallazgoCerrado =>
+        hallazgo is not null && string.Equals(hallazgo.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase);
 
     private bool HallazgoLiberadoPorSgc =>
         string.IsNullOrWhiteSpace(hallazgo?.EstatusValidacionSgc) ||
@@ -1169,7 +1165,7 @@ else
 
     private async Task EliminarEvidencia(int evidenciaId)
     {
-        if (subiendoEvidencia || !UsuarioActualEsResponsableCierre)
+        if (subiendoEvidencia || !UsuarioActualEsResponsableCierre || HallazgoCerrado)
             return;
 
         evidenciaErrorMsg = null;
