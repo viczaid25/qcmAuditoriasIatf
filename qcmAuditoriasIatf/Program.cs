@@ -18,6 +18,11 @@ builder.Services.Configure<ActiveDirectoryOptions>(
 
 builder.Services.AddScoped<ActiveDirectoryService>();
 
+builder.Services.Configure<EmailOptions>(
+    builder.Configuration.GetSection("EmailSettings"));
+
+builder.Services.AddScoped<EmailService>();
+
 builder.Services.AddRazorPages();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

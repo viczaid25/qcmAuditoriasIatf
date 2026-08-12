@@ -68,4 +68,13 @@ public class Hallazgo
     [StringLength(2000)]
     public string? ComentarioRevisionSgc { get; set; }
 
+    public bool VerificadoQms { get; set; } = false;
+
+    [StringLength(100)]
+    public string? VerificadoPorId { get; set; }
+
+    public DateTime? FechaVerificacionQms { get; set; }
+
+    [StringLength(2000)]
+    public string? ComentarioVerificacionQms { get; set; }
 }

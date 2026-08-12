@@ -6,12 +6,14 @@
 @using qcmAuditoriasIatf.Models.Evidencias
 @using qcmAuditoriasIatf.Models.Hallazgos
 @using qcmAuditoriasIatf.Models.External
+@using qcmAuditoriasIatf.Services
 @using System.Security.Claims
 @using System.Text.Json
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IWebHostEnvironment Env
+@inject EmailService EmailSvc
 
 @attribute [Authorize]
 
@@ -1151,6 +1153,7 @@ else
             });
 
             await Db.SaveChangesAsync();
+            await NotificarEvidenciaAsync(archivosSubidos);
             await CargarEvidencias();
         }
         catch (Exception ex)
@@ -1160,6 +1163,36 @@ else
         finally
         {
             subiendoEvidencia = false;
+        }
+    }
+
+    private async Task NotificarEvidenciaAsync(int archivosSubidos)
+    {
+        try
+        {
+            if (hallazgo is null)
+                return;
+
+            var auditores = await EmailSvc.ResolverAuditoresAsync(hallazgo.AuditoriaProceso);
+            var link = $"{Nav.BaseUri}auditorias/{auditoriaId}/hallazgos/{hallazgoId}";
+
+            var cuerpo = $@"
+                <p>Se adjuntaron {archivosSubidos} archivo(s) de evidencia de la solución del hallazgo #{hallazgoId} (auditoría #{auditoriaId}).</p>
+                <ul>
+                    <li><b>Descripción:</b> {hallazgo.Descripcion}</li>
+                    <li><b>Subido por:</b> {usuarioActualId}</li>
+                </ul>
+                <p><a href=""{link}"">Ver hallazgo</a></p>";
+
+            await EmailSvc.EnviarAsync(
+                new[] { EmailService.QmsEmail },
+                auditores,
+                $"Evidencia adjuntada - Hallazgo #{hallazgoId}",
+                cuerpo);
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear la carga de evidencia.
         }
     }
 
@@ -1225,6 +1258,7 @@ else
             });
 
             await Db.SaveChangesAsync();
+            await NotificarCierreAsync();
             await CargarPantalla();
         }
         catch (Exception ex)
@@ -1234,6 +1268,36 @@ else
         finally
         {
             guardando = false;
+        }
+    }
+
+    private async Task NotificarCierreAsync()
+    {
+        try
+        {
+            if (hallazgo is null)
+                return;
+
+            var auditores = await EmailSvc.ResolverAuditoresAsync(hallazgo.AuditoriaProceso);
+            var link = $"{Nav.BaseUri}auditorias/{auditoriaId}/hallazgos/{hallazgoId}";
+
+            var cuerpo = $@"
+                <p>Se cerró el hallazgo #{hallazgoId} de la auditoría #{auditoriaId}.</p>
+                <ul>
+                    <li><b>Descripción:</b> {hallazgo.Descripcion}</li>
+                    <li><b>Cerrado por:</b> {usuarioActualId}</li>
+                </ul>
+                <p><a href=""{link}"">Ver hallazgo</a></p>";
+
+            await EmailSvc.EnviarAsync(
+                new[] { EmailService.QmsEmail },
+                auditores,
+                $"Hallazgo cerrado - #{hallazgoId}",
+                cuerpo);
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear el cierre del hallazgo.
         }
     }
 

@@ -6,10 +6,12 @@
 @using qcmAuditoriasIatf.Models.Catalogos
 @using qcmAuditoriasIatf.Models.External
 @using qcmAuditoriasIatf.Models.Hallazgos
+@using qcmAuditoriasIatf.Services
 @using System.Security.Claims
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
+@inject EmailService EmailSvc
 
 @attribute [Authorize]
 
@@ -536,6 +538,8 @@ else
 
             await Db.SaveChangesAsync();
 
+            await NotificarCreacionAsync(hallazgo);
+
             Nav.NavigateTo($"auditorias/{auditoriaId}/procesos/{auditoriaProcesoId}/checklist");
         }
         catch (Exception ex)
@@ -545,6 +549,37 @@ else
         finally
         {
             guardando = false;
+        }
+    }
+
+    private async Task NotificarCreacionAsync(Hallazgo hallazgo)
+    {
+        try
+        {
+            var auditores = await EmailSvc.ResolverAuditoresAsync(ap);
+            var link = $"{Nav.BaseUri}auditorias/{auditoriaId}/hallazgos/{hallazgo.HallazgoId}";
+
+            var cuerpo = $@"
+                <p>Se registró un nuevo hallazgo en Auditorías IATF.</p>
+                <ul>
+                    <li><b>Auditoría:</b> #{auditoriaId}</li>
+                    <li><b>Proceso:</b> {ap?.Proceso?.Codigo} - {ap?.Proceso?.Nombre}</li>
+                    <li><b>Descripción:</b> {hallazgo.Descripcion}</li>
+                    <li><b>Responsable:</b> {hallazgo.ResponsableId}</li>
+                    <li><b>Responsable de cierre:</b> {hallazgo.ResponsableCierreId}</li>
+                    <li><b>Creado por:</b> {usuarioActualId}</li>
+                </ul>
+                <p><a href=""{link}"">Ver hallazgo</a></p>";
+
+            await EmailSvc.EnviarAsync(
+                new[] { EmailService.QmsEmail },
+                auditores,
+                $"Nuevo hallazgo registrado - Auditoría #{auditoriaId}",
+                cuerpo);
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear el registro del hallazgo.
         }
     }
 

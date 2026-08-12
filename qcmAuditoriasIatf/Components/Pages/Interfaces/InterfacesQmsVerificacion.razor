@@ -1,0 +1,672 @@
+@page "/interfaces/qms/verificacion-hallazgos"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Evidencias
+@using qcmAuditoriasIatf.Models.Hallazgos
+@using qcmAuditoriasIatf.Services
+@using System.Security.Claims
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+@inject IWebHostEnvironment Env
+@inject EmailService EmailSvc
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="interfaces-loading">
+        <div class="interfaces-skeleton interfaces-skeleton-hero"></div>
+        <div class="interfaces-metrics">
+            <div class="interfaces-skeleton interfaces-skeleton-card"></div>
+            <div class="interfaces-skeleton interfaces-skeleton-card"></div>
+            <div class="interfaces-skeleton interfaces-skeleton-card"></div>
+        </div>
+        <div class="interfaces-skeleton interfaces-skeleton-table"></div>
+    </div>
+}
+else if (!usuarioEsSgc)
+{
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">Acceso restringido</div>
+            <div class="empty-text">
+                Esta bandeja es exclusiva para usuarios del equipo QMS/SGC.
+            </div>
+
+            <button type="button" class="hero-btn primary mt-3" @onclick="IrInicio">
+                Volver al inicio
+            </button>
+        </div>
+    </section>
+}
+else
+{
+    <div class="interfaces-page">
+        <section class="interfaces-hero">
+            <div>
+                <span class="interfaces-kicker">Interfaces · Verificación QMS</span>
+                <h1>Verificación de hallazgos</h1>
+
+                <div class="interfaces-meta">
+                    <span class="meta-chip">
+                        Usuario:
+                        <strong>@usuarioActualId</strong>
+                    </span>
+
+                    <span class="meta-chip">
+                        Pendientes de verificación:
+                        <strong>@pendientes.Count</strong>
+                    </span>
+                </div>
+
+                <p class="hero-text">
+                    Revisa los hallazgos ya cerrados por el responsable, adjunta evidencia de verificación y márcalos como verificados.
+                </p>
+            </div>
+
+            <div class="hero-actions">
+                <button type="button" class="hero-btn" @onclick="IrInicio">
+                    Volver
+                </button>
+            </div>
+        </section>
+
+        <section class="interfaces-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Pendientes de verificación</div>
+                <div class="metric-value">@pendientes.Count</div>
+                <div class="metric-note">Hallazgos cerrados esperando verificación QMS</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Verificados</div>
+                <div class="metric-value">@totalVerificados</div>
+                <div class="metric-note">Confirmados como cierre satisfactorio</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Recientes</div>
+                <div class="metric-value">@verificados.Count</div>
+                <div class="metric-note">Últimos verificados por QMS</div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Hallazgos cerrados pendientes de verificación</h2>
+                    <p class="panel-subtitle">Confirma que el cierre del responsable fue satisfactorio.</p>
+                </div>
+
+                <span class="panel-badge">@pendientes.Count pendiente(s)</span>
+            </div>
+
+            @if (pendientes.Count == 0)
+            {
+                <div class="empty-state compact">
+                    No hay hallazgos cerrados pendientes de verificación.
+                </div>
+            }
+            else
+            {
+                <div class="reviewed-list">
+                    @foreach (var row in pendientes)
+                    {
+                        <div class="reviewed-item" @key="row.HallazgoId">
+                            <div class="reviewed-head">
+                                <div>
+                                    <div class="reviewed-title">Hallazgo #@row.HallazgoId · Auditoría #@row.AuditoriaId</div>
+                                    <div class="reviewed-subtitle">@row.ProcesoTexto</div>
+                                </div>
+
+                                <span class="validacion-pill pending">Pendiente de verificación</span>
+                            </div>
+
+                            <div class="reviewed-body">
+                                <div class="reviewed-text">@row.Descripcion</div>
+
+                                <div class="reviewed-meta">
+                                    <span>Responsable: <strong>@MostrarPersona(row.ResponsableId, row.ResponsableId)</strong></span>
+                                    <span>Responsable de cierre: <strong>@MostrarPersona(row.ResponsableCierreId, "Sin asignar")</strong></span>
+                                    <span>Creado por: <strong>@MostrarPersona(row.CreadoPorId, "No registrado")</strong></span>
+                                </div>
+
+                                <div class="verificacion-evidencia">
+                                    <div class="mini-label">Evidencia de verificación</div>
+
+                                    @if (row.Evidencias.Count == 0)
+                                    {
+                                        <div class="empty-state compact">
+                                            Aún no se ha adjuntado evidencia de verificación.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="evidencia-list">
+                                            @foreach (var ev in row.Evidencias)
+                                            {
+                                                <div class="evidencia-item" @key="ev.EvidenciaId">
+                                                    <a href="@($"evidencias/{ev.EvidenciaId}")" target="_blank" class="evidencia-link">
+                                                        @ev.NombreOriginal
+                                                    </a>
+                                                    <span class="evidencia-meta">
+                                                        @ev.FechaCarga.ToString("yyyy-MM-dd HH:mm")
+                                                    </span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+
+                                    <div class="mt-2">
+                                        <InputFile OnChange="e => SubirEvidenciaVerificacion(row, e)" multiple disabled="@row.SubiendoArchivo" />
+                                        <div class="field-help">Tamaño máximo por archivo: 20 MB.</div>
+
+                                        @if (row.SubiendoArchivo)
+                                        {
+                                            <div class="field-help">Subiendo...</div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="comment-box mt-3">
+                                    <div class="mini-label">Comentario de verificación (opcional)</div>
+                                    <InputTextArea class="mo-form-control review-textarea"
+                                                   @bind-Value="row.ComentarioVerificacionQms"
+                                                   rows="3"
+                                                   disabled="@(guardandoHallazgoId == row.HallazgoId)" />
+                                </div>
+                            </div>
+
+                            <div class="reviewed-actions">
+                                <button type="button" class="table-btn" @onclick="() => VerDetalle(row.AuditoriaId, row.HallazgoId)">
+                                    Ver detalle
+                                </button>
+
+                                <button type="button"
+                                        class="table-btn table-btn-success"
+                                        @onclick="() => VerificarHallazgo(row)"
+                                        disabled="@(guardandoHallazgoId == row.HallazgoId)">
+                                    @(guardandoHallazgoId == row.HallazgoId ? "Guardando..." : "Verificar")
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Últimos hallazgos verificados</h2>
+                    <p class="panel-subtitle">Historial reciente de verificaciones QMS.</p>
+                </div>
+
+                <span class="panel-badge">@verificados.Count reciente(s)</span>
+            </div>
+
+            @if (verificados.Count == 0)
+            {
+                <div class="empty-state compact">
+                    Aún no hay hallazgos verificados por QMS.
+                </div>
+            }
+            else
+            {
+                <div class="reviewed-list">
+                    @foreach (var row in verificados)
+                    {
+                        <div class="reviewed-item" @key="row.HallazgoId">
+                            <div class="reviewed-head">
+                                <div>
+                                    <div class="reviewed-title">Hallazgo #@row.HallazgoId · Auditoría #@row.AuditoriaId</div>
+                                    <div class="reviewed-subtitle">@row.ProcesoTexto</div>
+                                </div>
+
+                                <span class="validacion-pill approved">Verificado</span>
+                            </div>
+
+                            <div class="reviewed-body">
+                                <div class="reviewed-text">@row.Descripcion</div>
+
+                                <div class="reviewed-meta">
+                                    <span>Responsable de cierre: <strong>@MostrarPersona(row.ResponsableCierreId, "Sin asignar")</strong></span>
+                                    <span>Verificó: <strong>@MostrarPersona(row.VerificadoPorId, "—")</strong></span>
+                                    @if (row.FechaVerificacionQms.HasValue)
+                                    {
+                                        <span>Fecha: <strong>@row.FechaVerificacionQms.Value.ToString("yyyy-MM-dd HH:mm")</strong></span>
+                                    }
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(row.ComentarioVerificacionQms))
+                                {
+                                    <div class="comment-box">
+                                        <div class="mini-label">Comentario de verificación</div>
+                                        <div>@row.ComentarioVerificacionQms</div>
+                                    </div>
+                                }
+
+                                @if (row.Evidencias.Count > 0)
+                                {
+                                    <div class="evidencia-list mt-2">
+                                        @foreach (var ev in row.Evidencias)
+                                        {
+                                            <div class="evidencia-item" @key="ev.EvidenciaId">
+                                                <a href="@($"evidencias/{ev.EvidenciaId}")" target="_blank" class="evidencia-link">
+                                                    @ev.NombreOriginal
+                                                </a>
+                                                <span class="evidencia-meta">
+                                                    @ev.FechaCarga.ToString("yyyy-MM-dd HH:mm")
+                                                </span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="reviewed-actions">
+                                <button type="button" class="table-btn" @onclick="() => VerDetalle(row.AuditoriaId, row.HallazgoId)">
+                                    Ver detalle
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool cargando = true;
+    private string? errorMsg;
+    private int? guardandoHallazgoId;
+
+    private string usuarioActualId = "sistema";
+    private bool usuarioEsSgc;
+
+    private int totalVerificados;
+
+    private List<VerificacionRowVm> pendientes = new();
+    private List<VerificacionRowVm> verificados = new();
+
+    private class VerificacionRowVm
+    {
+        public int HallazgoId { get; set; }
+        public int AuditoriaId { get; set; }
+        public string ProcesoTexto { get; set; } = "";
+        public string Descripcion { get; set; } = "";
+        public string ResponsableId { get; set; } = "";
+        public string? ResponsableCierreId { get; set; }
+        public string? CreadoPorId { get; set; }
+        public string? VerificadoPorId { get; set; }
+        public DateTime? FechaVerificacionQms { get; set; }
+        public string? ComentarioVerificacionQms { get; set; }
+        public List<Evidencia> Evidencias { get; set; } = new();
+        public bool SubiendoArchivo { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            await CargarUsuarioActual();
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+        }
+
+        var loginNormalizado = (usuarioActualId ?? "").Trim().ToUpper();
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == loginNormalizado &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
+    }
+
+    private async Task CargarPantalla()
+    {
+        pendientes.Clear();
+        verificados.Clear();
+        personasDisplay.Clear();
+
+        if (!usuarioEsSgc)
+            return;
+
+        totalVerificados = await Db.Hallazgos.CountAsync(h => h.VerificadoQms);
+
+        var pendientesEntity = await Db.Hallazgos
+            .AsNoTracking()
+            .Include(h => h.Proceso)
+            .Where(h => h.Estatus == "Cerrado" && !h.VerificadoQms)
+            .OrderBy(h => h.FechaCreacion)
+            .ThenBy(h => h.HallazgoId)
+            .ToListAsync();
+
+        pendientes = pendientesEntity.Select(MapRow).ToList();
+
+        var verificadosEntity = await Db.Hallazgos
+            .AsNoTracking()
+            .Include(h => h.Proceso)
+            .Where(h => h.VerificadoQms)
+            .OrderByDescending(h => h.FechaVerificacionQms)
+            .ThenByDescending(h => h.HallazgoId)
+            .Take(12)
+            .ToListAsync();
+
+        verificados = verificadosEntity.Select(MapRow).ToList();
+
+        var idsHallazgos = pendientes.Select(x => x.HallazgoId)
+            .Concat(verificados.Select(x => x.HallazgoId))
+            .ToList();
+
+        var evidencias = await Db.Evidencias
+            .AsNoTracking()
+            .Where(e => e.ReferenciaTipo == "VerificacionQms" && idsHallazgos.Contains(e.ReferenciaId))
+            .OrderByDescending(e => e.FechaCarga)
+            .ToListAsync();
+
+        foreach (var row in pendientes.Concat(verificados))
+            row.Evidencias = evidencias.Where(e => e.ReferenciaId == row.HallazgoId).ToList();
+
+        await CargarPersonasDisplay(
+            pendientes.SelectMany(x => new string?[] { x.ResponsableId, x.ResponsableCierreId, x.CreadoPorId })
+                .Concat(verificados.SelectMany(x => new string?[] { x.ResponsableCierreId, x.VerificadoPorId })));
+    }
+
+    private static VerificacionRowVm MapRow(Hallazgo h) => new()
+    {
+        HallazgoId = h.HallazgoId,
+        AuditoriaId = h.AuditoriaId,
+        ProcesoTexto = $"{h.Proceso?.Codigo} - {h.Proceso?.Nombre}",
+        Descripcion = h.Descripcion,
+        ResponsableId = h.ResponsableId,
+        ResponsableCierreId = h.ResponsableCierreId,
+        CreadoPorId = h.CreadoPorId,
+        VerificadoPorId = h.VerificadoPorId,
+        FechaVerificacionQms = h.FechaVerificacionQms,
+        ComentarioVerificacionQms = h.ComentarioVerificacionQms
+    };
+
+    private async Task SubirEvidenciaVerificacion(VerificacionRowVm row, InputFileChangeEventArgs e)
+    {
+        if (row.SubiendoArchivo)
+            return;
+
+        const long maxBytes = 20 * 1024 * 1024;
+        row.SubiendoArchivo = true;
+        errorMsg = null;
+
+        try
+        {
+            var carpeta = Path.Combine(Env.ContentRootPath, "App_Data", "evidencias", "verificacion-qms", row.HallazgoId.ToString());
+            Directory.CreateDirectory(carpeta);
+
+            foreach (var file in e.GetMultipleFiles(10))
+            {
+                if (file.Size > maxBytes)
+                {
+                    errorMsg = $"El archivo \"{file.Name}\" excede el límite de 20 MB y no se subió.";
+                    continue;
+                }
+
+                var nombreArchivo = $"{Guid.NewGuid():N}{Path.GetExtension(file.Name)}";
+                var rutaCompleta = Path.Combine(carpeta, nombreArchivo);
+
+                await using (var origen = file.OpenReadStream(maxAllowedSize: maxBytes))
+                await using (var destino = File.Create(rutaCompleta))
+                {
+                    await origen.CopyToAsync(destino);
+                }
+
+                Db.Evidencias.Add(new Evidencia
+                {
+                    ReferenciaTipo = "VerificacionQms",
+                    ReferenciaId = row.HallazgoId,
+                    RutaArchivo = Path.Combine("verificacion-qms", row.HallazgoId.ToString(), nombreArchivo),
+                    NombreOriginal = file.Name,
+                    TipoArchivo = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                    FechaCarga = DateTime.Now,
+                    UsuarioId = usuarioActualId
+                });
+            }
+
+            await Db.SaveChangesAsync();
+
+            row.Evidencias = await Db.Evidencias
+                .AsNoTracking()
+                .Where(ev => ev.ReferenciaTipo == "VerificacionQms" && ev.ReferenciaId == row.HallazgoId)
+                .OrderByDescending(ev => ev.FechaCarga)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            row.SubiendoArchivo = false;
+        }
+    }
+
+    private async Task VerificarHallazgo(VerificacionRowVm row)
+    {
+        if (guardandoHallazgoId.HasValue) return;
+        errorMsg = null;
+
+        if (!usuarioEsSgc)
+        {
+            errorMsg = "No tienes permisos para verificar hallazgos.";
+            return;
+        }
+
+        guardandoHallazgoId = row.HallazgoId;
+
+        try
+        {
+            var entity = await Db.Hallazgos
+                .Include(h => h.AuditoriaProceso)
+                .FirstOrDefaultAsync(h => h.HallazgoId == row.HallazgoId);
+
+            if (entity is null)
+            {
+                errorMsg = "No se encontró el hallazgo a verificar.";
+                return;
+            }
+
+            if (!string.Equals(entity.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMsg = "Este hallazgo ya no está en estatus Cerrado.";
+                return;
+            }
+
+            if (entity.VerificadoQms)
+            {
+                errorMsg = "Este hallazgo ya fue verificado.";
+                return;
+            }
+
+            var comentario = row.ComentarioVerificacionQms?.Trim();
+
+            entity.VerificadoQms = true;
+            entity.VerificadoPorId = usuarioActualId;
+            entity.FechaVerificacionQms = DateTime.Now;
+            entity.ComentarioVerificacionQms = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = entity.HallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = $"QMS verificó el hallazgo.{(string.IsNullOrWhiteSpace(comentario) ? "" : $" Comentario: {comentario}")}",
+                EstatusNuevo = entity.Estatus
+            });
+
+            await Db.SaveChangesAsync();
+            await NotificarVerificacionAsync(entity, comentario);
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardandoHallazgoId = null;
+        }
+    }
+
+    private async Task NotificarVerificacionAsync(Hallazgo entity, string? comentario)
+    {
+        try
+        {
+            var auditores = await EmailSvc.ResolverAuditoresAsync(entity.AuditoriaProceso);
+            var responsableCierre = await EmailSvc.ResolverEmailAsync(entity.ResponsableCierreId);
+
+            var destinatarios = new List<string>(auditores);
+            if (responsableCierre is not null)
+                destinatarios.Add(responsableCierre);
+
+            var link = $"{Nav.BaseUri}auditorias/{entity.AuditoriaId}/hallazgos/{entity.HallazgoId}";
+            var comentarioHtml = string.IsNullOrWhiteSpace(comentario) ? "" : $"<li><b>Comentario:</b> {comentario}</li>";
+
+            var cuerpo = $@"
+                <p>QMS verificó el cierre del hallazgo #{entity.HallazgoId} de la auditoría #{entity.AuditoriaId}.</p>
+                <ul>
+                    <li><b>Descripción:</b> {entity.Descripcion}</li>
+                    {comentarioHtml}
+                </ul>
+                <p><a href=""{link}"">Ver hallazgo</a></p>";
+
+            await EmailSvc.EnviarAsync(
+                destinatarios,
+                auditores,
+                $"Hallazgo verificado por QMS - #{entity.HallazgoId}",
+                cuerpo);
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear la verificación del hallazgo.
+        }
+    }
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids
+            .Where(x => !personasDisplay.ContainsKey(x))
+            .ToList();
+
+        if (faltantes.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor, string fallback = "Sin asignar")
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return fallback;
+
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
+
+    private void VerDetalle(int auditoriaId, int hallazgoId) =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}");
+
+    private void IrInicio() => Nav.NavigateTo("");
+}

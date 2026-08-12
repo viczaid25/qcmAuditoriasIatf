@@ -3,9 +3,11 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Hallazgos
+@using qcmAuditoriasIatf.Services
 @using System.Security.Claims
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
+@inject EmailService EmailSvc
 
 @attribute [Authorize]
 
@@ -501,6 +503,7 @@ else
             });
 
             await Db.SaveChangesAsync();
+            await NotificarResolucionAsync(entity, aprobado, comentario);
             await CargarPantalla();
         }
         catch (Exception ex)
@@ -510,6 +513,47 @@ else
         finally
         {
             guardandoCincoPorQueId = null;
+        }
+    }
+
+    private async Task NotificarResolucionAsync(HallazgoCincoPorQue entity, bool aprobado, string? comentario)
+    {
+        try
+        {
+            var hallazgo = await Db.Hallazgos
+                .Include(h => h.AuditoriaProceso)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(h => h.HallazgoId == entity.HallazgoId);
+
+            if (hallazgo is null)
+                return;
+
+            var responsableCierre = await EmailSvc.ResolverEmailAsync(hallazgo.ResponsableCierreId);
+            if (responsableCierre is null)
+                return;
+
+            var auditores = await EmailSvc.ResolverAuditoresAsync(hallazgo.AuditoriaProceso);
+            var link = $"{Nav.BaseUri}auditorias/{hallazgo.AuditoriaId}/hallazgos/{hallazgo.HallazgoId}";
+            var resultado = aprobado ? "aprobó" : "rechazó";
+            var comentarioHtml = string.IsNullOrWhiteSpace(comentario) ? "" : $"<li><b>Comentario:</b> {comentario}</li>";
+
+            var cuerpo = $@"
+                <p>SGC {resultado} el análisis de 5 porqués del hallazgo #{hallazgo.HallazgoId} de la auditoría #{hallazgo.AuditoriaId}.</p>
+                <ul>
+                    <li><b>Descripción del hallazgo:</b> {hallazgo.Descripcion}</li>
+                    {comentarioHtml}
+                </ul>
+                <p><a href=""{link}"">Ver hallazgo</a></p>";
+
+            await EmailSvc.EnviarAsync(
+                new[] { responsableCierre },
+                auditores,
+                $"5 porqués {(aprobado ? "aprobados" : "rechazados")} - Hallazgo #{hallazgo.HallazgoId}",
+                cuerpo);
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear la resolución de los 5 porqués.
         }
     }
 

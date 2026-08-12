@@ -173,3 +173,4 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Debug\net8
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Debug\net8.0\System.IO.Packaging.dll
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Procesos\ChecklistPreguntas.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Interfaces\InterfacesSgcCincoPorques.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Interfaces\InterfacesQmsVerificacion.razor.rz.scp.css

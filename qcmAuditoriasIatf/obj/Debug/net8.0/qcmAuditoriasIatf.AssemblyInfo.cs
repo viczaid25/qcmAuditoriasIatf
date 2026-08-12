@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("qcmAuditoriasIatf")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+980de81a26c6667a16d50b7e5d9778248a715252")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b41c06f6e4e2fb304bccbe90a1336015968dc06d")]
 [assembly: System.Reflection.AssemblyProductAttribute("qcmAuditoriasIatf")]
 [assembly: System.Reflection.AssemblyTitleAttribute("qcmAuditoriasIatf")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

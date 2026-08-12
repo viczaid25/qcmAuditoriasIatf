@@ -4,9 +4,11 @@
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Models.Catalogos
 @using qcmAuditoriasIatf.Models.Hallazgos
+@using qcmAuditoriasIatf.Services
 @using System.Security.Claims
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
+@inject EmailService EmailSvc
 
 @attribute [Authorize]
 
@@ -546,6 +548,7 @@ else
         try
         {
             var entity = await Db.Hallazgos
+                .Include(h => h.AuditoriaProceso)
                 .FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId);
 
             if (entity is null)
@@ -585,6 +588,7 @@ else
             });
 
             await Db.SaveChangesAsync();
+            await NotificarResolucionAsync(entity, aprobado, comentario);
             await CargarPantalla();
         }
         catch (Exception ex)
@@ -594,6 +598,42 @@ else
         finally
         {
             guardandoHallazgoId = null;
+        }
+    }
+
+    private async Task NotificarResolucionAsync(Hallazgo entity, bool aprobado, string? comentario)
+    {
+        try
+        {
+            var auditores = await EmailSvc.ResolverAuditoresAsync(entity.AuditoriaProceso);
+            var responsableCierre = await EmailSvc.ResolverEmailAsync(entity.ResponsableCierreId);
+
+            var destinatarios = new List<string>(auditores);
+            if (responsableCierre is not null)
+                destinatarios.Add(responsableCierre);
+
+            var link = $"{Nav.BaseUri}auditorias/{entity.AuditoriaId}/hallazgos/{entity.HallazgoId}";
+            var resultado = aprobado ? "aprobado" : "rechazado";
+            var comentarioHtml = string.IsNullOrWhiteSpace(comentario) ? "" : $"<li><b>Comentario:</b> {comentario}</li>";
+
+            var cuerpo = $@"
+                <p>SGC {resultado} el hallazgo #{entity.HallazgoId} de la auditoría #{entity.AuditoriaId}.</p>
+                <ul>
+                    <li><b>Descripción:</b> {entity.Descripcion}</li>
+                    <li><b>Estatus:</b> {entity.Estatus}</li>
+                    {comentarioHtml}
+                </ul>
+                <p><a href=""{link}"">Ver hallazgo</a></p>";
+
+            await EmailSvc.EnviarAsync(
+                destinatarios,
+                auditores,
+                $"Hallazgo {resultado} por SGC - Auditoría #{entity.AuditoriaId}",
+                cuerpo);
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear la resolución del hallazgo.
         }
     }
 
