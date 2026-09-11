@@ -222,19 +222,19 @@ else
                                     <td>
                                         <div class="desc-cell">@h.Descripcion</div>
 
-                                        @if (!string.IsNullOrWhiteSpace(h.JustificacionNoConformidad))
-                                        {
-                                            <div class="evidencia-box">
-                                                <div class="mini-label">Justificación de la NC</div>
-                                                <div>@h.JustificacionNoConformidad</div>
-                                            </div>
-                                        }
-
                                         @if (!string.IsNullOrWhiteSpace(h.Evidencia))
                                         {
                                             <div class="evidencia-box">
                                                 <div class="mini-label">Evidencia inicial</div>
                                                 <div>@h.Evidencia</div>
+                                            </div>
+                                        }
+
+                                        @if (!string.IsNullOrWhiteSpace(h.JustificacionNoConformidad))
+                                        {
+                                            <div class="evidencia-box">
+                                                <div class="mini-label">Justificación de la NC</div>
+                                                <div>@h.JustificacionNoConformidad</div>
                                             </div>
                                         }
                                     </td>
@@ -421,6 +421,7 @@ else
         var q = Db.Hallazgos
             .Include(h => h.Proceso)
             .Include(h => h.Clausula)
+            .Include(h => h.Pregunta)
             .Include(h => h.TipoHallazgo)
             .Where(h => h.AuditoriaId == auditoriaId);
 
@@ -491,10 +492,13 @@ else
             ? "Sin proceso"
             : $"{h.Proceso.Codigo} - {h.Proceso.Nombre}";
 
-    private static string TextoClausula(Hallazgo h) =>
-        h.Clausula is null
-            ? "Sin cláusula"
-            : $"Cláusula: {h.Clausula.Codigo}";
+    private static string TextoClausula(Hallazgo h)
+    {
+        if (h.Clausula is not null)
+            return $"Cláusula: {h.Clausula.Codigo}";
+
+        return string.IsNullOrWhiteSpace(h.Pregunta?.Requisito) ? "Sin cláusula" : h.Pregunta.Requisito;
+    }
 
     private static string TextoValidacion(Hallazgo h) =>
         string.IsNullOrWhiteSpace(h.EstatusValidacionSgc)

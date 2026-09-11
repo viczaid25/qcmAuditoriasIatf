@@ -38,6 +38,9 @@ namespace qcmAuditoriasIatf.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Conclusiones")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Criterios")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -508,6 +511,10 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<string>("AnalisisCausa")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ComentarioSgc")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<bool?>("Eficaz")
                         .HasColumnType("bit");
 
@@ -515,7 +522,15 @@ namespace qcmAuditoriasIatf.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("EstatusValidacion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<DateTime>("FechaImplementacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaRevisionSgc")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaVerificacion")
@@ -527,6 +542,10 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<string>("ResponsableId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RevisadoPorSgcId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("AccionCorrectivaId");
 
@@ -613,6 +632,18 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<string>("RevisadoPorSgcId")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SeguimientoEntregaAnalisis")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("SeguimientoImplementacionCierre")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("SeguimientoVerificacion")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<int>("TipoHallazgoId")
                         .HasColumnType("int");

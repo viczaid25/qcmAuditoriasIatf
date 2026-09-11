@@ -229,10 +229,19 @@
 }
 
 .desc-cell {
-    max-width: 320px;
+    max-width: 560px;
     white-space: pre-wrap;
     line-height: 1.45;
     color: #334155;
+}
+
+.mo-table-wrap table.mo-table {
+    min-width: 1700px;
+}
+
+.mo-table-wrap table.mo-table th:nth-child(5),
+.mo-table-wrap table.mo-table td:nth-child(5) {
+    min-width: 560px;
 }
 
 .evidencia-box {
@@ -284,6 +293,12 @@
     resize: vertical;
     border-radius: 14px;
     line-height: 1.45;
+}
+
+.review-inline-error {
+    font-size: 0.82rem;
+    border-radius: 12px;
+    line-height: 1.4;
 }
 
 .review-actions {

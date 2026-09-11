@@ -57,9 +57,37 @@ else
                             Tipo: <strong>@auditoria.TipoAuditoria</strong>
                         </span>
 
-                        <span class="status-pill @GetStatusClass(auditoria.Estatus)">
-                            @auditoria.Estatus
-                        </span>
+                        @if (editandoEstatus)
+                        {
+                            <span class="meta-chip estatus-edit-chip">
+                                <select class="mo-form-select mo-form-select-sm" @bind="estatusEdit">
+                                    <option value="Planeada">Planeada</option>
+                                    <option value="En Proceso">En Proceso</option>
+                                    <option value="Cerrada">Cerrada</option>
+                                </select>
+
+                                <button type="button" class="mo-btn mo-btn-primary mo-btn-sm" @onclick="GuardarEstatus" disabled="@guardandoEstatus">
+                                    @(guardandoEstatus ? "..." : "Guardar")
+                                </button>
+
+                                <button type="button" class="mo-btn mo-btn-secondary-outline mo-btn-sm" @onclick="CancelarEditarEstatus" disabled="@guardandoEstatus">
+                                    Cancelar
+                                </button>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="status-pill @GetStatusClass(auditoria.Estatus)">
+                                @auditoria.Estatus
+                            </span>
+
+                            @if (UsuarioActualEsAuditorLider || usuarioEsSgc)
+                            {
+                                <button type="button" class="estatus-edit-btn" title="Cambiar estatus" @onclick="EmpezarEditarEstatus">
+                                    Cambiar estatus
+                                </button>
+                            }
+                        }
 
                         <span class="meta-chip">
                             Inicio: <strong>@auditoria.FechaInicio.ToString("yyyy-MM-dd")</strong>
@@ -74,6 +102,10 @@ else
                 <div class="auditoria-hero-actions">
                     <button type="button" class="hero-btn primary" @onclick="IrHallazgos">
                         Ver hallazgos
+                    </button>
+
+                    <button type="button" class="hero-btn" @onclick="IrInforme">
+                        Ver informe
                     </button>
 
                     <button type="button" class="hero-btn" @onclick="IrCalendario">
@@ -122,6 +154,43 @@ else
                     </div>
                 </div>
             </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Conclusiones de la auditoría</h2>
+                    <p class="panel-subtitle">Resumen de cierre que se incluye en el informe general.</p>
+                </div>
+            </div>
+
+            @if (editandoConclusiones)
+            {
+                <textarea class="mo-form-control" rows="4" @bind="conclusionesEdit"></textarea>
+
+                <div class="d-flex gap-2 mt-2">
+                    <button type="button" class="mo-btn mo-btn-primary" @onclick="GuardarConclusiones" disabled="@guardandoConclusiones">
+                        @(guardandoConclusiones ? "Guardando..." : "Guardar")
+                    </button>
+
+                    <button type="button" class="mo-btn mo-btn-secondary-outline" @onclick="CancelarEditarConclusiones" disabled="@guardandoConclusiones">
+                        Cancelar
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="conclusiones-box">
+                    @(string.IsNullOrWhiteSpace(auditoria.Conclusiones) ? "Sin conclusiones capturadas." : auditoria.Conclusiones)
+                </div>
+
+                @if (UsuarioActualEsAuditorLider || usuarioEsSgc)
+                {
+                    <button type="button" class="mo-btn mo-btn-primary-outline mo-btn-sm mt-3" @onclick="EmpezarEditarConclusiones">
+                        Editar conclusiones
+                    </button>
+                }
+            }
         </section>
 
         @if (mostrarConfirmEliminar)
@@ -419,6 +488,19 @@ else
     private bool mostrarConfirmEliminar;
     private bool eliminando;
 
+    private bool editandoConclusiones;
+    private bool guardandoConclusiones;
+    private string? conclusionesEdit;
+
+    private bool editandoEstatus;
+    private bool guardandoEstatus;
+    private string estatusEdit = "Planeada";
+
+    private bool UsuarioActualEsAuditorLider =>
+        auditoria is not null &&
+        !string.IsNullOrWhiteSpace(auditoria.AuditorLiderId) &&
+        string.Equals(auditoria.AuditorLiderId.Trim(), usuarioActualId.Trim(), StringComparison.OrdinalIgnoreCase);
+
     private List<Auditor> personasAuditoria = new();
 
     private int hallazgosTotal;
@@ -684,6 +766,105 @@ else
     private void IrCalendario() => Nav.NavigateTo($"auditorias/{id}/calendario");
 
     private void IrHallazgos() => Nav.NavigateTo($"auditorias/{id}/hallazgos");
+
+    private void IrInforme() => Nav.NavigateTo($"auditorias/{id}/informe");
+
+    private void EmpezarEditarConclusiones()
+    {
+        conclusionesEdit = auditoria?.Conclusiones;
+        editandoConclusiones = true;
+    }
+
+    private void CancelarEditarConclusiones()
+    {
+        editandoConclusiones = false;
+        conclusionesEdit = null;
+    }
+
+    private async Task GuardarConclusiones()
+    {
+        if (guardandoConclusiones || auditoria is null) return;
+
+        if (!UsuarioActualEsAuditorLider && !usuarioEsSgc)
+        {
+            errorMsg = "Solo el auditor líder o SGC pueden editar las conclusiones.";
+            return;
+        }
+
+        guardandoConclusiones = true;
+        errorMsg = null;
+
+        try
+        {
+            var entity = await Db.Auditorias.FirstOrDefaultAsync(a => a.AuditoriaId == id);
+
+            if (entity is not null)
+            {
+                entity.Conclusiones = string.IsNullOrWhiteSpace(conclusionesEdit) ? null : conclusionesEdit.Trim();
+                await Db.SaveChangesAsync();
+                auditoria.Conclusiones = entity.Conclusiones;
+            }
+
+            editandoConclusiones = false;
+            conclusionesEdit = null;
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardandoConclusiones = false;
+        }
+    }
+
+    private void EmpezarEditarEstatus()
+    {
+        if (auditoria is null) return;
+        estatusEdit = auditoria.Estatus;
+        editandoEstatus = true;
+    }
+
+    private void CancelarEditarEstatus()
+    {
+        editandoEstatus = false;
+    }
+
+    private async Task GuardarEstatus()
+    {
+        if (guardandoEstatus || auditoria is null) return;
+
+        if (!UsuarioActualEsAuditorLider && !usuarioEsSgc)
+        {
+            errorMsg = "Solo el auditor líder o SGC pueden cambiar el estatus de la auditoría.";
+            return;
+        }
+
+        guardandoEstatus = true;
+        errorMsg = null;
+
+        try
+        {
+            var entity = await Db.Auditorias.FirstOrDefaultAsync(a => a.AuditoriaId == id);
+
+            if (entity is not null)
+            {
+                entity.Estatus = estatusEdit;
+                await Db.SaveChangesAsync();
+                auditoria.Estatus = entity.Estatus;
+            }
+
+            editandoEstatus = false;
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardandoEstatus = false;
+        }
+    }
 
     private void IrAsignar(int auditoriaProcesoId) =>
         Nav.NavigateTo($"auditorias/{id}/procesos/{auditoriaProcesoId}");

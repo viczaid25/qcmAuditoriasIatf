@@ -179,19 +179,19 @@ else
                                     <td>
                                         <div class="desc-cell">@row.Descripcion</div>
 
-                                        @if (!string.IsNullOrWhiteSpace(row.JustificacionNoConformidad))
-                                        {
-                                            <div class="evidencia-box">
-                                                <div class="mini-label">Justificación de la NC</div>
-                                                <div>@row.JustificacionNoConformidad</div>
-                                            </div>
-                                        }
-
                                         @if (!string.IsNullOrWhiteSpace(row.Evidencia))
                                         {
                                             <div class="evidencia-box">
                                                 <div class="mini-label">Evidencia inicial</div>
                                                 <div>@row.Evidencia</div>
+                                            </div>
+                                        }
+
+                                        @if (!string.IsNullOrWhiteSpace(row.JustificacionNoConformidad))
+                                        {
+                                            <div class="evidencia-box">
+                                                <div class="mini-label">Justificación de la NC</div>
+                                                <div>@row.JustificacionNoConformidad</div>
                                             </div>
                                         }
                                     </td>
@@ -222,10 +222,18 @@ else
                                     <td>
                                         <div class="review-box">
                                             <label class="form-label small-label">Comentario SGC</label>
-                                            <InputTextArea class="mo-form-control review-textarea"
-                                                           @bind-Value="row.ComentarioSgc"
-                                                           rows="3"
-                                                           disabled="@(guardandoHallazgoId == row.HallazgoId)" />
+                                            <textarea class="mo-form-control review-textarea"
+                                                      rows="3"
+                                                      @bind="row.ComentarioSgc"
+                                                      @bind:event="oninput"
+                                                      disabled="@(guardandoHallazgoId == row.HallazgoId)"></textarea>
+
+                                            @if (errorFilaId == row.HallazgoId && !string.IsNullOrWhiteSpace(errorMsg))
+                                            {
+                                                <div class="alert alert-danger mt-2 mb-0 py-2 px-3 review-inline-error">
+                                                    @errorMsg
+                                                </div>
+                                            }
 
                                             <div class="review-actions">
                                                 <button type="button"
@@ -296,19 +304,19 @@ else
                             <div class="reviewed-body">
                                 <div class="reviewed-text">@row.Descripcion</div>
 
-                                @if (!string.IsNullOrWhiteSpace(row.JustificacionNoConformidad))
-                                {
-                                    <div class="comment-box mt-3">
-                                        <div class="mini-label">Justificación de la NC</div>
-                                        <div>@row.JustificacionNoConformidad</div>
-                                    </div>
-                                }
-
                                 @if (!string.IsNullOrWhiteSpace(row.Evidencia))
                                 {
                                     <div class="comment-box mt-3">
                                         <div class="mini-label">Evidencia inicial</div>
                                         <div>@row.Evidencia</div>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(row.JustificacionNoConformidad))
+                                {
+                                    <div class="comment-box mt-3">
+                                        <div class="mini-label">Justificación de la NC</div>
+                                        <div>@row.JustificacionNoConformidad</div>
                                     </div>
                                 }
 
@@ -351,6 +359,7 @@ else
 
     private bool cargando = true;
     private string? errorMsg;
+    private int? errorFilaId;
     private int? guardandoHallazgoId;
 
     private string usuarioActualId = "sistema";
@@ -439,6 +448,10 @@ else
 
     private async Task CargarPantalla()
     {
+        // El DbContext de Blazor Server vive por sesión: limpiamos el tracker para no
+        // arrastrar entidades desactualizadas de otra pantalla u otra acción.
+        Db.ChangeTracker.Clear();
+
         pendientes.Clear();
         revisados.Clear();
         personasDisplay.Clear();
@@ -453,6 +466,7 @@ else
             .AsNoTracking()
             .Include(h => h.Proceso)
             .Include(h => h.Clausula)
+            .Include(h => h.Pregunta)
             .Include(h => h.TipoHallazgo)
             .Where(h => h.EstatusValidacionSgc == "Pendiente")
             .OrderBy(h => h.FechaCreacion)
@@ -467,6 +481,7 @@ else
             .AsNoTracking()
             .Include(h => h.Proceso)
             .Include(h => h.Clausula)
+            .Include(h => h.Pregunta)
             .Include(h => h.TipoHallazgo)
             .Where(h => h.EstatusValidacionSgc == "Aprobado" || h.EstatusValidacionSgc == "Rechazado")
             .OrderByDescending(h => h.FechaRevisionSgc ?? h.FechaCreacion)
@@ -500,7 +515,9 @@ else
         HallazgoId = h.HallazgoId,
         AuditoriaId = h.AuditoriaId,
         ProcesoTexto = $"{h.Proceso?.Codigo} - {h.Proceso?.Nombre}",
-        ClausulaTexto = h.Clausula is null ? "Sin cláusula" : $"{h.Clausula.Codigo} - {h.Clausula.Descripcion}",
+        ClausulaTexto = h.Clausula is not null
+            ? $"{h.Clausula.Codigo} - {h.Clausula.Descripcion}"
+            : (string.IsNullOrWhiteSpace(h.Pregunta?.Requisito) ? "Sin cláusula" : h.Pregunta.Requisito),
         TipoHallazgoNombre = h.TipoHallazgo?.Nombre ?? "Sin tipo",
         Descripcion = h.Descripcion,
         JustificacionNoConformidad = h.JustificacionNoConformidad,
@@ -521,10 +538,12 @@ else
     {
         if (guardandoHallazgoId.HasValue) return;
         errorMsg = null;
+        errorFilaId = null;
 
         if (!usuarioEsSgc)
         {
             errorMsg = "No tienes permisos para revisar hallazgos de SGC.";
+            errorFilaId = hallazgoId;
             return;
         }
 
@@ -532,6 +551,7 @@ else
         if (row is null)
         {
             errorMsg = "No se encontró el hallazgo pendiente.";
+            errorFilaId = hallazgoId;
             return;
         }
 
@@ -540,6 +560,7 @@ else
         if (!aprobado && string.IsNullOrWhiteSpace(comentario))
         {
             errorMsg = "Debes capturar un comentario cuando rechazas un hallazgo.";
+            errorFilaId = hallazgoId;
             return;
         }
 
@@ -554,12 +575,14 @@ else
             if (entity is null)
             {
                 errorMsg = "No se encontró el hallazgo a revisar.";
+                errorFilaId = hallazgoId;
                 return;
             }
 
             if (!string.Equals(entity.EstatusValidacionSgc, "Pendiente", StringComparison.OrdinalIgnoreCase))
             {
-                errorMsg = "Este hallazgo ya no está pendiente de validación.";
+                errorMsg = "Este hallazgo ya no está pendiente de validación. Es probable que otro usuario de SGC ya lo haya revisado; recarga la página.";
+                errorFilaId = hallazgoId;
                 return;
             }
 
@@ -588,12 +611,13 @@ else
             });
 
             await Db.SaveChangesAsync();
-            await NotificarResolucionAsync(entity, aprobado, comentario);
+            await NotificarResolucionAsync(entity, aprobado);
             await CargarPantalla();
         }
         catch (Exception ex)
         {
             errorMsg = ex.InnerException?.Message ?? ex.Message;
+            errorFilaId = hallazgoId;
         }
         finally
         {
@@ -601,35 +625,22 @@ else
         }
     }
 
-    private async Task NotificarResolucionAsync(Hallazgo entity, bool aprobado, string? comentario)
+    private async Task NotificarResolucionAsync(Hallazgo entity, bool aprobado)
     {
         try
         {
             var auditores = await EmailSvc.ResolverAuditoresAsync(entity.AuditoriaProceso);
-            var responsableCierre = await EmailSvc.ResolverEmailAsync(entity.ResponsableCierreId);
 
             var destinatarios = new List<string>(auditores);
-            if (responsableCierre is not null)
-                destinatarios.Add(responsableCierre);
 
-            var link = $"{Nav.BaseUri}auditorias/{entity.AuditoriaId}/hallazgos/{entity.HallazgoId}";
-            var resultado = aprobado ? "aprobado" : "rechazado";
-            var comentarioHtml = string.IsNullOrWhiteSpace(comentario) ? "" : $"<li><b>Comentario:</b> {comentario}</li>";
+            if (aprobado)
+            {
+                var responsableCierre = await EmailSvc.ResolverEmailAsync(entity.ResponsableCierreId);
+                if (responsableCierre is not null)
+                    destinatarios.Add(responsableCierre);
+            }
 
-            var cuerpo = $@"
-                <p>SGC {resultado} el hallazgo #{entity.HallazgoId} de la auditoría #{entity.AuditoriaId}.</p>
-                <ul>
-                    <li><b>Descripción:</b> {entity.Descripcion}</li>
-                    <li><b>Estatus:</b> {entity.Estatus}</li>
-                    {comentarioHtml}
-                </ul>
-                <p><a href=""{link}"">Ver hallazgo</a></p>";
-
-            await EmailSvc.EnviarAsync(
-                destinatarios,
-                auditores,
-                $"Hallazgo {resultado} por SGC - Auditoría #{entity.AuditoriaId}",
-                cuerpo);
+            await EmailSvc.NotificarAsync(destinatarios, auditores);
         }
         catch
         {

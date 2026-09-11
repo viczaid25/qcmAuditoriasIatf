@@ -286,6 +286,13 @@ else
         public string? Evidencia { get; set; }
         public string? Comentarios { get; set; }
 
+        // Valores tal como estaban al cargar la pantalla. Sirven para detectar qué campos
+        // editó realmente este usuario y no pisar cambios que otra persona haya guardado
+        // mientras tanto en las preguntas que este usuario no tocó.
+        public string CumpleOriginal { get; set; } = "Pendiente";
+        public string? EvidenciaOriginal { get; set; }
+        public string? ComentariosOriginal { get; set; }
+
         public bool TieneHallazgo { get; set; }
         public int? HallazgoId { get; set; }
     }
@@ -355,14 +362,19 @@ else
             map.TryGetValue(p.PreguntaId, out var r);
             hallazgoMap.TryGetValue(p.PreguntaId, out var hid);
 
+            var cumpleInicial = string.IsNullOrWhiteSpace(r?.Cumple) ? "Pendiente" : r!.Cumple;
+
             rows.Add(new RowVm
             {
                 PreguntaId = p.PreguntaId,
                 Pregunta = p.Pregunta,
                 Requisito = p.Requisito,
-                Cumple = string.IsNullOrWhiteSpace(r?.Cumple) ? "Pendiente" : r!.Cumple,
+                Cumple = cumpleInicial,
                 Evidencia = r?.Evidencia,
                 Comentarios = r?.Comentarios,
+                CumpleOriginal = cumpleInicial,
+                EvidenciaOriginal = r?.Evidencia,
+                ComentariosOriginal = r?.Comentarios,
                 TieneHallazgo = hid > 0,
                 HallazgoId = hid > 0 ? hid : null
             });
@@ -390,9 +402,21 @@ else
                 if (!map.TryGetValue(row.PreguntaId, out var e))
                     continue;
 
-                e.Cumple = string.IsNullOrWhiteSpace(row.Cumple) ? "Pendiente" : row.Cumple;
-                e.Evidencia = string.IsNullOrWhiteSpace(row.Evidencia) ? null : row.Evidencia.Trim();
-                e.Comentarios = string.IsNullOrWhiteSpace(row.Comentarios) ? null : row.Comentarios.Trim();
+                var cumpleEditado = row.Cumple != row.CumpleOriginal;
+                var evidenciaEditada = row.Evidencia != row.EvidenciaOriginal;
+                var comentariosEditados = row.Comentarios != row.ComentariosOriginal;
+
+                if (!cumpleEditado && !evidenciaEditada && !comentariosEditados)
+                    continue; // Esta pregunta no la tocó este usuario; no pisar lo que haya en la base.
+
+                if (cumpleEditado)
+                    e.Cumple = string.IsNullOrWhiteSpace(row.Cumple) ? "Pendiente" : row.Cumple;
+
+                if (evidenciaEditada)
+                    e.Evidencia = string.IsNullOrWhiteSpace(row.Evidencia) ? null : row.Evidencia.Trim();
+
+                if (comentariosEditados)
+                    e.Comentarios = string.IsNullOrWhiteSpace(row.Comentarios) ? null : row.Comentarios.Trim();
 
                 if (ap is not null && !string.IsNullOrWhiteSpace(ap.AuditorAsignadoId))
                     e.AuditorId = ap.AuditorAsignadoId!;

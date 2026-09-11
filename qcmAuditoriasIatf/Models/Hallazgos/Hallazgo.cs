@@ -77,4 +77,14 @@ public class Hallazgo
 
     [StringLength(2000)]
     public string? ComentarioVerificacionQms { get; set; }
+
+    // Seguimiento narrativo para el informe general de auditoría (formato MX-6100-F2).
+    [StringLength(2000)]
+    public string? SeguimientoEntregaAnalisis { get; set; }
+
+    [StringLength(2000)]
+    public string? SeguimientoImplementacionCierre { get; set; }
+
+    [StringLength(2000)]
+    public string? SeguimientoVerificacion { get; set; }
 }

@@ -1,4 +1,5 @@
 using System.Net.Mail;
+using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using qcmAuditoriasIatf.Data;
@@ -10,17 +11,28 @@ public class EmailService
 {
     public const string QmsEmail = "meax_qms_communication@meax.mx";
     private const string BccFijo = "zaid.garcia@meax.mx";
+    private const string Asunto = "Notificación automática del sistema de auditorías";
 
     private readonly EmailOptions _options;
     private readonly ApplicationDbContext _db;
+    private readonly NavigationManager _nav;
 
-    public EmailService(IOptions<EmailOptions> options, ApplicationDbContext db)
+    public EmailService(IOptions<EmailOptions> options, ApplicationDbContext db, NavigationManager nav)
     {
         _options = options.Value;
         _db = db;
+        _nav = nav;
     }
 
-    public async Task EnviarAsync(IEnumerable<string> to, IEnumerable<string>? cc, string asunto, string cuerpoHtml)
+    public Task NotificarAsync(IEnumerable<string> to, IEnumerable<string>? cc = null)
+    {
+        var link = $"{_nav.BaseUri}mis-cosas";
+        var cuerpo = $@"<p>Tiene una notificación pendiente en el sistema de auditorías.</p><p><a href=""{link}"">Ir a Mis cosas</a></p>";
+
+        return EnviarAsync(to, cc, Asunto, cuerpo);
+    }
+
+    private async Task EnviarAsync(IEnumerable<string> to, IEnumerable<string>? cc, string asunto, string cuerpoHtml)
     {
         var destinatarios = to
             .Where(x => !string.IsNullOrWhiteSpace(x))

@@ -175,3 +175,6 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\bin\Release\ne
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Interfaces\InterfacesSgcCincoPorques.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Procesos\ChecklistPreguntas.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Interfaces\InterfacesQmsVerificacion.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Hallazgos\HallazgoEditar.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Interfaces\InterfacesSgcAccionesCorrectivas.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Release\net8.0\scopedcss\Components\Pages\Auditorias\AuditoriaInforme.razor.rz.scp.css

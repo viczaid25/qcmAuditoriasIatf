@@ -91,6 +91,10 @@ build_metadata.AdditionalFiles.CssScope = b-ejixc872ul
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYURldGFsbGUucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-ef5s3tv012
 
+[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaInforme.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYUluZm9ybWUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-j4czlq24z2
+
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Auditorias/AuditoriaNueva.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBdWRpdG9yaWFzXEF1ZGl0b3JpYU51ZXZhLnJhem9y
 build_metadata.AdditionalFiles.CssScope = b-a9hm7vmasi
@@ -111,6 +115,10 @@ build_metadata.AdditionalFiles.CssScope = b-sc00kwlzym
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIYWxsYXpnb3NcSGFsbGF6Z29EZXRhbGxlLnJhem9y
 build_metadata.AdditionalFiles.CssScope = b-632mtvfssd
 
+[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Hallazgos/HallazgoEditar.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIYWxsYXpnb3NcSGFsbGF6Z29FZGl0YXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-up3jwwf9ch
+
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Hallazgos/HallazgoNuevoDesdeChecklist.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIYWxsYXpnb3NcSGFsbGF6Z29OdWV2b0Rlc2RlQ2hlY2tsaXN0LnJhem9y
 build_metadata.AdditionalFiles.CssScope = b-t8j6nevnhg
@@ -130,6 +138,10 @@ build_metadata.AdditionalFiles.CssScope = b-rktzq20osz
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Interfaces/InterfacesQmsVerificacion.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xJbnRlcmZhY2VzXEludGVyZmFjZXNRbXNWZXJpZmljYWNpb24ucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-ty8avq1m0q
+
+[C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Interfaces/InterfacesSgcAccionesCorrectivas.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xJbnRlcmZhY2VzXEludGVyZmFjZXNTZ2NBY2Npb25lc0NvcnJlY3RpdmFzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-1tzdqlxr0w
 
 [C:/Users/dm45207/source/repos/qcmAuditoriasIatf/qcmAuditoriasIatf/Components/Pages/Interfaces/InterfacesSgcCincoPorques.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xJbnRlcmZhY2VzXEludGVyZmFjZXNTZ2NDaW5jb1BvcnF1ZXMucmF6b3I=

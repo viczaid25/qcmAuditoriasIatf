@@ -174,7 +174,6 @@ else
                         <div class="col-12">
                             <label class="form-label">Evidencia</label>
                             <InputTextArea class="mo-form-control" @bind-Value="vm.Evidencia" rows="4" />
-                            <div class="field-help">Opcional.</div>
                         </div>
 
                         <div class="col-12">
@@ -476,6 +475,12 @@ else
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(vm.Evidencia))
+            {
+                errorMsg = "La evidencia es obligatoria.";
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(vm.JustificacionNoConformidad))
             {
                 errorMsg = "La justificación de la no conformidad es obligatoria.";
@@ -512,7 +517,7 @@ else
 
                 Descripcion = vm.DescripcionNoConformidad.Trim(),
                 JustificacionNoConformidad = vm.JustificacionNoConformidad.Trim(),
-                Evidencia = string.IsNullOrWhiteSpace(vm.Evidencia) ? null : vm.Evidencia.Trim(),
+                Evidencia = vm.Evidencia!.Trim(),
 
                 ResponsableId = ResponsableHallazgoId.Trim(),
                 ResponsableCierreId = vm.ResponsableCierreId.Trim(),
@@ -556,26 +561,7 @@ else
     {
         try
         {
-            var auditores = await EmailSvc.ResolverAuditoresAsync(ap);
-            var link = $"{Nav.BaseUri}auditorias/{auditoriaId}/hallazgos/{hallazgo.HallazgoId}";
-
-            var cuerpo = $@"
-                <p>Se registró un nuevo hallazgo en Auditorías IATF.</p>
-                <ul>
-                    <li><b>Auditoría:</b> #{auditoriaId}</li>
-                    <li><b>Proceso:</b> {ap?.Proceso?.Codigo} - {ap?.Proceso?.Nombre}</li>
-                    <li><b>Descripción:</b> {hallazgo.Descripcion}</li>
-                    <li><b>Responsable:</b> {hallazgo.ResponsableId}</li>
-                    <li><b>Responsable de cierre:</b> {hallazgo.ResponsableCierreId}</li>
-                    <li><b>Creado por:</b> {usuarioActualId}</li>
-                </ul>
-                <p><a href=""{link}"">Ver hallazgo</a></p>";
-
-            await EmailSvc.EnviarAsync(
-                new[] { EmailService.QmsEmail },
-                auditores,
-                $"Nuevo hallazgo registrado - Auditoría #{auditoriaId}",
-                cuerpo);
+            await EmailSvc.NotificarAsync(new[] { EmailService.QmsEmail });
         }
         catch
         {

@@ -80,7 +80,7 @@ else
             <div class="panel-head">
                 <div>
                     <h2>Filtros</h2>
-                    <p class="panel-subtitle">Refina por auditoría, validación SGC, estatus o texto.</p>
+                    <p class="panel-subtitle">Refina por auditoría, estatus o texto. Solo se muestran hallazgos ya aprobados por SGC.</p>
                 </div>
                 <span class="panel-badge">Mostrando @hallazgos.Count</span>
             </div>
@@ -94,16 +94,6 @@ else
                         {
                             <option value="@a.AuditoriaId">@TextoAuditoria(a)</option>
                         }
-                    </InputSelect>
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label">Validación SGC</label>
-                    <InputSelect class="mo-form-select" @bind-Value="validacionSeleccionada">
-                        <option value="">-- Todas --</option>
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Aprobado">Aprobado</option>
-                        <option value="Rechazado">Rechazado</option>
                     </InputSelect>
                 </div>
 
@@ -158,6 +148,7 @@ else
                                 <th>#</th>
                                 <th>Auditoría</th>
                                 <th>Proceso</th>
+                                <th>Línea</th>
                                 <th>Tipo</th>
                                 <th>Descripción</th>
                                 <th>Responsables</th>
@@ -174,6 +165,7 @@ else
                                 <th><input class="mo-th-filter" data-mo-filter-col="5" placeholder="Filtrar…"></th>
                                 <th><input class="mo-th-filter" data-mo-filter-col="6" placeholder="Filtrar…"></th>
                                 <th><input class="mo-th-filter" data-mo-filter-col="7" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="8" placeholder="Filtrar…"></th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -201,6 +193,17 @@ else
 
                                     <td>
                                         <div class="cell-title">@TextoProceso(h)</div>
+                                    </td>
+
+                                    <td>
+                                        @if (string.IsNullOrWhiteSpace(h.AuditoriaProceso?.LineaNombre))
+                                        {
+                                            <span class="empty-inline">—</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="linea-pill">@h.AuditoriaProceso.LineaNombre</span>
+                                        }
                                     </td>
 
                                     <td>
@@ -287,7 +290,6 @@ else
     private string? errorMsg;
 
     private int auditoriaIdSeleccionada = 0;
-    private string validacionSeleccionada = "";
     private string estatusSeleccionado = "";
     private string textoBusqueda = "";
 
@@ -364,15 +366,15 @@ else
         var q = Db.Hallazgos
             .Include(h => h.Proceso)
             .Include(h => h.Clausula)
+            .Include(h => h.Pregunta)
             .Include(h => h.TipoHallazgo)
             .Include(h => h.Auditoria)
+            .Include(h => h.AuditoriaProceso)
+            .Where(h => h.EstatusValidacionSgc == "Aprobado") // solo hallazgos que ya pasaron la validación SGC inicial
             .AsQueryable();
 
         if (auditoriaIdSeleccionada > 0)
             q = q.Where(h => h.AuditoriaId == auditoriaIdSeleccionada);
-
-        if (!string.IsNullOrWhiteSpace(validacionSeleccionada))
-            q = q.Where(h => h.EstatusValidacionSgc == validacionSeleccionada);
 
         if (!string.IsNullOrWhiteSpace(estatusSeleccionado))
             q = q.Where(h => h.Estatus == estatusSeleccionado);
@@ -412,7 +414,6 @@ else
     private async Task LimpiarFiltros()
     {
         auditoriaIdSeleccionada = 0;
-        validacionSeleccionada = "";
         estatusSeleccionado = "";
         textoBusqueda = "";
         await CargarResumen();
@@ -425,8 +426,13 @@ else
     private static string TextoProceso(Hallazgo h) =>
         h.Proceso is null ? "Sin proceso" : $"{h.Proceso.Codigo} - {h.Proceso.Nombre}";
 
-    private static string TextoClausula(Hallazgo h) =>
-        h.Clausula is null ? "Sin cláusula" : $"Cláusula: {h.Clausula.Codigo}";
+    private static string TextoClausula(Hallazgo h)
+    {
+        if (h.Clausula is not null)
+            return $"Cláusula: {h.Clausula.Codigo}";
+
+        return string.IsNullOrWhiteSpace(h.Pregunta?.Requisito) ? "Sin cláusula" : h.Pregunta.Requisito;
+    }
 
     private static string GetTipoClass(string? tipo)
     {

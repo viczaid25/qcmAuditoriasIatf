@@ -1,0 +1,451 @@
+@page "/auditorias/{auditoriaId:int}/hallazgos/{hallazgoId:int}/editar"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.External
+@using qcmAuditoriasIatf.Models.Hallazgos
+@using qcmAuditoriasIatf.Services
+@using System.Security.Claims
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+@inject EmailService EmailSvc
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="editar-loading">
+        <div class="editar-skeleton"></div>
+    </div>
+}
+else if (hallazgo is null)
+{
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró el hallazgo</div>
+            <button type="button" class="hero-btn primary mt-3" @onclick="Volver">
+                Volver
+            </button>
+        </div>
+    </section>
+}
+else if (!usuarioAutorizadoEditar)
+{
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">Acceso restringido</div>
+            <div class="empty-text">Solo el auditor principal o el segundo auditor del proceso pueden editar este hallazgo.</div>
+            <button type="button" class="hero-btn primary mt-3" @onclick="Volver">
+                Volver
+            </button>
+        </div>
+    </section>
+}
+else
+{
+    <div class="editar-page">
+        <section class="editar-hero">
+            <div>
+                <span class="editar-kicker">Editar hallazgo rechazado</span>
+                <h1>Hallazgo #@hallazgoId</h1>
+                <p class="hero-text">
+                    Corrige la información y guarda los cambios. Cuando esté lista, reenvía el hallazgo a validación SGC.
+                </p>
+            </div>
+
+            <div class="hero-actions">
+                <button type="button" class="hero-btn" @onclick="Volver" disabled="@guardando">
+                    Volver
+                </button>
+            </div>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(hallazgo.ComentarioRevisionSgc))
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Motivo del rechazo</h2>
+                    </div>
+                </div>
+                <div class="content-box">@hallazgo.ComentarioRevisionSgc</div>
+            </section>
+        }
+
+        <EditForm Model="vm" OnValidSubmit="GuardarCambios">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Datos del hallazgo</h2>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha compromiso</label>
+                        <InputDate class="mo-form-control" @bind-Value="vm.FechaCompromiso" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo de hallazgo</label>
+                        <InputSelect class="mo-form-select" @bind-Value="vm.TipoHallazgoId">
+                            <option value="0">-- Selecciona --</option>
+                            @foreach (var t in tiposHallazgo)
+                            {
+                                <option value="@t.TipoHallazgoId">@t.Nombre</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Responsable de finalizar el hallazgo</label>
+                        <InputSelect class="mo-form-select" @bind-Value="vm.ResponsableCierreId">
+                            <option value="">-- Selecciona --</option>
+                            @foreach (var u in usuariosDisponibles)
+                            {
+                                <option value="@u.pc_login_id">@GetResponsableTexto(u)</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Descripción de la No Conformidad</label>
+                        <InputTextArea class="mo-form-control" @bind-Value="vm.Descripcion" rows="4" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Evidencia</label>
+                        <InputTextArea class="mo-form-control" @bind-Value="vm.Evidencia" rows="4" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Justificación de la No Conformidad</label>
+                        <InputTextArea class="mo-form-control" @bind-Value="vm.JustificacionNoConformidad" rows="4" />
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel-card action-panel">
+                <div class="action-panel-inner">
+                    <div>
+                        <h2>Acciones</h2>
+                        <p class="panel-subtitle mb-0">
+                            Guarda los cambios y, cuando esté listo, reenvía el hallazgo a validación SGC.
+                        </p>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="mo-btn mo-btn-primary" type="submit" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Guardar cambios")
+                        </button>
+
+                        <button class="mo-btn mo-btn-success" type="button" @onclick="ReenviarAValidacion" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Reenviar a validación")
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter] public int auditoriaId { get; set; }
+    [Parameter] public int hallazgoId { get; set; }
+
+    private bool cargando = true;
+    private bool guardando;
+    private string? errorMsg;
+
+    private string usuarioActualId = "sistema";
+    private bool usuarioAutorizadoEditar;
+
+    private Hallazgo? hallazgo;
+    private List<TipoHallazgo> tiposHallazgo = new();
+    private List<MeaxAllUser> usuariosDisponibles = new();
+
+    private Vm vm = new();
+
+    private class Vm
+    {
+        public int TipoHallazgoId { get; set; }
+        public DateTime FechaCompromiso { get; set; } = DateTime.Today;
+        public string? ResponsableCierreId { get; set; }
+        public string? Descripcion { get; set; }
+        public string? Evidencia { get; set; }
+        public string? JustificacionNoConformidad { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        await CargarUsuarioActual();
+        await CargarPantalla();
+
+        cargando = false;
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        usuarioActualId = "sistema";
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                usuarioActualId =
+                    user.FindFirst("pc_login_id")?.Value
+                    ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? user.Identity?.Name
+                    ?? "sistema";
+            }
+        }
+        catch
+        {
+            usuarioActualId = "sistema";
+        }
+    }
+
+    private async Task CargarPantalla()
+    {
+        Db.ChangeTracker.Clear();
+
+        hallazgo = await Db.Hallazgos
+            .Include(h => h.AuditoriaProceso)
+            .FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId && h.AuditoriaId == auditoriaId);
+
+        if (hallazgo is null)
+            return;
+
+        var esAuditorPrincipal =
+            !string.IsNullOrWhiteSpace(hallazgo.AuditoriaProceso?.AuditorAsignadoId) &&
+            NormalizarLogin(usuarioActualId) == NormalizarLogin(hallazgo.AuditoriaProceso.AuditorAsignadoId);
+
+        var esSegundoAuditor =
+            !string.IsNullOrWhiteSpace(hallazgo.AuditoriaProceso?.SegundoAuditorId) &&
+            NormalizarLogin(usuarioActualId) == NormalizarLogin(hallazgo.AuditoriaProceso.SegundoAuditorId);
+
+        usuarioAutorizadoEditar = esAuditorPrincipal || esSegundoAuditor;
+
+        if (!usuarioAutorizadoEditar)
+            return;
+
+        vm = new Vm
+        {
+            TipoHallazgoId = hallazgo.TipoHallazgoId,
+            FechaCompromiso = hallazgo.FechaCompromiso,
+            ResponsableCierreId = hallazgo.ResponsableCierreId,
+            Descripcion = hallazgo.Descripcion,
+            Evidencia = hallazgo.Evidencia,
+            JustificacionNoConformidad = hallazgo.JustificacionNoConformidad
+        };
+
+        tiposHallazgo = await Db.TiposHallazgo
+            .OrderBy(x => x.Severidad)
+            .ThenBy(x => x.Nombre)
+            .ToListAsync();
+
+        usuariosDisponibles = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x => !string.IsNullOrWhiteSpace(x.pc_login_id))
+            .OrderBy(x => x.username ?? x.pc_login_id)
+            .ToListAsync();
+    }
+
+    private static string NormalizarLogin(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return string.Empty;
+
+        var v = valor.Trim();
+
+        if (v.Contains("\\"))
+            v = v[(v.LastIndexOf('\\') + 1)..];
+
+        if (v.Contains("@"))
+            v = v[..v.IndexOf('@')];
+
+        return v.Trim().ToUpperInvariant();
+    }
+
+    private string GetResponsableTexto(MeaxAllUser u)
+    {
+        var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username;
+        var depto = string.IsNullOrWhiteSpace(u.department) ? "" : $" - {u.department}";
+        return $"{nombre} ({u.pc_login_id}){depto}";
+    }
+
+    private bool Validar()
+    {
+        if (vm.TipoHallazgoId == 0)
+        {
+            errorMsg = "Selecciona un tipo de hallazgo.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(vm.Descripcion))
+        {
+            errorMsg = "La descripción de la no conformidad es obligatoria.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(vm.Evidencia))
+        {
+            errorMsg = "La evidencia es obligatoria.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(vm.JustificacionNoConformidad))
+        {
+            errorMsg = "La justificación de la no conformidad es obligatoria.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(vm.ResponsableCierreId))
+        {
+            errorMsg = "El responsable de finalizar el hallazgo es obligatorio.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task GuardarCambios()
+    {
+        if (guardando) return;
+        errorMsg = null;
+
+        if (!Validar())
+            return;
+
+        guardando = true;
+
+        try
+        {
+            var entity = await Db.Hallazgos.FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId && h.AuditoriaId == auditoriaId);
+
+            if (entity is null)
+            {
+                errorMsg = "No se encontró el hallazgo.";
+                return;
+            }
+
+            entity.TipoHallazgoId = vm.TipoHallazgoId;
+            entity.FechaCompromiso = vm.FechaCompromiso;
+            entity.ResponsableCierreId = vm.ResponsableCierreId!.Trim();
+            entity.Descripcion = vm.Descripcion!.Trim();
+            entity.Evidencia = vm.Evidencia!.Trim();
+            entity.JustificacionNoConformidad = string.IsNullOrWhiteSpace(vm.JustificacionNoConformidad) ? null : vm.JustificacionNoConformidad.Trim();
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = entity.HallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = "El auditor principal o segundo auditor editó el hallazgo rechazado."
+            });
+
+            await Db.SaveChangesAsync();
+            await CargarPantalla();
+
+            errorMsg = null;
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task ReenviarAValidacion()
+    {
+        if (guardando) return;
+        errorMsg = null;
+
+        if (!Validar())
+            return;
+
+        guardando = true;
+
+        try
+        {
+            var entity = await Db.Hallazgos
+                .Include(h => h.AuditoriaProceso)
+                .FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId && h.AuditoriaId == auditoriaId);
+
+            if (entity is null)
+            {
+                errorMsg = "No se encontró el hallazgo.";
+                return;
+            }
+
+            if (!string.Equals(entity.EstatusValidacionSgc, "Rechazado", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMsg = "Este hallazgo ya no está rechazado.";
+                return;
+            }
+
+            entity.TipoHallazgoId = vm.TipoHallazgoId;
+            entity.FechaCompromiso = vm.FechaCompromiso;
+            entity.ResponsableCierreId = vm.ResponsableCierreId!.Trim();
+            entity.Descripcion = vm.Descripcion!.Trim();
+            entity.Evidencia = vm.Evidencia!.Trim();
+            entity.JustificacionNoConformidad = string.IsNullOrWhiteSpace(vm.JustificacionNoConformidad) ? null : vm.JustificacionNoConformidad.Trim();
+
+            entity.EstatusValidacionSgc = "Pendiente";
+            entity.Estatus = "Pendiente SGC";
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = entity.HallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = "El auditor principal o segundo auditor reenvió el hallazgo a validación SGC.",
+                EstatusNuevo = entity.Estatus
+            });
+
+            await Db.SaveChangesAsync();
+            await NotificarReenvioAsync();
+
+            Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}");
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task NotificarReenvioAsync()
+    {
+        try
+        {
+            await EmailSvc.NotificarAsync(new[] { EmailService.QmsEmail });
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear el reenvío del hallazgo.
+        }
+    }
+
+    private void Volver() => Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}");
+}

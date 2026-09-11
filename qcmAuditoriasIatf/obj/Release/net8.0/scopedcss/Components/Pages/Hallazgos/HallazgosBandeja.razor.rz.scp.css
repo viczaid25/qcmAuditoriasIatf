@@ -249,10 +249,19 @@
 }
 
 .desc-cell[b-d6xafaed0r] {
-    max-width: 340px;
+    max-width: 560px;
     white-space: pre-wrap;
     line-height: 1.45;
     color: #334155;
+}
+
+.mo-table-wrap table.mo-table[b-d6xafaed0r] {
+    min-width: 1400px;
+}
+
+.mo-table-wrap table.mo-table th:nth-child(4)[b-d6xafaed0r],
+.mo-table-wrap table.mo-table td:nth-child(4)[b-d6xafaed0r] {
+    min-width: 560px;
 }
 
 .evidencia-box[b-d6xafaed0r] {

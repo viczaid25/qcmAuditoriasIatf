@@ -61,6 +61,32 @@
     font-size: 0.88rem;
 }
 
+.estatus-edit-btn[b-ef5s3tv012] {
+    padding: 0.3rem 0.1rem;
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.72);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+    .estatus-edit-btn:hover[b-ef5s3tv012] {
+        color: #fff;
+    }
+
+.estatus-edit-chip[b-ef5s3tv012] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.14);
+}
+
+    .estatus-edit-chip select[b-ef5s3tv012] {
+        min-height: 30px;
+    }
+
 .auditoria-text-grid[b-ef5s3tv012] {
     display: grid;
     grid-template-columns: 1fr;
@@ -85,6 +111,16 @@
 .text-card-value[b-ef5s3tv012] {
     color: rgba(255,255,255,0.94);
     line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.conclusiones-box[b-ef5s3tv012] {
+    padding: 1rem;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    line-height: 1.5;
     white-space: pre-wrap;
 }
 

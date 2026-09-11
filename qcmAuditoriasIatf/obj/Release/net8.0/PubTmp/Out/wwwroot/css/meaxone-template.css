@@ -1324,3 +1324,24 @@ select.mo-th-filter { cursor: pointer; }
     box-shadow: 0 1px 6px rgba(0,0,0,0.05); border: 1px solid #f0f0f7;
 }
 .mo-panel + .mo-panel { margin-top: 18px; }
+
+/* ══════════════════════════════════════════════════════════════
+   IMPRESIÓN / PDF: oculta el shell de la app (navbar, sidebar) y
+   cualquier elemento marcado como .no-print en cualquier página.
+══════════════════════════════════════════════════════════════ */
+@media print {
+    #mo-navbar,
+    #mo-sidebar,
+    .no-print {
+        display: none !important;
+    }
+
+    #mo-main {
+        margin: 0 !important;
+        width: 100% !important;
+    }
+
+    .mo-page-wrap {
+        padding: 0 !important;
+    }
+}

@@ -34,6 +34,8 @@ public class Auditoria
     [Required]
     public string Estatus { get; set; } = "Planeada";
 
+    public string? Conclusiones { get; set; }
+
     public ICollection<AuditoriaProceso> AuditoriaProcesos { get; set; } = new List<AuditoriaProceso>();
     public ICollection<AuditoriaChecklist> AuditoriaChecklists { get; set; } = new List<AuditoriaChecklist>();
     public ICollection<Hallazgo> Hallazgos { get; set; } = new List<Hallazgo>();

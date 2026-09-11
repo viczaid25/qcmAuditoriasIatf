@@ -118,6 +118,13 @@ else
                     <div class="alert alert-danger mb-0">
                         Este hallazgo fue rechazado por SGC. Debe corregirse o reenviarse antes de continuar con el flujo.
                     </div>
+
+                    @if (UsuarioActualEsAuditorPrincipal || UsuarioActualEsSegundoAuditor)
+                    {
+                        <button type="button" class="mo-btn mo-btn-primary mt-3" @onclick="IrEditar">
+                            Editar y reenviar a validación
+                        </button>
+                    }
                 }
 
                 @if (!string.IsNullOrWhiteSpace(hallazgo.ComentarioRevisionSgc))
@@ -270,7 +277,7 @@ else
                         </span>
                     </div>
 
-                    @if (cincoPorQue is not null)
+                    @if (cincoPorQue is not null && (CincoPorQueAprobado || !UsuarioActualEsResponsableCierre))
                     {
                         var accionesGuardadas = ObtenerAccionesGuardadas(cincoPorQue.Acciones);
 
@@ -308,15 +315,15 @@ else
                         </div>
                     }
 
-                    @if (!CincoPorQueAprobado)
-                    {
-                    @if (!UsuarioActualEsResponsableCierre)
+                    @if (!CincoPorQueAprobado && !UsuarioActualEsResponsableCierre && cincoPorQue is null)
                     {
                         <div class="alert alert-warning mt-3">
-                            Solo el responsable de cierre puede capturar o actualizar los 5 porqués.
+                            Solo el responsable de cierre puede capturar los 5 porqués.
                         </div>
                     }
 
+                    @if (!CincoPorQueAprobado && UsuarioActualEsResponsableCierre)
+                    {
                     <div class="row g-3 mt-1">
                         <div class="col-md-6">
                             <label class="form-label">Usuario actual</label>
@@ -490,9 +497,38 @@ else
 
                         @if (string.Equals(cincoPorQue.Estatus, "Pendiente", StringComparison.OrdinalIgnoreCase))
                         {
-                            <div class="alert alert-info mt-3">
-                                En espera de revisión por parte de SGC (pantalla Validación SGC).
-                            </div>
+                            @if (usuarioEsSgc)
+                            {
+                                <div class="mt-3">
+                                    <label class="form-label">Comentario SGC</label>
+                                    <InputTextArea class="mo-form-control"
+                                                   rows="2"
+                                                   @bind-Value="comentarioCincoPorQueSgc"
+                                                   disabled="@guardando" />
+
+                                    <div class="d-flex gap-2 mt-2">
+                                        <button type="button"
+                                                class="mo-btn mo-btn-success"
+                                                @onclick='@(() => ResolverCincoPorQueDesdeDetalle(true))'
+                                                disabled="@guardando">
+                                            @(guardando ? "Guardando..." : "Aprobar")
+                                        </button>
+
+                                        <button type="button"
+                                                class="mo-btn mo-btn-danger"
+                                                @onclick='@(() => ResolverCincoPorQueDesdeDetalle(false))'
+                                                disabled="@guardando">
+                                            @(guardando ? "Guardando..." : "Rechazar")
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info mt-3">
+                                    En espera de revisión por parte de SGC (pantalla Validación SGC).
+                                </div>
+                            }
                         }
                     }
                 </div>
@@ -518,8 +554,116 @@ else
                 </div>
             </section>
         }
+        else if (!EsNcMenor && HallazgoLiberadoPorSgc)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Validación de la acción correctiva</h2>
+                        <p class="panel-subtitle">Adjunta el archivo con la acción correctiva; SGC debe aprobarlo antes de subir la evidencia de las acciones.</p>
+                    </div>
 
-        @if (HallazgoLiberadoPorSgc && (!EsNcMenor || CincoPorQueAprobado))
+                    <span class="flow-pill @GetFlowClass(accionCorrectiva?.EstatusValidacion)">
+                        @(accionCorrectiva?.EstatusValidacion ?? "Sin captura")
+                    </span>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(validacionAccionErrorMsg))
+                {
+                    <div class="alert alert-danger">@validacionAccionErrorMsg</div>
+                }
+
+                @if (!UsuarioActualEsResponsableCierre)
+                {
+                    <div class="alert alert-warning mb-3">
+                        Solo el responsable de cierre puede adjuntar el archivo de acción correctiva.
+                    </div>
+                }
+
+                @if (evidenciasValidacionAccion.Count == 0)
+                {
+                    <div class="empty-state compact">
+                        Aún no se ha adjuntado el archivo de acción correctiva.
+                    </div>
+                }
+                else
+                {
+                    <div class="evidencia-list">
+                        @foreach (var ev in evidenciasValidacionAccion)
+                        {
+                            <div class="evidencia-item" @key="ev.EvidenciaId">
+                                <a href="@($"evidencias/{ev.EvidenciaId}")" target="_blank" class="evidencia-link">
+                                    @ev.NombreOriginal
+                                </a>
+                                <span class="evidencia-meta">
+                                    @ev.FechaCarga.ToString("yyyy-MM-dd HH:mm")
+                                </span>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (UsuarioActualEsResponsableCierre && !ValidacionAccionAprobada)
+                {
+                    <div class="mt-3">
+                        <label class="form-label">Adjuntar archivo(s)</label>
+                        <InputFile OnChange="SubirValidacionAccion" multiple disabled="@subiendoValidacionAccion" />
+                        <div class="field-help">Tamaño máximo por archivo: 20 MB.</div>
+
+                        @if (subiendoValidacionAccion)
+                        {
+                            <div class="field-help">Subiendo...</div>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(accionCorrectiva?.ComentarioSgc))
+                {
+                    <div class="comment-box mt-3">
+                        <div class="comment-label">Comentario SGC</div>
+                        <div>@accionCorrectiva.ComentarioSgc</div>
+                    </div>
+                }
+
+                @if (accionCorrectiva is not null && string.Equals(accionCorrectiva.EstatusValidacion, "Pendiente", StringComparison.OrdinalIgnoreCase))
+                {
+                    @if (usuarioEsSgc)
+                    {
+                        <div class="mt-3">
+                            <label class="form-label">Comentario SGC</label>
+                            <InputTextArea class="mo-form-control"
+                                           rows="2"
+                                           @bind-Value="comentarioValidacionAccionSgc"
+                                           disabled="@guardando" />
+
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button"
+                                        class="mo-btn mo-btn-success"
+                                        @onclick='@(() => ResolverValidacionAccion(true))'
+                                        disabled="@guardando">
+                                    @(guardando ? "Guardando..." : "Aprobar")
+                                </button>
+
+                                <button type="button"
+                                        class="mo-btn mo-btn-danger"
+                                        @onclick='@(() => ResolverValidacionAccion(false))'
+                                        disabled="@guardando">
+                                    @(guardando ? "Guardando..." : "Rechazar")
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info mt-3">
+                            En espera de revisión por parte de SGC.
+                        </div>
+                    }
+                }
+            </section>
+        }
+
+        @if (HallazgoLiberadoPorSgc && (EsNcMenor ? CincoPorQueAprobado : ValidacionAccionAprobada))
         {
             <section class="panel-card">
                 <div class="panel-head">
@@ -613,32 +757,61 @@ else
             <section class="panel-card">
                 <div class="panel-head">
                     <div>
-                        <h2>Cerrar hallazgo</h2>
-                        <p class="panel-subtitle">Marca el hallazgo como cerrado una vez implementada la solución.</p>
+                        <h2>Cierre del hallazgo</h2>
+                        <p class="panel-subtitle">El cierre lo realiza QMS desde su bandeja de verificación.</p>
                     </div>
                 </div>
 
-                @if (!UsuarioActualEsResponsableCierre)
-                {
-                    <div class="alert alert-warning mb-0">
-                        Solo el responsable de cierre puede cerrar el hallazgo.
-                    </div>
-                }
-                else if (EsNcMenor && !CincoPorQueAprobado)
+                @if (EsNcMenor && !CincoPorQueAprobado)
                 {
                     <div class="empty-state compact">
-                        No puedes cerrar una NC Menor hasta que los 5 porqués estén aprobados por SGC.
+                        No se puede avanzar con una NC Menor hasta que los 5 porqués estén aprobados por SGC.
                     </div>
                 }
                 else
                 {
-                    <button class="mo-btn mo-btn-success"
-                            type="button"
-                            @onclick="CerrarHallazgo"
-                            disabled="@guardando">
-                        @(guardando ? "Guardando..." : "Cerrar hallazgo")
-                    </button>
+                    <div class="alert alert-info mb-0">
+                        Una vez que el responsable de cierre suba evidencia de la solución, QMS podrá cerrar el hallazgo o rechazarlo desde la bandeja de "Verificación QMS".
+                    </div>
                 }
+            </section>
+        }
+
+        @if (usuarioEsSgc)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Seguimiento para el informe</h2>
+                        <p class="panel-subtitle">Notas de seguimiento que se incluyen en el informe general de auditoría.</p>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(seguimientoInformeErrorMsg))
+                {
+                    <div class="alert alert-danger">@seguimientoInformeErrorMsg</div>
+                }
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Entrega de análisis (20 días)</label>
+                        <InputTextArea class="mo-form-control" rows="3" @bind-Value="hallazgo.SeguimientoEntregaAnalisis" disabled="@guardandoSeguimientoInforme" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Implementación y cierre (45 días)</label>
+                        <InputTextArea class="mo-form-control" rows="3" @bind-Value="hallazgo.SeguimientoImplementacionCierre" disabled="@guardandoSeguimientoInforme" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Verificación</label>
+                        <InputTextArea class="mo-form-control" rows="3" @bind-Value="hallazgo.SeguimientoVerificacion" disabled="@guardandoSeguimientoInforme" />
+                    </div>
+                </div>
+
+                <button type="button" class="mo-btn mo-btn-primary mt-3" @onclick="GuardarSeguimientoInforme" disabled="@guardandoSeguimientoInforme">
+                    @(guardandoSeguimientoInforme ? "Guardando..." : "Guardar seguimiento")
+                </button>
             </section>
         }
     </div>
@@ -657,6 +830,8 @@ else
 
     private string usuarioActualId = "sistema";
     private string usuarioActualNombre = "sistema";
+    private bool usuarioEsSgc;
+    private string? comentarioCincoPorQueSgc;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -670,6 +845,14 @@ else
     private List<Evidencia> evidenciasHallazgo = new();
     private bool subiendoEvidencia;
     private string? evidenciaErrorMsg;
+
+    private List<Evidencia> evidenciasValidacionAccion = new();
+    private bool subiendoValidacionAccion;
+    private string? validacionAccionErrorMsg;
+    private string? comentarioValidacionAccionSgc;
+
+    private bool guardandoSeguimientoInforme;
+    private string? seguimientoInformeErrorMsg;
 
     private CincoPorQueVm vm5 = new();
 
@@ -706,6 +889,9 @@ else
     private bool CincoPorQueAprobado =>
         string.Equals(cincoPorQue?.Estatus, "Aprobado", StringComparison.OrdinalIgnoreCase);
 
+    private bool ValidacionAccionAprobada =>
+        string.Equals(accionCorrectiva?.EstatusValidacion, "Aprobado", StringComparison.OrdinalIgnoreCase);
+
     private bool UsuarioActualEsResponsableCierre =>
         hallazgo is not null &&
         !string.IsNullOrWhiteSpace(hallazgo.ResponsableCierreId) &&
@@ -723,6 +909,14 @@ else
 
     private bool HallazgoRechazadoSgc =>
         string.Equals(hallazgo?.EstatusValidacionSgc, "Rechazado", StringComparison.OrdinalIgnoreCase);
+
+    private bool UsuarioActualEsAuditorPrincipal =>
+        !string.IsNullOrWhiteSpace(AuditorPrincipalId) &&
+        NormalizarLogin(usuarioActualId) == NormalizarLogin(AuditorPrincipalId);
+
+    private bool UsuarioActualEsSegundoAuditor =>
+        !string.IsNullOrWhiteSpace(SegundoAuditorId) &&
+        NormalizarLogin(usuarioActualId) == NormalizarLogin(SegundoAuditorId);
 
     private string TextoValidacionSgc =>
         string.IsNullOrWhiteSpace(hallazgo?.EstatusValidacionSgc)
@@ -772,6 +966,13 @@ else
             usuarioActualId = "sistema";
             usuarioActualNombre = "sistema";
         }
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == usuarioActualId.ToUpper() &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
     }
 
     private static string NormalizarLogin(string? valor)
@@ -882,6 +1083,11 @@ else
 
     private async Task CargarPantalla()
     {
+        // El DbContext de Blazor Server vive por sesión, no por página: si otra pantalla
+        // (u otra acción en esta misma) ya trackeó estas entidades, limpiamos para forzar
+        // una lectura fresca de la base y no mostrar estatus desactualizados.
+        Db.ChangeTracker.Clear();
+
         hallazgo = await Db.Hallazgos
             .Include(h => h.TipoHallazgo)
             .Include(h => h.AuditoriaProceso)
@@ -896,6 +1102,7 @@ else
             .FirstOrDefaultAsync();
 
         await CargarEvidencias();
+        await CargarEvidenciasValidacionAccion();
 
         if (cincoPorQue is not null)
         {
@@ -1052,6 +1259,7 @@ else
             });
 
             await Db.SaveChangesAsync();
+            await NotificarCaptura5PorquesAsync();
             await CargarPantalla();
 
             msg5 = "Los 5 porqués se guardaron correctamente.";
@@ -1067,6 +1275,77 @@ else
         }
     }
 
+    private async Task ResolverCincoPorQueDesdeDetalle(bool aprobado)
+    {
+        if (guardando) return;
+        errorMsg = null;
+
+        if (!usuarioEsSgc)
+        {
+            errorMsg = "No tienes permisos para revisar los 5 porqués.";
+            return;
+        }
+
+        if (cincoPorQue is null)
+            return;
+
+        var comentario = comentarioCincoPorQueSgc?.Trim();
+
+        if (!aprobado && string.IsNullOrWhiteSpace(comentario))
+        {
+            errorMsg = "Debes capturar un comentario cuando rechazas los 5 porqués.";
+            return;
+        }
+
+        guardando = true;
+
+        try
+        {
+            var entity = await Db.HallazgosCincoPorQue
+                .FirstOrDefaultAsync(x => x.HallazgoCincoPorQueId == cincoPorQue.HallazgoCincoPorQueId);
+
+            if (entity is null)
+            {
+                errorMsg = "No se encontró el registro de 5 porqués.";
+                return;
+            }
+
+            if (!string.Equals(entity.Estatus, "Pendiente", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMsg = "Este análisis de 5 porqués ya no está pendiente de revisión.";
+                return;
+            }
+
+            entity.Estatus = aprobado ? "Aprobado" : "Rechazado";
+            entity.RevisadoPorSgcId = usuarioActualId;
+            entity.FechaRevisionSgc = DateTime.Now;
+            entity.ComentarioSgc = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = entity.HallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = aprobado
+                    ? $"SGC aprobó los 5 porqués.{(string.IsNullOrWhiteSpace(comentario) ? "" : $" Comentario: {comentario}")}"
+                    : $"SGC rechazó los 5 porqués. Motivo: {comentario}"
+            });
+
+            await Db.SaveChangesAsync();
+            await NotificarResolucion5PorquesAsync();
+
+            comentarioCincoPorQueSgc = null;
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
     private async Task CargarEvidencias()
     {
         evidenciasHallazgo = await Db.Evidencias
@@ -1074,6 +1353,220 @@ else
             .Where(e => e.ReferenciaTipo == "Hallazgo" && e.ReferenciaId == hallazgoId)
             .OrderByDescending(e => e.FechaCarga)
             .ToListAsync();
+    }
+
+    private async Task CargarEvidenciasValidacionAccion()
+    {
+        evidenciasValidacionAccion = await Db.Evidencias
+            .AsNoTracking()
+            .Where(e => e.ReferenciaTipo == "ValidacionAccion" && e.ReferenciaId == hallazgoId)
+            .OrderByDescending(e => e.FechaCarga)
+            .ToListAsync();
+    }
+
+    private async Task SubirValidacionAccion(InputFileChangeEventArgs e)
+    {
+        if (subiendoValidacionAccion || hallazgo is null || !UsuarioActualEsResponsableCierre || ValidacionAccionAprobada)
+            return;
+
+        const long maxBytes = 20 * 1024 * 1024;
+
+        subiendoValidacionAccion = true;
+        validacionAccionErrorMsg = null;
+
+        try
+        {
+            var carpeta = Path.Combine(Env.ContentRootPath, "App_Data", "evidencias", "validacion-accion", hallazgoId.ToString());
+            Directory.CreateDirectory(carpeta);
+
+            var archivosSubidos = 0;
+
+            foreach (var file in e.GetMultipleFiles(10))
+            {
+                if (file.Size > maxBytes)
+                {
+                    validacionAccionErrorMsg = $"El archivo \"{file.Name}\" excede el límite de 20 MB y no se subió.";
+                    continue;
+                }
+
+                var nombreArchivo = $"{Guid.NewGuid():N}{Path.GetExtension(file.Name)}";
+                var rutaCompleta = Path.Combine(carpeta, nombreArchivo);
+
+                await using (var origen = file.OpenReadStream(maxAllowedSize: maxBytes))
+                await using (var destino = File.Create(rutaCompleta))
+                {
+                    await origen.CopyToAsync(destino);
+                }
+
+                Db.Evidencias.Add(new Evidencia
+                {
+                    ReferenciaTipo = "ValidacionAccion",
+                    ReferenciaId = hallazgoId,
+                    RutaArchivo = Path.Combine("validacion-accion", hallazgoId.ToString(), nombreArchivo),
+                    NombreOriginal = file.Name,
+                    TipoArchivo = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                    FechaCarga = DateTime.Now,
+                    UsuarioId = usuarioActualId
+                });
+
+                archivosSubidos++;
+            }
+
+            if (archivosSubidos == 0)
+                return;
+
+            var esNuevo = accionCorrectiva is null;
+
+            if (accionCorrectiva is null)
+            {
+                accionCorrectiva = new AccionCorrectiva
+                {
+                    HallazgoId = hallazgoId,
+                    ResponsableId = usuarioActualId,
+                    FechaImplementacion = DateTime.Today,
+                    Estatus = "En Verificación",
+                    EstatusValidacion = "Pendiente"
+                };
+
+                Db.AccionesCorrectivas.Add(accionCorrectiva);
+            }
+            else if (string.Equals(accionCorrectiva.EstatusValidacion, "Rechazado", StringComparison.OrdinalIgnoreCase))
+            {
+                accionCorrectiva.EstatusValidacion = "Pendiente";
+                accionCorrectiva.RevisadoPorSgcId = null;
+                accionCorrectiva.FechaRevisionSgc = null;
+                accionCorrectiva.ComentarioSgc = null;
+            }
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = hallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = esNuevo
+                    ? $"Adjuntó {archivosSubidos} archivo(s) de acción correctiva para validación."
+                    : $"Adjuntó {archivosSubidos} archivo(s) adicionales de acción correctiva."
+            });
+
+            await Db.SaveChangesAsync();
+            await NotificarCapturaValidacionAccionAsync();
+            await CargarEvidenciasValidacionAccion();
+        }
+        catch (Exception ex)
+        {
+            validacionAccionErrorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            subiendoValidacionAccion = false;
+        }
+    }
+
+    private async Task NotificarCapturaValidacionAccionAsync()
+    {
+        try
+        {
+            if (hallazgo is null)
+                return;
+
+            var auditores = await EmailSvc.ResolverAuditoresAsync(hallazgo.AuditoriaProceso);
+            await EmailSvc.NotificarAsync(new[] { EmailService.QmsEmail }, auditores);
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear la carga del archivo de acción correctiva.
+        }
+    }
+
+    private async Task ResolverValidacionAccion(bool aprobado)
+    {
+        if (guardando) return;
+        errorMsg = null;
+
+        if (!usuarioEsSgc)
+        {
+            errorMsg = "No tienes permisos para revisar la acción correctiva.";
+            return;
+        }
+
+        if (accionCorrectiva is null)
+            return;
+
+        var comentario = comentarioValidacionAccionSgc?.Trim();
+
+        if (!aprobado && string.IsNullOrWhiteSpace(comentario))
+        {
+            errorMsg = "Debes capturar un comentario cuando rechazas la acción correctiva.";
+            return;
+        }
+
+        guardando = true;
+
+        try
+        {
+            var entity = await Db.AccionesCorrectivas
+                .FirstOrDefaultAsync(x => x.AccionCorrectivaId == accionCorrectiva.AccionCorrectivaId);
+
+            if (entity is null)
+            {
+                errorMsg = "No se encontró el registro de acción correctiva.";
+                return;
+            }
+
+            if (!string.Equals(entity.EstatusValidacion, "Pendiente", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMsg = "Esta acción correctiva ya no está pendiente de revisión.";
+                return;
+            }
+
+            entity.EstatusValidacion = aprobado ? "Aprobado" : "Rechazado";
+            entity.RevisadoPorSgcId = usuarioActualId;
+            entity.FechaRevisionSgc = DateTime.Now;
+            entity.ComentarioSgc = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = entity.HallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = aprobado
+                    ? $"SGC aprobó la acción correctiva.{(string.IsNullOrWhiteSpace(comentario) ? "" : $" Comentario: {comentario}")}"
+                    : $"SGC rechazó la acción correctiva. Motivo: {comentario}"
+            });
+
+            await Db.SaveChangesAsync();
+            await NotificarResolucionValidacionAccionAsync();
+
+            comentarioValidacionAccionSgc = null;
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task NotificarResolucionValidacionAccionAsync()
+    {
+        try
+        {
+            if (hallazgo is null)
+                return;
+
+            var auditores = await EmailSvc.ResolverAuditoresAsync(hallazgo.AuditoriaProceso);
+            var responsableCierre = await EmailSvc.ResolverEmailAsync(hallazgo.ResponsableCierreId);
+
+            if (responsableCierre is null)
+                return;
+
+            await EmailSvc.NotificarAsync(new[] { responsableCierre }, auditores);
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear la resolución de la acción correctiva.
+        }
     }
 
     private async Task SubirEvidencias(InputFileChangeEventArgs e)
@@ -1174,25 +1667,48 @@ else
                 return;
 
             var auditores = await EmailSvc.ResolverAuditoresAsync(hallazgo.AuditoriaProceso);
-            var link = $"{Nav.BaseUri}auditorias/{auditoriaId}/hallazgos/{hallazgoId}";
-
-            var cuerpo = $@"
-                <p>Se adjuntaron {archivosSubidos} archivo(s) de evidencia de la solución del hallazgo #{hallazgoId} (auditoría #{auditoriaId}).</p>
-                <ul>
-                    <li><b>Descripción:</b> {hallazgo.Descripcion}</li>
-                    <li><b>Subido por:</b> {usuarioActualId}</li>
-                </ul>
-                <p><a href=""{link}"">Ver hallazgo</a></p>";
-
-            await EmailSvc.EnviarAsync(
-                new[] { EmailService.QmsEmail },
-                auditores,
-                $"Evidencia adjuntada - Hallazgo #{hallazgoId}",
-                cuerpo);
+            await EmailSvc.NotificarAsync(new[] { EmailService.QmsEmail }, auditores);
         }
         catch
         {
             // El envío de correo no debe bloquear la carga de evidencia.
+        }
+    }
+
+    private async Task NotificarCaptura5PorquesAsync()
+    {
+        try
+        {
+            if (hallazgo is null)
+                return;
+
+            var auditores = await EmailSvc.ResolverAuditoresAsync(hallazgo.AuditoriaProceso);
+            await EmailSvc.NotificarAsync(new[] { EmailService.QmsEmail }, auditores);
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear la captura de los 5 porqués.
+        }
+    }
+
+    private async Task NotificarResolucion5PorquesAsync()
+    {
+        try
+        {
+            if (hallazgo is null)
+                return;
+
+            var auditores = await EmailSvc.ResolverAuditoresAsync(hallazgo.AuditoriaProceso);
+            var responsableCierre = await EmailSvc.ResolverEmailAsync(hallazgo.ResponsableCierreId);
+
+            if (responsableCierre is null)
+                return;
+
+            await EmailSvc.NotificarAsync(new[] { responsableCierre }, auditores);
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear la resolución de los 5 porqués.
         }
     }
 
@@ -1222,82 +1738,6 @@ else
         catch (Exception ex)
         {
             evidenciaErrorMsg = ex.InnerException?.Message ?? ex.Message;
-        }
-    }
-
-    private async Task CerrarHallazgo()
-    {
-        if (guardando) return;
-        guardando = true;
-        errorMsg = null;
-
-        try
-        {
-            if (hallazgo is null) return;
-
-            if (!UsuarioActualEsResponsableCierre)
-            {
-                errorMsg = "Solo el responsable de cierre puede cerrar el hallazgo.";
-                return;
-            }
-
-            if (EsNcMenor && !CincoPorQueAprobado)
-            {
-                errorMsg = "No puedes cerrar una NC Menor hasta que los 5 porqués estén aprobados por SGC.";
-                return;
-            }
-
-            hallazgo.Estatus = "Cerrado";
-
-            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
-            {
-                HallazgoId = hallazgoId,
-                UsuarioId = usuarioActualId,
-                Comentario = "Cerró el hallazgo.",
-                EstatusNuevo = "Cerrado"
-            });
-
-            await Db.SaveChangesAsync();
-            await NotificarCierreAsync();
-            await CargarPantalla();
-        }
-        catch (Exception ex)
-        {
-            errorMsg = ex.InnerException?.Message ?? ex.Message;
-        }
-        finally
-        {
-            guardando = false;
-        }
-    }
-
-    private async Task NotificarCierreAsync()
-    {
-        try
-        {
-            if (hallazgo is null)
-                return;
-
-            var auditores = await EmailSvc.ResolverAuditoresAsync(hallazgo.AuditoriaProceso);
-            var link = $"{Nav.BaseUri}auditorias/{auditoriaId}/hallazgos/{hallazgoId}";
-
-            var cuerpo = $@"
-                <p>Se cerró el hallazgo #{hallazgoId} de la auditoría #{auditoriaId}.</p>
-                <ul>
-                    <li><b>Descripción:</b> {hallazgo.Descripcion}</li>
-                    <li><b>Cerrado por:</b> {usuarioActualId}</li>
-                </ul>
-                <p><a href=""{link}"">Ver hallazgo</a></p>";
-
-            await EmailSvc.EnviarAsync(
-                new[] { EmailService.QmsEmail },
-                auditores,
-                $"Hallazgo cerrado - #{hallazgoId}",
-                cuerpo);
-        }
-        catch
-        {
-            // El envío de correo no debe bloquear el cierre del hallazgo.
         }
     }
 
@@ -1345,6 +1785,45 @@ else
 
     private void VolverAuditoria() =>
         Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos");
+
+    private void IrEditar() =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}/editar");
+
+    private async Task GuardarSeguimientoInforme()
+    {
+        if (guardandoSeguimientoInforme || hallazgo is null) return;
+
+        if (!usuarioEsSgc)
+        {
+            seguimientoInformeErrorMsg = "No tienes permisos para editar el seguimiento del informe.";
+            return;
+        }
+
+        guardandoSeguimientoInforme = true;
+        seguimientoInformeErrorMsg = null;
+
+        try
+        {
+            var entity = await Db.Hallazgos.FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId);
+
+            if (entity is not null)
+            {
+                entity.SeguimientoEntregaAnalisis = string.IsNullOrWhiteSpace(hallazgo.SeguimientoEntregaAnalisis) ? null : hallazgo.SeguimientoEntregaAnalisis.Trim();
+                entity.SeguimientoImplementacionCierre = string.IsNullOrWhiteSpace(hallazgo.SeguimientoImplementacionCierre) ? null : hallazgo.SeguimientoImplementacionCierre.Trim();
+                entity.SeguimientoVerificacion = string.IsNullOrWhiteSpace(hallazgo.SeguimientoVerificacion) ? null : hallazgo.SeguimientoVerificacion.Trim();
+
+                await Db.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            seguimientoInformeErrorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardandoSeguimientoInforme = false;
+        }
+    }
 
     private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
     {

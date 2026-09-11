@@ -382,6 +382,10 @@ else
 
     private async Task CargarPantalla()
     {
+        // El DbContext de Blazor Server vive por sesión: limpiamos el tracker para no
+        // arrastrar entidades desactualizadas de otra pantalla u otra acción.
+        Db.ChangeTracker.Clear();
+
         cincoPorQuesPendientes.Clear();
         revisados.Clear();
         personasDisplay.Clear();
@@ -503,7 +507,7 @@ else
             });
 
             await Db.SaveChangesAsync();
-            await NotificarResolucionAsync(entity, aprobado, comentario);
+            await NotificarResolucionAsync(entity);
             await CargarPantalla();
         }
         catch (Exception ex)
@@ -516,7 +520,7 @@ else
         }
     }
 
-    private async Task NotificarResolucionAsync(HallazgoCincoPorQue entity, bool aprobado, string? comentario)
+    private async Task NotificarResolucionAsync(HallazgoCincoPorQue entity)
     {
         try
         {
@@ -533,23 +537,8 @@ else
                 return;
 
             var auditores = await EmailSvc.ResolverAuditoresAsync(hallazgo.AuditoriaProceso);
-            var link = $"{Nav.BaseUri}auditorias/{hallazgo.AuditoriaId}/hallazgos/{hallazgo.HallazgoId}";
-            var resultado = aprobado ? "aprobó" : "rechazó";
-            var comentarioHtml = string.IsNullOrWhiteSpace(comentario) ? "" : $"<li><b>Comentario:</b> {comentario}</li>";
 
-            var cuerpo = $@"
-                <p>SGC {resultado} el análisis de 5 porqués del hallazgo #{hallazgo.HallazgoId} de la auditoría #{hallazgo.AuditoriaId}.</p>
-                <ul>
-                    <li><b>Descripción del hallazgo:</b> {hallazgo.Descripcion}</li>
-                    {comentarioHtml}
-                </ul>
-                <p><a href=""{link}"">Ver hallazgo</a></p>";
-
-            await EmailSvc.EnviarAsync(
-                new[] { responsableCierre },
-                auditores,
-                $"5 porqués {(aprobado ? "aprobados" : "rechazados")} - Hallazgo #{hallazgo.HallazgoId}",
-                cuerpo);
+            await EmailSvc.NotificarAsync(new[] { responsableCierre }, auditores);
         }
         catch
         {

@@ -24,4 +24,17 @@ public class AccionCorrectiva
 
     [Required]
     public string Estatus { get; set; } = "Abierta";
+
+    // Validación SGC del archivo de acción correctiva, exclusiva de NC Mayor.
+    [Required, StringLength(50)]
+    public string EstatusValidacion { get; set; } = "Pendiente";
+    // Pendiente / Aprobado / Rechazado
+
+    [StringLength(100)]
+    public string? RevisadoPorSgcId { get; set; }
+
+    public DateTime? FechaRevisionSgc { get; set; }
+
+    [StringLength(2000)]
+    public string? ComentarioSgc { get; set; }
 }

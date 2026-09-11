@@ -1,0 +1,371 @@
+@page "/auditorias/{auditoriaId:int}/informe"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.Hallazgos
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger no-print">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="informe-loading">
+        <div class="informe-skeleton"></div>
+    </div>
+}
+else if (auditoria is null)
+{
+    <section class="panel-card no-print">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró la auditoría</div>
+            <button type="button" class="mo-btn mo-btn-primary mt-3" @onclick="Volver">
+                Volver
+            </button>
+        </div>
+    </section>
+}
+else
+{
+    <div class="informe-page">
+        <div class="informe-actions no-print">
+            <button type="button" class="mo-btn mo-btn-secondary-outline" @onclick="Volver">
+                Volver a la auditoría
+            </button>
+
+            <a class="mo-btn mo-btn-primary-outline" href="@($"informes/auditoria/{auditoriaId}/excel")" target="_blank">
+                Descargar Excel
+            </a>
+
+            <button type="button" class="mo-btn mo-btn-primary" @onclick="ImprimirPdf">
+                Imprimir / Descargar PDF
+            </button>
+        </div>
+
+        <div class="informe-doc">
+            <div class="informe-header">
+                <img src="images/logo.png" class="informe-logo" alt="Logo" onerror="this.style.display='none'" />
+                <div>
+                    <div class="informe-empresa">Mitsubishi Electric Automotive de México, S.A. de C.V.</div>
+                    <h1>Informe de auditoría interna</h1>
+                </div>
+            </div>
+
+            <table class="informe-meta-table">
+                <tbody>
+                    <tr>
+                        <th>Auditoría</th>
+                        <td>#@auditoria.AuditoriaId</td>
+                        <th>Tipo</th>
+                        <td>@auditoria.TipoAuditoria</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha</th>
+                        <td>@auditoria.FechaInicio.ToString("yyyy-MM-dd") – @auditoria.FechaFin.ToString("yyyy-MM-dd")</td>
+                        <th>Auditor líder</th>
+                        <td>@MostrarPersona(auditoria.AuditorLiderId)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="informe-section">
+                <h2>Alcance de auditoría</h2>
+                <p>@(string.IsNullOrWhiteSpace(auditoria.Alcance) ? "Sin alcance capturado." : auditoria.Alcance)</p>
+            </div>
+
+            <div class="informe-section">
+                <h2>Objetivo de auditoría</h2>
+                <p>@(string.IsNullOrWhiteSpace(auditoria.Objetivo) ? "Sin objetivo capturado." : auditoria.Objetivo)</p>
+            </div>
+
+            <div class="informe-section">
+                <h2>Criterios</h2>
+                <p>@(string.IsNullOrWhiteSpace(auditoria.Criterios) ? "Sin criterios capturados." : auditoria.Criterios)</p>
+            </div>
+
+            <div class="informe-section">
+                <h2>Método</h2>
+                <p>@(string.IsNullOrWhiteSpace(auditoria.Metodos) ? "Sin método capturado." : auditoria.Metodos)</p>
+            </div>
+
+            <div class="informe-section">
+                <h2>Auditores participantes</h2>
+                <p>@(auditoresParticipantes.Count == 0 ? "Sin registrar." : string.Join(", ", auditoresParticipantes))</p>
+            </div>
+
+            <div class="informe-section">
+                <h2>Resultados de auditoría</h2>
+                <div class="informe-resultados">
+                    <div class="informe-resultado-card ncm">
+                        <div class="valor">@totalNCM</div>
+                        <div class="label">No conformidades mayores (NCM)</div>
+                    </div>
+                    <div class="informe-resultado-card ncmm">
+                        <div class="valor">@totalNCm</div>
+                        <div class="label">No conformidades menores (NCm)</div>
+                    </div>
+                    <div class="informe-resultado-card om">
+                        <div class="valor">@totalOM</div>
+                        <div class="label">Observaciones de mejora (OM)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="informe-section">
+                <h2>Informe detallado de hallazgos</h2>
+
+                @if (hallazgos.Count == 0)
+                {
+                    <p>No se registraron hallazgos en esta auditoría.</p>
+                }
+                else
+                {
+                    <div class="informe-table-wrap">
+                        <table class="informe-hallazgos-table">
+                            <thead>
+                                <tr>
+                                    <th>No.</th>
+                                    <th>Proceso</th>
+                                    <th>Declaración</th>
+                                    <th>Requisito</th>
+                                    <th>Evidencia</th>
+                                    <th>Tipo</th>
+                                    <th>Justificación</th>
+                                    <th>Responsable</th>
+                                    <th>Estatus</th>
+                                    <th>Entrega de análisis (20 días)</th>
+                                    <th>Implementación y cierre (45 días)</th>
+                                    <th>Verificación</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var h in hallazgos)
+                                {
+                                    <tr @key="h.HallazgoId">
+                                        <td>@h.HallazgoId</td>
+                                        <td>@(h.Proceso is null ? "" : $"{h.Proceso.Codigo} - {h.Proceso.Nombre}")</td>
+                                        <td>@h.Descripcion</td>
+                                        <td>@TextoRequisito(h)</td>
+                                        <td>@h.Evidencia</td>
+                                        <td>@TipoAbreviado(h)</td>
+                                        <td>@h.JustificacionNoConformidad</td>
+                                        <td>@MostrarPersona(h.ResponsableId)</td>
+                                        <td>@h.Estatus</td>
+                                        <td>@h.SeguimientoEntregaAnalisis</td>
+                                        <td>@h.SeguimientoImplementacionCierre</td>
+                                        <td>@h.SeguimientoVerificacion</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="informe-section">
+                <h2>Conclusiones de auditoría</h2>
+                <p>@(string.IsNullOrWhiteSpace(auditoria.Conclusiones) ? "Sin conclusiones capturadas." : auditoria.Conclusiones)</p>
+            </div>
+
+            <div class="informe-firma">
+                <div>
+                    <div class="label">Autor líder</div>
+                    <div class="valor">@MostrarPersona(auditoria.AuditorLiderId)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int auditoriaId { get; set; }
+
+    private bool cargando = true;
+    private string? errorMsg;
+
+    private Auditoria? auditoria;
+    private List<Hallazgo> hallazgos = new();
+    private List<string> auditoresParticipantes = new();
+
+    private int totalNCM;
+    private int totalNCm;
+    private int totalOM;
+
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            auditoria = await Db.Auditorias
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.AuditoriaId == auditoriaId);
+
+            if (auditoria is null)
+            {
+                cargando = false;
+                return;
+            }
+
+            var procesos = await Db.AuditoriaProcesos
+                .AsNoTracking()
+                .Where(x => x.AuditoriaId == auditoriaId)
+                .ToListAsync();
+
+            hallazgos = await Db.Hallazgos
+                .AsNoTracking()
+                .Include(h => h.Proceso)
+                .Include(h => h.Clausula)
+                .Include(h => h.Pregunta)
+                .Include(h => h.TipoHallazgo)
+                .Where(h => h.AuditoriaId == auditoriaId)
+                .OrderBy(h => h.HallazgoId)
+                .ToListAsync();
+
+            totalNCM = hallazgos.Count(h => string.Equals(h.TipoHallazgo?.Nombre, "NC Mayor", StringComparison.OrdinalIgnoreCase));
+            totalNCm = hallazgos.Count(h => string.Equals(h.TipoHallazgo?.Nombre, "NC Menor", StringComparison.OrdinalIgnoreCase));
+            totalOM = hallazgos.Count(h => string.Equals(h.TipoHallazgo?.Nombre, "Observación de Mejora", StringComparison.OrdinalIgnoreCase));
+
+            var loginsAuditores = procesos
+                .SelectMany(p => new[] { p.AuditorAsignadoId, p.SegundoAuditorId })
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            await CargarPersonasDisplay(
+                loginsAuditores
+                    .Append(auditoria.AuditorLiderId)
+                    .Concat(hallazgos.SelectMany(h => new string?[] { h.ResponsableId, h.ResponsableCierreId })));
+
+            auditoresParticipantes = loginsAuditores
+                .Select(MostrarPersona)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private static string TextoRequisito(Hallazgo h)
+    {
+        if (h.Clausula is not null)
+            return $"{h.Clausula.Codigo} - {h.Clausula.Descripcion}";
+
+        return h.Pregunta?.Requisito ?? "";
+    }
+
+    private static string TipoAbreviado(Hallazgo h)
+    {
+        var nombre = h.TipoHallazgo?.Nombre ?? "";
+
+        if (nombre.Contains("Mayor", StringComparison.OrdinalIgnoreCase))
+            return "NCM";
+
+        if (nombre.Contains("Menor", StringComparison.OrdinalIgnoreCase))
+            return "NCm";
+
+        if (nombre.Contains("Mejora", StringComparison.OrdinalIgnoreCase))
+            return "OM";
+
+        return nombre;
+    }
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids.Where(x => !personasDisplay.ContainsKey(x)).ToList();
+
+        if (faltantes.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return "Sin asignar";
+
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
+
+    private async Task ImprimirPdf()
+    {
+        await JS.InvokeVoidAsync("print");
+    }
+
+    private void Volver() => Nav.NavigateTo($"auditorias/{auditoriaId}");
+}

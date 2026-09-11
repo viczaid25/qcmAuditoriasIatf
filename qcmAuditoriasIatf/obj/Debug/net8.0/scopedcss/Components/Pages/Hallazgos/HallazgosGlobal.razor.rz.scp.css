@@ -210,10 +210,36 @@
 }
 
 .desc-cell[b-q773rletvo] {
-    max-width: 320px;
+    max-width: 560px;
     white-space: pre-wrap;
     line-height: 1.45;
     color: #334155;
+}
+
+.mo-table-wrap table.mo-table[b-q773rletvo] {
+    min-width: 1700px;
+}
+
+.mo-table-wrap table.mo-table th:nth-child(6)[b-q773rletvo],
+.mo-table-wrap table.mo-table td:nth-child(6)[b-q773rletvo] {
+    min-width: 560px;
+}
+
+.linea-pill[b-q773rletvo] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.empty-inline[b-q773rletvo] {
+    color: #94a3b8;
 }
 
 .evidencia-box[b-q773rletvo] {

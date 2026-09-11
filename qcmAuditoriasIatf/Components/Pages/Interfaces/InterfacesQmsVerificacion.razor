@@ -61,13 +61,13 @@ else
                     </span>
 
                     <span class="meta-chip">
-                        Pendientes de verificación:
+                        Pendientes de decisión:
                         <strong>@pendientes.Count</strong>
                     </span>
                 </div>
 
                 <p class="hero-text">
-                    Revisa los hallazgos ya cerrados por el responsable, adjunta evidencia de verificación y márcalos como verificados.
+                    Revisa la evidencia que subió el responsable de cierre y decide si el hallazgo se cierra o se rechaza para que suba evidencia nueva.
                 </p>
             </div>
 
@@ -80,29 +80,29 @@ else
 
         <section class="interfaces-metrics">
             <div class="metric-card">
-                <div class="metric-label">Pendientes de verificación</div>
+                <div class="metric-label">Pendientes de decisión</div>
                 <div class="metric-value">@pendientes.Count</div>
-                <div class="metric-note">Hallazgos cerrados esperando verificación QMS</div>
+                <div class="metric-note">Con evidencia subida, esperando a QMS</div>
             </div>
 
             <div class="metric-card">
-                <div class="metric-label">Verificados</div>
+                <div class="metric-label">Cerrados por QMS</div>
                 <div class="metric-value">@totalVerificados</div>
-                <div class="metric-note">Confirmados como cierre satisfactorio</div>
+                <div class="metric-note">Total histórico</div>
             </div>
 
             <div class="metric-card">
                 <div class="metric-label">Recientes</div>
                 <div class="metric-value">@verificados.Count</div>
-                <div class="metric-note">Últimos verificados por QMS</div>
+                <div class="metric-note">Últimos cerrados por QMS</div>
             </div>
         </section>
 
         <section class="panel-card">
             <div class="panel-head">
                 <div>
-                    <h2>Hallazgos cerrados pendientes de verificación</h2>
-                    <p class="panel-subtitle">Confirma que el cierre del responsable fue satisfactorio.</p>
+                    <h2>Hallazgos con evidencia pendientes de decisión</h2>
+                    <p class="panel-subtitle">Cierra el hallazgo si la evidencia es satisfactoria, o recházala para que el responsable suba una nueva.</p>
                 </div>
 
                 <span class="panel-badge">@pendientes.Count pendiente(s)</span>
@@ -111,7 +111,7 @@ else
             @if (pendientes.Count == 0)
             {
                 <div class="empty-state compact">
-                    No hay hallazgos cerrados pendientes de verificación.
+                    No hay hallazgos con evidencia pendiente de decisión.
                 </div>
             }
             else
@@ -126,7 +126,7 @@ else
                                     <div class="reviewed-subtitle">@row.ProcesoTexto</div>
                                 </div>
 
-                                <span class="validacion-pill pending">Pendiente de verificación</span>
+                                <span class="validacion-pill pending">Pendiente de decisión</span>
                             </div>
 
                             <div class="reviewed-body">
@@ -139,18 +139,39 @@ else
                                 </div>
 
                                 <div class="verificacion-evidencia">
-                                    <div class="mini-label">Evidencia de verificación</div>
+                                    <div class="mini-label">Evidencia subida por el responsable</div>
 
-                                    @if (row.Evidencias.Count == 0)
+                                    @if (row.EvidenciasResponsable.Count == 0)
                                     {
                                         <div class="empty-state compact">
-                                            Aún no se ha adjuntado evidencia de verificación.
+                                            El responsable aún no ha adjuntado evidencia.
                                         </div>
                                     }
                                     else
                                     {
                                         <div class="evidencia-list">
-                                            @foreach (var ev in row.Evidencias)
+                                            @foreach (var ev in row.EvidenciasResponsable)
+                                            {
+                                                <div class="evidencia-item" @key="ev.EvidenciaId">
+                                                    <a href="@($"evidencias/{ev.EvidenciaId}")" target="_blank" class="evidencia-link">
+                                                        @ev.NombreOriginal
+                                                    </a>
+                                                    <span class="evidencia-meta">
+                                                        @ev.FechaCarga.ToString("yyyy-MM-dd HH:mm")
+                                                    </span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="verificacion-evidencia mt-2">
+                                    <div class="mini-label">Evidencia adicional de QMS (opcional)</div>
+
+                                    @if (row.EvidenciasQms.Count > 0)
+                                    {
+                                        <div class="evidencia-list mb-2">
+                                            @foreach (var ev in row.EvidenciasQms)
                                             {
                                                 <div class="evidencia-item" @key="ev.EvidenciaId">
                                                     <a href="@($"evidencias/{ev.EvidenciaId}")" target="_blank" class="evidencia-link">
@@ -164,21 +185,19 @@ else
                                         </div>
                                     }
 
-                                    <div class="mt-2">
-                                        <InputFile OnChange="e => SubirEvidenciaVerificacion(row, e)" multiple disabled="@row.SubiendoArchivo" />
-                                        <div class="field-help">Tamaño máximo por archivo: 20 MB.</div>
+                                    <InputFile OnChange="e => SubirEvidenciaQms(row, e)" multiple disabled="@row.SubiendoArchivo" />
+                                    <div class="field-help">No es obligatorio. Tamaño máximo por archivo: 20 MB.</div>
 
-                                        @if (row.SubiendoArchivo)
-                                        {
-                                            <div class="field-help">Subiendo...</div>
-                                        }
-                                    </div>
+                                    @if (row.SubiendoArchivo)
+                                    {
+                                        <div class="field-help">Subiendo...</div>
+                                    }
                                 </div>
 
                                 <div class="comment-box mt-3">
-                                    <div class="mini-label">Comentario de verificación (opcional)</div>
+                                    <div class="mini-label">Comentario (obligatorio solo si rechazas)</div>
                                     <InputTextArea class="mo-form-control review-textarea"
-                                                   @bind-Value="row.ComentarioVerificacionQms"
+                                                   @bind-Value="row.ComentarioDecision"
                                                    rows="3"
                                                    disabled="@(guardandoHallazgoId == row.HallazgoId)" />
                                 </div>
@@ -191,9 +210,16 @@ else
 
                                 <button type="button"
                                         class="table-btn table-btn-success"
-                                        @onclick="() => VerificarHallazgo(row)"
+                                        @onclick="() => ResolverHallazgo(row, true)"
                                         disabled="@(guardandoHallazgoId == row.HallazgoId)">
-                                    @(guardandoHallazgoId == row.HallazgoId ? "Guardando..." : "Verificar")
+                                    @(guardandoHallazgoId == row.HallazgoId ? "Guardando..." : "Cerrar hallazgo")
+                                </button>
+
+                                <button type="button"
+                                        class="table-btn table-btn-danger"
+                                        @onclick="() => ResolverHallazgo(row, false)"
+                                        disabled="@(guardandoHallazgoId == row.HallazgoId)">
+                                    @(guardandoHallazgoId == row.HallazgoId ? "Guardando..." : "Rechazar")
                                 </button>
                             </div>
                         </div>
@@ -205,8 +231,8 @@ else
         <section class="panel-card">
             <div class="panel-head">
                 <div>
-                    <h2>Últimos hallazgos verificados</h2>
-                    <p class="panel-subtitle">Historial reciente de verificaciones QMS.</p>
+                    <h2>Últimos hallazgos cerrados por QMS</h2>
+                    <p class="panel-subtitle">Historial reciente de cierres.</p>
                 </div>
 
                 <span class="panel-badge">@verificados.Count reciente(s)</span>
@@ -215,7 +241,7 @@ else
             @if (verificados.Count == 0)
             {
                 <div class="empty-state compact">
-                    Aún no hay hallazgos verificados por QMS.
+                    Aún no hay hallazgos cerrados por QMS.
                 </div>
             }
             else
@@ -230,7 +256,7 @@ else
                                     <div class="reviewed-subtitle">@row.ProcesoTexto</div>
                                 </div>
 
-                                <span class="validacion-pill approved">Verificado</span>
+                                <span class="validacion-pill approved">Cerrado</span>
                             </div>
 
                             <div class="reviewed-body">
@@ -238,7 +264,7 @@ else
 
                                 <div class="reviewed-meta">
                                     <span>Responsable de cierre: <strong>@MostrarPersona(row.ResponsableCierreId, "Sin asignar")</strong></span>
-                                    <span>Verificó: <strong>@MostrarPersona(row.VerificadoPorId, "—")</strong></span>
+                                    <span>Cerró: <strong>@MostrarPersona(row.VerificadoPorId, "—")</strong></span>
                                     @if (row.FechaVerificacionQms.HasValue)
                                     {
                                         <span>Fecha: <strong>@row.FechaVerificacionQms.Value.ToString("yyyy-MM-dd HH:mm")</strong></span>
@@ -248,25 +274,8 @@ else
                                 @if (!string.IsNullOrWhiteSpace(row.ComentarioVerificacionQms))
                                 {
                                     <div class="comment-box">
-                                        <div class="mini-label">Comentario de verificación</div>
+                                        <div class="mini-label">Comentario</div>
                                         <div>@row.ComentarioVerificacionQms</div>
-                                    </div>
-                                }
-
-                                @if (row.Evidencias.Count > 0)
-                                {
-                                    <div class="evidencia-list mt-2">
-                                        @foreach (var ev in row.Evidencias)
-                                        {
-                                            <div class="evidencia-item" @key="ev.EvidenciaId">
-                                                <a href="@($"evidencias/{ev.EvidenciaId}")" target="_blank" class="evidencia-link">
-                                                    @ev.NombreOriginal
-                                                </a>
-                                                <span class="evidencia-meta">
-                                                    @ev.FechaCarga.ToString("yyyy-MM-dd HH:mm")
-                                                </span>
-                                            </div>
-                                        }
                                     </div>
                                 }
                             </div>
@@ -314,7 +323,9 @@ else
         public string? VerificadoPorId { get; set; }
         public DateTime? FechaVerificacionQms { get; set; }
         public string? ComentarioVerificacionQms { get; set; }
-        public List<Evidencia> Evidencias { get; set; } = new();
+        public List<Evidencia> EvidenciasResponsable { get; set; } = new();
+        public List<Evidencia> EvidenciasQms { get; set; } = new();
+        public string? ComentarioDecision { get; set; }
         public bool SubiendoArchivo { get; set; }
     }
 
@@ -366,6 +377,10 @@ else
 
     private async Task CargarPantalla()
     {
+        // El DbContext de Blazor Server vive por sesión: limpiamos el tracker para no
+        // arrastrar entidades desactualizadas de otra pantalla u otra acción.
+        Db.ChangeTracker.Clear();
+
         pendientes.Clear();
         verificados.Clear();
         personasDisplay.Clear();
@@ -375,10 +390,17 @@ else
 
         totalVerificados = await Db.Hallazgos.CountAsync(h => h.VerificadoQms);
 
+        var idsConEvidencia = await Db.Evidencias
+            .AsNoTracking()
+            .Where(e => e.ReferenciaTipo == "Hallazgo")
+            .Select(e => e.ReferenciaId)
+            .Distinct()
+            .ToListAsync();
+
         var pendientesEntity = await Db.Hallazgos
             .AsNoTracking()
             .Include(h => h.Proceso)
-            .Where(h => h.Estatus == "Cerrado" && !h.VerificadoQms)
+            .Where(h => h.Estatus != "Cerrado" && idsConEvidencia.Contains(h.HallazgoId))
             .OrderBy(h => h.FechaCreacion)
             .ThenBy(h => h.HallazgoId)
             .ToListAsync();
@@ -402,12 +424,22 @@ else
 
         var evidencias = await Db.Evidencias
             .AsNoTracking()
-            .Where(e => e.ReferenciaTipo == "VerificacionQms" && idsHallazgos.Contains(e.ReferenciaId))
+            .Where(e =>
+                (e.ReferenciaTipo == "Hallazgo" || e.ReferenciaTipo == "VerificacionQms") &&
+                idsHallazgos.Contains(e.ReferenciaId))
             .OrderByDescending(e => e.FechaCarga)
             .ToListAsync();
 
         foreach (var row in pendientes.Concat(verificados))
-            row.Evidencias = evidencias.Where(e => e.ReferenciaId == row.HallazgoId).ToList();
+        {
+            row.EvidenciasResponsable = evidencias
+                .Where(e => e.ReferenciaTipo == "Hallazgo" && e.ReferenciaId == row.HallazgoId)
+                .ToList();
+
+            row.EvidenciasQms = evidencias
+                .Where(e => e.ReferenciaTipo == "VerificacionQms" && e.ReferenciaId == row.HallazgoId)
+                .ToList();
+        }
 
         await CargarPersonasDisplay(
             pendientes.SelectMany(x => new string?[] { x.ResponsableId, x.ResponsableCierreId, x.CreadoPorId })
@@ -428,7 +460,7 @@ else
         ComentarioVerificacionQms = h.ComentarioVerificacionQms
     };
 
-    private async Task SubirEvidenciaVerificacion(VerificacionRowVm row, InputFileChangeEventArgs e)
+    private async Task SubirEvidenciaQms(VerificacionRowVm row, InputFileChangeEventArgs e)
     {
         if (row.SubiendoArchivo)
             return;
@@ -473,7 +505,7 @@ else
 
             await Db.SaveChangesAsync();
 
-            row.Evidencias = await Db.Evidencias
+            row.EvidenciasQms = await Db.Evidencias
                 .AsNoTracking()
                 .Where(ev => ev.ReferenciaTipo == "VerificacionQms" && ev.ReferenciaId == row.HallazgoId)
                 .OrderByDescending(ev => ev.FechaCarga)
@@ -489,14 +521,22 @@ else
         }
     }
 
-    private async Task VerificarHallazgo(VerificacionRowVm row)
+    private async Task ResolverHallazgo(VerificacionRowVm row, bool cerrar)
     {
         if (guardandoHallazgoId.HasValue) return;
         errorMsg = null;
 
         if (!usuarioEsSgc)
         {
-            errorMsg = "No tienes permisos para verificar hallazgos.";
+            errorMsg = "No tienes permisos para resolver hallazgos.";
+            return;
+        }
+
+        var comentario = row.ComentarioDecision?.Trim();
+
+        if (!cerrar && string.IsNullOrWhiteSpace(comentario))
+        {
+            errorMsg = "Debes capturar un comentario para rechazar la evidencia.";
             return;
         }
 
@@ -510,39 +550,49 @@ else
 
             if (entity is null)
             {
-                errorMsg = "No se encontró el hallazgo a verificar.";
+                errorMsg = "No se encontró el hallazgo.";
                 return;
             }
 
-            if (!string.Equals(entity.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(entity.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase))
             {
-                errorMsg = "Este hallazgo ya no está en estatus Cerrado.";
+                errorMsg = "Este hallazgo ya está cerrado.";
                 return;
             }
 
-            if (entity.VerificadoQms)
+            if (cerrar)
             {
-                errorMsg = "Este hallazgo ya fue verificado.";
-                return;
+                entity.Estatus = "Cerrado";
+                entity.VerificadoQms = true;
+                entity.VerificadoPorId = usuarioActualId;
+                entity.FechaVerificacionQms = DateTime.Now;
+                entity.ComentarioVerificacionQms = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
+
+                Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+                {
+                    HallazgoId = entity.HallazgoId,
+                    UsuarioId = usuarioActualId,
+                    Comentario = $"QMS cerró el hallazgo.{(string.IsNullOrWhiteSpace(comentario) ? "" : $" Comentario: {comentario}")}",
+                    EstatusNuevo = "Cerrado"
+                });
             }
-
-            var comentario = row.ComentarioVerificacionQms?.Trim();
-
-            entity.VerificadoQms = true;
-            entity.VerificadoPorId = usuarioActualId;
-            entity.FechaVerificacionQms = DateTime.Now;
-            entity.ComentarioVerificacionQms = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
-
-            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            else
             {
-                HallazgoId = entity.HallazgoId,
-                UsuarioId = usuarioActualId,
-                Comentario = $"QMS verificó el hallazgo.{(string.IsNullOrWhiteSpace(comentario) ? "" : $" Comentario: {comentario}")}",
-                EstatusNuevo = entity.Estatus
-            });
+                entity.Estatus = "En Proceso";
+
+                Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+                {
+                    HallazgoId = entity.HallazgoId,
+                    UsuarioId = usuarioActualId,
+                    Comentario = $"QMS rechazó la evidencia. Motivo: {comentario}",
+                    EstatusNuevo = "En Proceso"
+                });
+            }
 
             await Db.SaveChangesAsync();
-            await NotificarVerificacionAsync(entity, comentario);
+            await NotificarDecisionAsync(entity, cerrar);
+
+            row.ComentarioDecision = null;
             await CargarPantalla();
         }
         catch (Exception ex)
@@ -555,7 +605,7 @@ else
         }
     }
 
-    private async Task NotificarVerificacionAsync(Hallazgo entity, string? comentario)
+    private async Task NotificarDecisionAsync(Hallazgo entity, bool cerrar)
     {
         try
         {
@@ -566,26 +616,11 @@ else
             if (responsableCierre is not null)
                 destinatarios.Add(responsableCierre);
 
-            var link = $"{Nav.BaseUri}auditorias/{entity.AuditoriaId}/hallazgos/{entity.HallazgoId}";
-            var comentarioHtml = string.IsNullOrWhiteSpace(comentario) ? "" : $"<li><b>Comentario:</b> {comentario}</li>";
-
-            var cuerpo = $@"
-                <p>QMS verificó el cierre del hallazgo #{entity.HallazgoId} de la auditoría #{entity.AuditoriaId}.</p>
-                <ul>
-                    <li><b>Descripción:</b> {entity.Descripcion}</li>
-                    {comentarioHtml}
-                </ul>
-                <p><a href=""{link}"">Ver hallazgo</a></p>";
-
-            await EmailSvc.EnviarAsync(
-                destinatarios,
-                auditores,
-                $"Hallazgo verificado por QMS - #{entity.HallazgoId}",
-                cuerpo);
+            await EmailSvc.NotificarAsync(destinatarios, auditores);
         }
         catch
         {
-            // El envío de correo no debe bloquear la verificación del hallazgo.
+            // El envío de correo no debe bloquear la decisión de QMS.
         }
     }
 
