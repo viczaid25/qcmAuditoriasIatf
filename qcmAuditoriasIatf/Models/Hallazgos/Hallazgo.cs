@@ -20,6 +20,11 @@ public class Hallazgo
     public int? ClausulaId { get; set; }
     public ClausulaIATF? Clausula { get; set; }
 
+    // Texto libre que captura el auditor indicando a qué cláusula de la norma
+    // está dirigido el hallazgo (independiente de la cláusula del catálogo/checklist).
+    [StringLength(500)]
+    public string? ClausulaAplicable { get; set; }
+
     public int TipoHallazgoId { get; set; }
     public TipoHallazgo? TipoHallazgo { get; set; }
 
@@ -87,4 +92,10 @@ public class Hallazgo
 
     [StringLength(2000)]
     public string? SeguimientoVerificacion { get; set; }
+
+    // Clasificación adicional para el informe extendido (revisión SGC de posible mala conducta).
+    public bool EsMissconduct { get; set; } = false;
+
+    [StringLength(2000)]
+    public string? ComentarioMissconduct { get; set; }
 }

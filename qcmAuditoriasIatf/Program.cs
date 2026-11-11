@@ -77,6 +77,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await SeedData.SeedAsync(db);
+    await SeedData.SeedCompetenciasAuditorAsync(db);
 }
 
 if (!app.Environment.IsDevelopment())
@@ -93,7 +94,7 @@ app.UseAntiforgery();
 
 app.MapRazorPages();
 
-app.MapGet("/evidencias/{id:int}", async (int id, ApplicationDbContext db, IWebHostEnvironment env) =>
+app.MapGet("/evidencias/{id:int}", async (int id, bool? ver, ApplicationDbContext db, IWebHostEnvironment env) =>
 {
     var evidencia = await db.Evidencias
         .AsNoTracking()
@@ -111,6 +112,11 @@ app.MapGet("/evidencias/{id:int}", async (int id, ApplicationDbContext db, IWebH
     var tipoContenido = string.IsNullOrWhiteSpace(evidencia.TipoArchivo)
         ? "application/octet-stream"
         : evidencia.TipoArchivo;
+
+    // ?ver=true no manda Content-Disposition: attachment, así que el navegador
+    // muestra el archivo directamente (PDF/imagen) en vez de forzar la descarga.
+    if (ver == true)
+        return Results.File(rutaCompleta, tipoContenido, enableRangeProcessing: true);
 
     return Results.File(rutaCompleta, tipoContenido, evidencia.NombreOriginal);
 }).RequireAuthorization();
@@ -130,8 +136,10 @@ app.MapGet("/informes/auditoria/{auditoriaId:int}/excel", async (int auditoriaId
         .Include(h => h.Clausula)
         .Include(h => h.Pregunta)
         .Include(h => h.TipoHallazgo)
+        .Include(h => h.AuditoriaProceso)
         .Where(h => h.AuditoriaId == auditoriaId)
-        .OrderBy(h => h.HallazgoId)
+        .OrderBy(h => h.Proceso!.Codigo)
+        .ThenBy(h => h.HallazgoId)
         .ToListAsync();
 
     var procesos = await db.AuditoriaProcesos
@@ -263,7 +271,7 @@ app.MapGet("/informes/auditoria/{auditoriaId:int}/excel", async (int auditoriaId
 
     var encabezados = new[]
     {
-        "No.", "Proceso", "Declaración", "Requisito", "Evidencia", "Tipo", "Justificación",
+        "No.", "Proceso", "Línea auditada", "Declaración", "Requisito", "Cláusula aplicable", "Evidencia", "Tipo", "Justificación",
         "Responsable", "Estatus", "Entrega de análisis (20 días)", "Implementación y cierre (45 días)", "Verificación"
     };
 
@@ -281,16 +289,18 @@ app.MapGet("/informes/auditoria/{auditoriaId:int}/excel", async (int auditoriaId
     {
         ws.Cell(filaDatos, 1).Value = h.HallazgoId;
         ws.Cell(filaDatos, 2).Value = h.Proceso is null ? "" : $"{h.Proceso.Codigo} - {h.Proceso.Nombre}";
-        ws.Cell(filaDatos, 3).Value = h.Descripcion;
-        ws.Cell(filaDatos, 4).Value = TextoRequisito(h);
-        ws.Cell(filaDatos, 5).Value = h.Evidencia ?? "";
-        ws.Cell(filaDatos, 6).Value = TipoAbreviado(h);
-        ws.Cell(filaDatos, 7).Value = h.JustificacionNoConformidad ?? "";
-        ws.Cell(filaDatos, 8).Value = MostrarPersona(h.ResponsableId);
-        ws.Cell(filaDatos, 9).Value = h.Estatus;
-        ws.Cell(filaDatos, 10).Value = h.SeguimientoEntregaAnalisis ?? "";
-        ws.Cell(filaDatos, 11).Value = h.SeguimientoImplementacionCierre ?? "";
-        ws.Cell(filaDatos, 12).Value = h.SeguimientoVerificacion ?? "";
+        ws.Cell(filaDatos, 3).Value = h.AuditoriaProceso?.LineaNombre ?? "";
+        ws.Cell(filaDatos, 4).Value = h.Descripcion;
+        ws.Cell(filaDatos, 5).Value = TextoRequisito(h);
+        ws.Cell(filaDatos, 6).Value = h.ClausulaAplicable ?? "";
+        ws.Cell(filaDatos, 7).Value = h.Evidencia ?? "";
+        ws.Cell(filaDatos, 8).Value = TipoAbreviado(h);
+        ws.Cell(filaDatos, 9).Value = h.JustificacionNoConformidad ?? "";
+        ws.Cell(filaDatos, 10).Value = MostrarPersona(h.ResponsableId);
+        ws.Cell(filaDatos, 11).Value = h.Estatus;
+        ws.Cell(filaDatos, 12).Value = h.SeguimientoEntregaAnalisis ?? "";
+        ws.Cell(filaDatos, 13).Value = h.SeguimientoImplementacionCierre ?? "";
+        ws.Cell(filaDatos, 14).Value = h.SeguimientoVerificacion ?? "";
 
         for (var col = 1; col <= encabezados.Length; col++)
             ws.Cell(filaDatos, col).Style.Alignment.WrapText = true;
@@ -306,9 +316,9 @@ app.MapGet("/informes/auditoria/{auditoriaId:int}/excel", async (int auditoriaId
         : auditoria.Conclusiones;
 
     ws.Columns(1, encabezados.Length).AdjustToContents(1, filaDatos - 1);
-    ws.Column(3).Width = Math.Min(ws.Column(3).Width, 60);
     ws.Column(4).Width = Math.Min(ws.Column(4).Width, 60);
-    ws.Column(7).Width = Math.Min(ws.Column(7).Width, 60);
+    ws.Column(5).Width = Math.Min(ws.Column(5).Width, 60);
+    ws.Column(8).Width = Math.Min(ws.Column(8).Width, 60);
 
     using var stream = new MemoryStream();
     wb.SaveAs(stream);

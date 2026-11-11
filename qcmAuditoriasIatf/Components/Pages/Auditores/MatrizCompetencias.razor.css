@@ -1,0 +1,353 @@
+.matriz-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.matriz-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.7rem;
+    border-radius: 28px;
+    background: linear-gradient(135deg, rgba(6,11,41,0.97) 0%, rgba(28,51,117,0.97) 100%);
+    color: #fff;
+    box-shadow: 0 24px 45px rgba(15,23,42,0.16);
+}
+
+.matriz-kicker {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.38rem 0.78rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.10);
+    color: rgba(255,255,255,0.86);
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 0.9rem;
+}
+
+.matriz-hero h1 {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    line-height: 1.1;
+    font-weight: 800;
+}
+
+.hero-text {
+    margin: 0 0 0.9rem;
+    max-width: 760px;
+    color: rgba(255,255,255,0.78);
+    font-size: 0.95rem;
+}
+
+.hero-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    align-self: start;
+}
+
+.hero-btn {
+    min-height: 46px;
+    padding: 0.8rem 1.1rem;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.10);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.08);
+    font-weight: 700;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+}
+
+    .hero-btn:hover {
+        background: rgba(255,255,255,0.16);
+    }
+
+    .hero-btn.primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border-color: transparent;
+        box-shadow: 0 12px 24px rgba(59,130,246,0.25);
+    }
+
+.matriz-save-ok {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.55rem 1rem;
+    border-radius: 999px;
+    background: rgba(16,185,129,0.14);
+    color: #059669;
+    font-weight: 700;
+    font-size: 0.88rem;
+    align-self: flex-start;
+}
+
+.panel-card {
+    padding: 1.25rem;
+    border-radius: 24px;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid rgba(226,232,240,0.95);
+    box-shadow: 0 14px 30px rgba(15,23,42,0.06);
+}
+
+.empty-state.compact {
+    padding: 1rem;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    color: #64748b;
+    text-align: center;
+}
+
+.matriz-scroll {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    box-shadow: 0 14px 30px rgba(15,23,42,0.06);
+}
+
+.matriz-table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 2200px;
+    font-size: 0.82rem;
+}
+
+    .matriz-table th,
+    .matriz-table td {
+        border: 1px solid #e2e8f0;
+        padding: 0.5rem 0.6rem;
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .matriz-table thead th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+.matriz-col-fija {
+    min-width: 150px;
+    background: #fff;
+}
+
+    thead .matriz-col-fija {
+        background: #f8fafc;
+    }
+
+.matriz-grupo-header {
+    text-align: center;
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+}
+
+.matriz-comp-header {
+    min-width: 120px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.3;
+}
+
+.matriz-section-row td {
+    background: #0f172a;
+    color: #fff;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.78rem;
+    padding: 0.6rem 0.9rem;
+}
+
+.matriz-celda {
+    text-align: center;
+    min-width: 90px;
+}
+
+.matriz-check {
+    display: inline-flex;
+    cursor: pointer;
+}
+
+    .matriz-check input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+.matriz-check-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 2px solid #cbd5e1;
+    background: #f8fafc;
+    color: #fff;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+    .matriz-check:hover .matriz-check-box {
+        border-color: #94a3b8;
+    }
+
+    .matriz-check:active .matriz-check-box {
+        transform: scale(0.92);
+    }
+
+    .matriz-check-box.checked {
+        background: #10b981;
+        border-color: #059669;
+    }
+
+    .matriz-check-box.checked.vig-por-vencer {
+        background: #f59e0b;
+        border-color: #d97706;
+    }
+
+    .matriz-check-box.checked.vig-vencido {
+        background: #ef4444;
+        border-color: #dc2626;
+    }
+
+.matriz-leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    padding: 0.7rem 1rem;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid rgba(226,232,240,0.95);
+    color: #475569;
+    font-size: 0.82rem;
+}
+
+.leyenda-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 600;
+}
+
+.leyenda-cuadro {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+}
+
+    .leyenda-cuadro.ok {
+        background: #10b981;
+    }
+
+    .leyenda-cuadro.warn {
+        background: #f59e0b;
+    }
+
+    .leyenda-cuadro.danger {
+        background: #ef4444;
+    }
+
+.leyenda-nota {
+    color: #64748b;
+}
+
+.cell-title {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.matriz-link {
+    color: #0f172a;
+    text-decoration: none;
+}
+
+    .matriz-link:hover {
+        color: #1d4ed8;
+        text-decoration: underline;
+    }
+
+.text-center {
+    text-align: center;
+}
+
+.matriz-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+    .matriz-badge.ok {
+        background: #ecfdf5;
+        color: #059669;
+    }
+
+    .matriz-badge.danger {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .matriz-badge.warn {
+        background: #fffbeb;
+        color: #b45309;
+    }
+
+.matriz-loading {
+    display: grid;
+    gap: 1rem;
+}
+
+.matriz-skeleton {
+    border-radius: 24px;
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 37%, #e5e7eb 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+}
+
+.matriz-skeleton-hero {
+    height: 200px;
+}
+
+.matriz-skeleton-table {
+    height: 420px;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: 0 0;
+    }
+}
+
+@media (max-width: 900px) {
+    .matriz-hero {
+        padding: 1.25rem;
+    }
+
+    .hero-actions {
+        width: 100%;
+    }
+
+    .hero-btn {
+        width: 100%;
+    }
+}

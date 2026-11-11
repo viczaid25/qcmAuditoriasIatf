@@ -132,6 +132,12 @@ else
                     </div>
 
                     <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Cláusula de la norma aplicable</label>
+                            <InputText class="mo-form-control" @bind-Value="vm.ClausulaAplicable" placeholder="Ej. 8.5.1.1, 9.1.1..." />
+                            <div class="field-help">Opcional. Indica a qué cláusula de la norma está dirigido este hallazgo.</div>
+                        </div>
+
                         <div class="col-md-6">
                             <label class="form-label">Fecha compromiso</label>
                             <InputDate class="mo-form-control" @bind-Value="vm.FechaCompromiso" />
@@ -338,6 +344,7 @@ else
         public string? DescripcionNoConformidad { get; set; }
         public string? JustificacionNoConformidad { get; set; }
         public string? Evidencia { get; set; }
+        public string? ClausulaAplicable { get; set; }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -510,6 +517,7 @@ else
                 AuditoriaId = auditoriaId,
                 ProcesoId = ap.ProcesoId,
                 ClausulaId = pregunta.ClausulaId,
+                ClausulaAplicable = string.IsNullOrWhiteSpace(vm.ClausulaAplicable) ? null : vm.ClausulaAplicable.Trim(),
                 TipoHallazgoId = vm.TipoHallazgoId,
 
                 AuditoriaProcesoId = auditoriaProcesoId,

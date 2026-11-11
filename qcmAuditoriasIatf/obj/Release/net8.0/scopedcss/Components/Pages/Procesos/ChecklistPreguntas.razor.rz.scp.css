@@ -16,3 +16,11 @@
 .mo-table-wrap table.mo-table td:nth-child(3)[b-l8wzk2qqwx] {
     min-width: 700px;
 }
+
+.table-action-group[b-l8wzk2qqwx] {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}

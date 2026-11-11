@@ -282,6 +282,12 @@ else
                                                 <div class="action-stack">
                                                     <button type="button"
                                                             class="table-btn"
+                                                            @onclick='() => Nav.NavigateTo($"auditores/{a.AuditorId}/perfil")'>
+                                                        Ver perfil
+                                                    </button>
+
+                                                    <button type="button"
+                                                            class="table-btn"
                                                             @onclick='() => Nav.NavigateTo($"auditores/{a.AuditorId}")'>
                                                         Editar
                                                     </button>

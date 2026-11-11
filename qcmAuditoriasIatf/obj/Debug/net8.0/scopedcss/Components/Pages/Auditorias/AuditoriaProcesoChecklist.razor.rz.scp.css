@@ -57,6 +57,17 @@
     font-size: 1rem;
 }
 
+.checklist-save-ok[b-apczmvjvss] {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(16,185,129,0.16);
+    color: #10b981;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
 .checklist-hero-actions[b-apczmvjvss] {
     display: flex;
     flex-direction: column;

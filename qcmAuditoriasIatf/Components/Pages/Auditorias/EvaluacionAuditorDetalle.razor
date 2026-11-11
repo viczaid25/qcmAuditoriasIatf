@@ -1,0 +1,559 @@
+@page "/auditorias/{auditoriaId:int}/evaluaciones/{evaluacionId:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Services
+@using System.Security.Claims
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+@inject EmailService EmailSvc
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger" style="white-space:pre-wrap">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="eval-loading">
+        <div class="eval-skeleton eval-skeleton-hero"></div>
+        <div class="eval-skeleton eval-skeleton-body"></div>
+    </div>
+}
+else if (evaluacion is null)
+{
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró la evaluación</div>
+            <button type="button" class="hero-btn primary mt-3" @onclick="Volver">
+                Volver a la auditoría
+            </button>
+        </div>
+    </section>
+}
+else if (!usuarioEsSgc && !esElAuditorEvaluado)
+{
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">Acceso restringido</div>
+            <div class="empty-text">
+                Esta evaluación solo la puede ver el equipo SGC o la persona evaluada.
+            </div>
+            <button type="button" class="hero-btn primary mt-3" @onclick="Volver">
+                Volver a la auditoría
+            </button>
+        </div>
+    </section>
+}
+else
+{
+    <div class="eval-page">
+        <section class="eval-hero">
+            <div>
+                <span class="eval-kicker">Evaluación de auditor interno · MX-6100-F3</span>
+                <h1>@MostrarPersona(evaluacion.AuditorEvaluadoId)</h1>
+
+                <div class="eval-meta">
+                    <span class="meta-chip">Auditoría #@auditoriaId</span>
+                    <span class="status-pill @(evaluacion.Estatus == "Completada" ? "closed" : "progress")">@evaluacion.Estatus</span>
+
+                    @if (evaluacion.CalificacionGeneral.HasValue)
+                    {
+                        <span class="meta-chip">Calificación: <strong>@evaluacion.CalificacionGeneral.Value.ToString("0.##")%</strong></span>
+                    }
+                </div>
+            </div>
+
+            <div class="hero-actions">
+                <button type="button" class="hero-btn" @onclick="Volver">
+                    Volver a la auditoría
+                </button>
+            </div>
+        </section>
+
+        @if (evaluacion.Estatus == "Pendiente" && !usuarioEsSgc)
+        {
+            <section class="panel-card">
+                <div class="empty-state compact">
+                    Tu evaluación de esta auditoría todavía está pendiente de captura por parte de SGC. Te notificaremos por correo en cuanto esté lista.
+                </div>
+            </section>
+        }
+        else if (evaluacion.Estatus == "Pendiente" && usuarioEsSgc)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Datos generales</h2>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha de evaluación</label>
+                        <input type="date" class="mo-form-control" @bind="vm.FechaEvaluacion" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Responsable(s) de la evaluación</label>
+                        <input class="mo-form-control" @bind="vm.ResponsablesEvaluacion" placeholder="Ej. Carolina Flores / Rebeca Girón" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Total de horas auditadas</label>
+                        <input class="mo-form-control" @bind="vm.TotalHorasAuditadas" placeholder="Ej. 6 horas" />
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Evaluación (escala 1 a 5)</h2>
+                        <p class="panel-subtitle">1 = valoración mínima, 5 = valoración máxima. Todas las preguntas son obligatorias.</p>
+                    </div>
+
+                    <span class="panel-badge">Calificación estimada: @CalificacionEstimada.ToString("0.##")%</span>
+                </div>
+
+                @foreach (var categoria in Preguntas.Select(p => p.Categoria).Distinct())
+                {
+                    <div class="eval-categoria">
+                        <h3>@categoria</h3>
+
+                        @foreach (var p in Preguntas.Where(p => p.Categoria == categoria))
+                        {
+                            var r = respuestas[p.Numero];
+
+                            <div class="eval-pregunta">
+                                <div class="eval-pregunta-texto">@p.Numero.- @p.Texto</div>
+
+                                <div class="eval-pregunta-controles">
+                                    <select class="mo-form-select eval-select" @bind="r.CalificacionTexto">
+                                        <option value="">—</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                        <option value="5">5</option>
+                                    </select>
+
+                                    <input class="mo-form-control eval-comentario" @bind="r.Comentario" placeholder="Comentario (opcional)" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="panel-card action-panel">
+                <div class="action-panel-inner">
+                    <div>
+                        <h2>Confirmación</h2>
+                        <p class="panel-subtitle mb-0">
+                            Al completar, se notificará por correo al auditor evaluado y aparecerá en su "Mis cosas".
+                        </p>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="button" class="mo-btn mo-btn-primary mo-btn-lg" @onclick="CompletarEvaluacion" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Completar evaluación")
+                        </button>
+                    </div>
+                </div>
+            </section>
+        }
+        else
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Datos generales</h2>
+                    </div>
+                </div>
+
+                <div class="eval-datos-grid">
+                    <div>
+                        <div class="mini-label">Fecha de evaluación</div>
+                        <div class="cell-value">@(evaluacion.FechaEvaluacion?.ToString("yyyy-MM-dd") ?? "—")</div>
+                    </div>
+                    <div>
+                        <div class="mini-label">Responsable(s) de la evaluación</div>
+                        <div class="cell-value">@(evaluacion.ResponsablesEvaluacion ?? "—")</div>
+                    </div>
+                    <div>
+                        <div class="mini-label">Total de horas auditadas</div>
+                        <div class="cell-value">@(evaluacion.TotalHorasAuditadas ?? "—")</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Resultado de la evaluación</h2>
+                    </div>
+
+                    <span class="panel-badge">Calificación general: @(evaluacion.CalificacionGeneral?.ToString("0.##") ?? "—")%</span>
+                </div>
+
+                @foreach (var categoria in Preguntas.Select(p => p.Categoria).Distinct())
+                {
+                    var preguntasCategoria = Preguntas.Where(p => p.Categoria == categoria).ToList();
+                    var suma = preguntasCategoria.Sum(p => respuestas[p.Numero].Calificacion ?? 0);
+                    var maxCategoria = preguntasCategoria.Count * 5;
+
+                    <div class="eval-categoria">
+                        <div class="eval-categoria-head">
+                            <h3>@categoria</h3>
+                            <span class="eval-categoria-badge">@(maxCategoria == 0 ? 0 : Math.Round(suma * 100m / maxCategoria, 1))%</span>
+                        </div>
+
+                        @foreach (var p in preguntasCategoria)
+                        {
+                            var r = respuestas[p.Numero];
+
+                            <div class="eval-pregunta readonly">
+                                <div class="eval-pregunta-texto">@p.Numero.- @p.Texto</div>
+                                <div class="eval-pregunta-resultado">
+                                    <span class="eval-calif-pill">@(r.Calificacion?.ToString() ?? "—")</span>
+
+                                    @if (!string.IsNullOrWhiteSpace(r.Comentario))
+                                    {
+                                        <div class="eval-comentario-texto">@r.Comentario</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int auditoriaId { get; set; }
+    [Parameter] public int evaluacionId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private bool cargando = true;
+    private bool guardando;
+    private string? errorMsg;
+
+    private string usuarioActualId = "sistema";
+    private bool usuarioEsSgc;
+    private bool esElAuditorEvaluado;
+
+    private EvaluacionAuditor? evaluacion;
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
+
+    private Vm vm = new();
+    private Dictionary<int, RespuestaVm> respuestas = new();
+
+    private static readonly (int Numero, string Categoria, string Texto)[] Preguntas = new[]
+    {
+        (1, "Actitud del auditor", "¿El auditor se mostró imparcial al momento de ejecutar la auditoría (no tomó partido por uno u otro departamento o situación)?"),
+        (2, "Actitud del auditor", "¿El auditor mostró una actitud respetuosa con todos los participantes?"),
+        (3, "Actitud del auditor", "¿El auditor se mantuvo enfocado en lo que estaba aconteciendo durante la auditoría?"),
+        (4, "Actitud del auditor", "¿El auditor se mantuvo dispuesto a aclarar las dudas del porqué de alguna no conformidad?"),
+        (5, "Actitud del auditor", "¿La actitud del auditor hizo sentir cómodos a los auditados?"),
+        (6, "Actitud del auditor", "¿El auditor fue capaz de alcanzar conclusiones oportunas basadas en el análisis y el razonamiento lógico?"),
+        (7, "Actitud del auditor", "¿El auditor se mostró abierto a la mejora y dispuesto a aprender de las situaciones?"),
+        (8, "Actitud del auditor", "¿El auditor interactuó eficazmente con los demás, incluyendo otros miembros del equipo auditor y el personal auditado?"),
+        (9, "Actitud del auditor", "¿El auditor se mostró dispuesto a considerar ideas o puntos de vista alternativos?"),
+        (10, "Actitud del auditor", "¿El auditor asignó al auditor en entrenamiento la responsabilidad para auditar procesos, actividades o funciones, según fuera apropiado?"),
+        (11, "Conocimientos y habilidades", "¿El auditor aplicó el pensamiento basado en riesgos?"),
+        (12, "Conocimientos y habilidades", "¿El auditor reunió la información documentada necesaria para comprender las operaciones del auditado y preparar las actividades de auditoría?"),
+        (13, "Conocimientos y habilidades", "¿El auditor planifica y organiza el trabajo eficazmente? (Es decir, efectúa la auditoría conforme al plan previamente comunicado)"),
+        (14, "Conocimientos y habilidades", "¿El auditor hizo uso de los métodos para recopilar información (entrevistas, observaciones, revisión de la información documentada)?"),
+        (15, "Conocimientos y habilidades", "¿El auditor mantiene el enfoque a procesos y se enfoca en la interacción de los procesos de la organización?"),
+        (16, "Conocimientos y habilidades", "¿El auditor fue capaz de alcanzar conclusiones oportunas basadas en el análisis y el razonamiento lógico?"),
+        (17, "Conocimientos y habilidades", "¿El auditor fundamentó de manera clara cuando detectó alguna no conformidad a las cláusulas auditadas?"),
+        (18, "Conocimientos y habilidades", "Al momento de redactar no conformidades / conformidades, ¿la redacción fue clara y con evidencia completa (códigos, nombres, fechas) para sustentar lo encontrado?"),
+        (19, "Conocimientos y habilidades", "¿El auditor compartió en tiempo el informe con los hallazgos y las notas tomadas durante la auditoría?"),
+        (20, "Conocimientos y habilidades", "¿El auditor aplicó métodos de muestreo durante la auditoría?"),
+    };
+
+    private class Vm
+    {
+        public DateTime FechaEvaluacion { get; set; } = DateTime.Today;
+        public string? ResponsablesEvaluacion { get; set; }
+        public string? TotalHorasAuditadas { get; set; }
+    }
+
+    private class RespuestaVm
+    {
+        public int? Calificacion { get; set; }
+        public string? Comentario { get; set; }
+
+        public string CalificacionTexto
+        {
+            get => Calificacion?.ToString() ?? "";
+            set => Calificacion = string.IsNullOrWhiteSpace(value) ? (int?)null : int.Parse(value);
+        }
+    }
+
+    private decimal CalificacionEstimada
+    {
+        get
+        {
+            var suma = respuestas.Values.Sum(r => r.Calificacion ?? 0);
+            return suma; // 20 preguntas x máx 5 = 100, la suma ya es el %.
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            await CargarUsuarioActual();
+
+            evaluacion = await Db.EvaluacionesAuditor
+                .Include(x => x.Respuestas)
+                .FirstOrDefaultAsync(x => x.EvaluacionAuditorId == evaluacionId && x.AuditoriaId == auditoriaId);
+
+            respuestas = Preguntas.ToDictionary(p => p.Numero, p => new RespuestaVm());
+
+            if (evaluacion is not null)
+            {
+                esElAuditorEvaluado =
+                    NormalizarLogin(usuarioActualId) == NormalizarLogin(evaluacion.AuditorEvaluadoId);
+
+                foreach (var r in evaluacion.Respuestas)
+                {
+                    if (respuestas.TryGetValue(r.NumeroPregunta, out var rvm))
+                    {
+                        rvm.Calificacion = r.Calificacion;
+                        rvm.Comentario = r.Comentario;
+                    }
+                }
+
+                vm.FechaEvaluacion = evaluacion.FechaEvaluacion ?? DateTime.Today;
+                vm.ResponsablesEvaluacion = evaluacion.ResponsablesEvaluacion;
+                vm.TotalHorasAuditadas = evaluacion.TotalHorasAuditadas;
+
+                await CargarPersonasDisplay(new[] { evaluacion.AuditorEvaluadoId });
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+        }
+
+        var loginNormalizado = usuarioActualId.Trim().ToUpper();
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == loginNormalizado &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
+    }
+
+    private static string NormalizarLogin(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return string.Empty;
+
+        var v = valor.Trim();
+
+        if (v.Contains("\\"))
+            v = v[(v.LastIndexOf('\\') + 1)..];
+
+        if (v.Contains("@"))
+            v = v[..v.IndexOf('@')];
+
+        return v.Trim().ToUpperInvariant();
+    }
+
+    private async Task CompletarEvaluacion()
+    {
+        if (guardando || !usuarioEsSgc || evaluacion is null) return;
+
+        errorMsg = null;
+
+        if (respuestas.Values.Any(r => r.Calificacion is null))
+        {
+            errorMsg = "Debes calificar las 20 preguntas antes de completar la evaluación.";
+            return;
+        }
+
+        guardando = true;
+
+        try
+        {
+            var entidad = await Db.EvaluacionesAuditor
+                .FirstOrDefaultAsync(x => x.EvaluacionAuditorId == evaluacionId && x.AuditoriaId == auditoriaId);
+
+            if (entidad is null)
+            {
+                errorMsg = "No se encontró la evaluación.";
+                return;
+            }
+
+            if (!string.Equals(entidad.Estatus, "Pendiente", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMsg = "Esta evaluación ya fue completada.";
+                return;
+            }
+
+            entidad.FechaEvaluacion = vm.FechaEvaluacion;
+            entidad.ResponsablesEvaluacion = string.IsNullOrWhiteSpace(vm.ResponsablesEvaluacion) ? null : vm.ResponsablesEvaluacion.Trim();
+            entidad.TotalHorasAuditadas = string.IsNullOrWhiteSpace(vm.TotalHorasAuditadas) ? null : vm.TotalHorasAuditadas.Trim();
+            entidad.CalificacionGeneral = CalificacionEstimada;
+            entidad.Estatus = "Completada";
+            entidad.FechaCompletada = DateTime.Now;
+            entidad.CompletadaPorId = usuarioActualId;
+
+            foreach (var p in Preguntas)
+            {
+                var r = respuestas[p.Numero];
+
+                Db.EvaluacionAuditorRespuestas.Add(new EvaluacionAuditorRespuesta
+                {
+                    EvaluacionAuditorId = entidad.EvaluacionAuditorId,
+                    NumeroPregunta = p.Numero,
+                    Calificacion = r.Calificacion,
+                    Comentario = string.IsNullOrWhiteSpace(r.Comentario) ? null : r.Comentario.Trim()
+                });
+            }
+
+            await Db.SaveChangesAsync();
+
+            await NotificarCompletadaAsync(entidad);
+
+            evaluacion = entidad;
+            await OnParametersSetAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task NotificarCompletadaAsync(EvaluacionAuditor entidad)
+    {
+        try
+        {
+            var email = await EmailSvc.ResolverEmailAsync(entidad.AuditorEvaluadoId);
+            if (email is null)
+                return;
+
+            await EmailSvc.NotificarAsync(new[] { email });
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear la evaluación.
+        }
+    }
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids.Where(x => !personasDisplay.ContainsKey(x)).ToList();
+
+        if (faltantes.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return "Sin asignar";
+
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
+
+    private void Volver() => Nav.NavigateTo($"auditorias/{auditoriaId}");
+}

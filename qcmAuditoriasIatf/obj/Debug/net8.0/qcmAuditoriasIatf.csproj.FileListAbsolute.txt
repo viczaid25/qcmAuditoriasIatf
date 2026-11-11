@@ -177,3 +177,10 @@ C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Hallazgos\HallazgoEditar.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Interfaces\InterfacesSgcAccionesCorrectivas.razor.rz.scp.css
 C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditorias\AuditoriaInforme.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditorias\AuditoriaInformeExtendido.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditores\MatrizCompetencias.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditorias\EvaluacionAuditorDetalle.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Interfaces\InterfacesSgcEvaluaciones.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Layout\NavMenu.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Procesos\Procesos.razor.rz.scp.css
+C:\Users\dm45207\source\repos\qcmAuditoriasIatf\qcmAuditoriasIatf\obj\Debug\net8.0\scopedcss\Components\Pages\Auditores\AuditorPerfil.razor.rz.scp.css

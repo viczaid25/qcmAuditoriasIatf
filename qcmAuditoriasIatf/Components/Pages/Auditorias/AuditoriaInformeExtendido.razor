@@ -1,0 +1,1071 @@
+@page "/auditorias/{auditoriaId:int}/informe-extendido"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.External
+@using qcmAuditoriasIatf.Models.Hallazgos
+@using qcmAuditoriasIatf.Services
+@using System.Security.Claims
+@using System.Security.Cryptography
+@using System.Text
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+@inject EmailService EmailSvc
+@inject IJSRuntime JS
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger no-print">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="informe-loading">
+        <div class="informe-skeleton"></div>
+    </div>
+}
+else if (auditoria is null)
+{
+    <section class="panel-card no-print">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró la auditoría</div>
+            <button type="button" class="mo-btn mo-btn-primary mt-3" @onclick="Volver">
+                Volver
+            </button>
+        </div>
+    </section>
+}
+else if (!usuarioEsSgc && !esRevisor && !usuarioEsDirectivoQc)
+{
+    <section class="panel-card no-print">
+        <div class="empty-state">
+            <div class="empty-title">Acceso restringido</div>
+            <div class="empty-text">
+                El informe extendido (clasificación de Misconduct) es exclusivo para el equipo SGC, para las personas a quienes SGC les pidió revisarlo y para los gerentes (DGM y MGR) del departamento de Calidad (QC).
+            </div>
+            <button type="button" class="mo-btn mo-btn-primary mt-3" @onclick="Volver">
+                Volver a la auditoría
+            </button>
+        </div>
+    </section>
+}
+else
+{
+    <div class="informe-page">
+        <div class="informe-actions no-print">
+            <button type="button" class="mo-btn mo-btn-secondary-outline" @onclick="Volver">
+                Volver a la auditoría
+            </button>
+
+            <div class="informe-tabs">
+                <button type="button" class="informe-tab @(vista == "detalle" ? "active" : "")" @onclick='() => vista = "detalle"'>
+                    Vista detallada
+                </button>
+                <button type="button" class="informe-tab @(vista == "resumen" ? "active" : "")" @onclick='() => vista = "resumen"'>
+                    Vista resumen
+                </button>
+            </div>
+
+            <button type="button" class="mo-btn mo-btn-primary-outline" @onclick="ImprimirPdf">
+                Imprimir / Descargar PDF
+            </button>
+
+            @if (usuarioEsSgc)
+            {
+                <button type="button" class="mo-btn mo-btn-primary" @onclick="GuardarCambios" disabled="@guardando">
+                    @(guardando ? "Guardando..." : "Guardar cambios")
+                </button>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(mensajeGuardado))
+            {
+                <span class="informe-save-ok">@mensajeGuardado</span>
+            }
+        </div>
+
+        @if (miRevision is not null)
+        {
+            <section class="panel-card revision-aviso no-print">
+                @if (miRevision.Estado == EstadoRevision.Vigente)
+                {
+                    <div>
+                        <strong>Ya confirmaste tu revisión</strong>
+                        <span class="revision-sub">el @(miRevision.FechaConfirmacion?.ToString("yyyy-MM-dd HH:mm")).</span>
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <strong>SGC te pidió revisar este reporte.</strong>
+                        <span class="revision-sub">
+                            @(miRevision.Estado == EstadoRevision.Desactualizada
+                                ? "El reporte cambió después de tu revisión anterior; revísalo de nuevo y confirma."
+                                : "Cuando termines, confirma que lo revisaste.")
+                        </span>
+                    </div>
+
+                    <button type="button" class="mo-btn mo-btn-success" @onclick="ConfirmarMiRevision" disabled="@procesandoRevision">
+                        @(procesandoRevision ? "Guardando..." : "Confirmo que revisé el reporte")
+                    </button>
+                }
+            </section>
+        }
+
+        @if (usuarioEsSgc)
+        {
+            <section class="panel-card revision-panel no-print">
+                <div class="panel-head-simple">
+                    <div>
+                        <h2>Revisión del reporte</h2>
+                        <p class="informe-section-note">
+                            Elige a quién se le pide revisar este reporte. Recibirán un aviso y verán el pendiente en Mis cosas; al confirmar, aparecerán en "Revisado por".
+                        </p>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(errorRevision))
+                {
+                    <div class="alert alert-danger">@errorRevision</div>
+                }
+
+                @if (revisiones.Count == 0)
+                {
+                    <div class="empty-state compact">Todavía no se ha pedido la revisión a nadie.</div>
+                }
+                else
+                {
+                    <div class="revision-lista">
+                        @foreach (var r in revisiones)
+                        {
+                            <div class="revision-item" @key="r.Id">
+                                <div>
+                                    <div class="revision-nombre">@r.Nombre</div>
+                                    <div class="revision-sub">
+                                        Solicitada el @r.FechaSolicitud.ToString("yyyy-MM-dd")
+                                        @if (r.FechaConfirmacion.HasValue)
+                                        {
+                                            <span> · Confirmó el @r.FechaConfirmacion.Value.ToString("yyyy-MM-dd HH:mm")</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <span class="revision-estado @ClaseEstadoRevision(r.Estado)">@TextoEstadoRevision(r.Estado)</span>
+
+                                <div class="revision-acciones">
+                                    @if (r.Estado != EstadoRevision.Pendiente)
+                                    {
+                                        <button type="button" class="table-btn table-btn-xs" @onclick="() => ReenviarSolicitud(r.Id)" disabled="@procesandoRevision" title="Reinicia la confirmación y vuelve a avisar a la persona">
+                                            Pedir revisión de nuevo
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="table-btn table-btn-xs" @onclick="() => ReenviarSolicitud(r.Id)" disabled="@procesandoRevision">
+                                            Recordar
+                                        </button>
+                                    }
+
+                                    <button type="button" class="table-btn table-btn-danger table-btn-xs" @onclick="() => QuitarRevisor(r.Id)" disabled="@procesandoRevision">
+                                        Quitar
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="revision-agregar">
+                    <input class="mo-form-control"
+                           list="lista-revisores"
+                           placeholder="Busca por nombre o usuario…"
+                           @bind="textoRevisor"
+                           @bind:event="oninput"
+                           autocomplete="off" />
+
+                    <datalist id="lista-revisores">
+                        @foreach (var u in usuariosDisponibles)
+                        {
+                            <option value="@TextoUsuario(u)"></option>
+                        }
+                    </datalist>
+
+                    <button type="button" class="mo-btn mo-btn-primary" @onclick="AgregarRevisor" disabled="@procesandoRevision">
+                        Agregar y notificar
+                    </button>
+                </div>
+            </section>
+        }
+
+        <div class="informe-doc">
+            <div class="informe-header">
+                <img src="images/logo-informe.svg" class="informe-logo" alt="Logo" onerror="this.style.display='none'" />
+                <div>
+                    <div class="informe-empresa">Mitsubishi Electric Automotive de México, S.A. de C.V.</div>
+                    <h1>Informe extendido de auditoría (Misconduct)</h1>
+                </div>
+            </div>
+
+            @if (revisionesVigentes.Count > 0)
+            {
+                <div class="informe-revisado">
+                    <strong>Revisado por:</strong>
+                    @for (var i = 0; i < revisionesVigentes.Count; i++)
+                    {
+                        var rv = revisionesVigentes[i];
+                        <span title="@($"Confirmó el {rv.FechaConfirmacion:yyyy-MM-dd HH:mm}")">@rv.Nombre@(i < revisionesVigentes.Count - 1 ? "," : "")</span>
+                    }
+                </div>
+            }
+
+            <table class="informe-meta-table">
+                <tbody>
+                    <tr>
+                        <th>Auditoría</th>
+                        <td>#@auditoria.AuditoriaId</td>
+                        <th>Tipo</th>
+                        <td>@auditoria.TipoAuditoria</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha</th>
+                        <td>@auditoria.FechaInicio.ToString("yyyy-MM-dd") – @auditoria.FechaFin.ToString("yyyy-MM-dd")</td>
+                        <th>Auditor líder</th>
+                        <td>@MostrarPersona(auditoria.AuditorLiderId)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="informe-section">
+                <h2>Hallazgos y clasificación de Misconduct</h2>
+                <p class="informe-section-note">
+                    Marca "Sí" cuando el hallazgo corresponda a una falta de conducta (Misconduct) y captura el comentario correspondiente. Solo el equipo SGC puede editar estas dos columnas.
+                </p>
+
+                @if (filas.Count == 0)
+                {
+                    <p>No se registraron hallazgos en esta auditoría.</p>
+                }
+                else if (vista == "resumen")
+                {
+                    var filasResumen = gruposFilas
+                        .SelectMany(g => g.Filas)
+                        .Where(f => !soloMisconduct || f.EsMissconduct)
+                        .ToList();
+
+                    <div class="resumen-toolbar no-print">
+                        <label class="resumen-check">
+                            <input type="checkbox" @bind="soloMisconduct" />
+                            <span>Mostrar solo los que son Misconduct</span>
+                        </label>
+                        <span class="resumen-conteo">
+                            @filas.Count hallazgo(s) · @(filas.Count(f => f.EsMissconduct)) Misconduct
+                        </span>
+                    </div>
+
+                    <table class="resumen-table">
+                        <thead>
+                            <tr>
+                                <th>Proceso</th>
+                                <th>Hallazgo</th>
+                                <th>Misconduct</th>
+                                <th>Comentarios</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var f in filasResumen)
+                            {
+                                <tr class="@(f.EsMissconduct ? "misconduct-si" : "")" @key="f.HallazgoId">
+                                    <td>
+                                        <div class="resumen-proceso">@f.Proceso</div>
+                                        @if (!string.IsNullOrWhiteSpace(f.Linea))
+                                        {
+                                            <div class="resumen-sub">Línea: @f.Linea</div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>No. @f.HallazgoId</strong>
+                                            <span class="informe-finding-chip @TipoClase(f.Tipo)">@f.Tipo</span>
+                                        </div>
+                                        <div class="resumen-texto">@f.Declaracion</div>
+                                    </td>
+                                    <td class="resumen-centro">
+                                        <span class="misconduct-pill @(f.EsMissconduct ? "si" : "no")">@(f.EsMissconduct ? "Sí" : "No")</span>
+                                    </td>
+                                    <td class="resumen-texto">@(string.IsNullOrWhiteSpace(f.ComentarioMissconduct) ? "—" : f.ComentarioMissconduct)</td>
+                                </tr>
+                            }
+
+                            @if (filasResumen.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="4" class="resumen-centro">No hay hallazgos marcados como Misconduct.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="informe-findings">
+                        @foreach (var grupo in gruposFilas)
+                        {
+                            <div class="informe-proceso-group" @key="grupo.Key">
+                                <h3 class="informe-proceso-title">
+                                    <span>@grupo.Titulo</span>
+                                    <span class="informe-proceso-count">@grupo.Filas.Count hallazgo(s)</span>
+                                </h3>
+
+                                @foreach (var f in grupo.Filas)
+                                {
+                                    <div class="informe-finding @(f.EsMissconduct ? "misconduct-si" : "")" @key="f.HallazgoId">
+                                        <div class="informe-finding-head">
+                                            <span class="informe-finding-no">No. @f.HallazgoId</span>
+
+                                            @if (!string.IsNullOrWhiteSpace(f.Linea))
+                                            {
+                                                <span class="informe-finding-chip linea">Línea auditada: @f.Linea</span>
+                                            }
+
+                                            <span class="informe-finding-chip @TipoClase(f.Tipo)">@f.Tipo</span>
+
+                                            @if (!string.IsNullOrWhiteSpace(f.ClausulaAplicable))
+                                            {
+                                                <span class="informe-finding-chip">Cláusula: @f.ClausulaAplicable</span>
+                                            }
+
+                                            <span class="informe-finding-chip no-print">Estatus: @f.Estatus</span>
+                                            <span class="informe-finding-chip no-print">Responsable: @f.Responsable</span>
+                                        </div>
+
+                                        <div class="informe-finding-body">
+                                            <div class="informe-finding-block">
+                                                <div class="mini-label">Declaración</div>
+                                                <p>@f.Declaracion</p>
+                                            </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(f.Requisito))
+                                            {
+                                                <div class="informe-finding-block">
+                                                    <div class="mini-label">Requisito</div>
+                                                    <p>@f.Requisito</p>
+                                                </div>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(f.Evidencia))
+                                            {
+                                                <div class="informe-finding-block">
+                                                    <div class="mini-label">Evidencia</div>
+                                                    <p>@f.Evidencia</p>
+                                                </div>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(f.Justificacion))
+                                            {
+                                                <div class="informe-finding-block">
+                                                    <div class="mini-label">Justificación</div>
+                                                    <p>@f.Justificacion</p>
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <div class="informe-misconduct">
+                                            @if (usuarioEsSgc)
+                                            {
+                                                <div class="misconduct-campo">
+                                                    <label class="mini-label">Misconduct</label>
+                                                    <select class="mo-form-select informe-missconduct-select" @bind="f.EsMissconductTexto">
+                                                        <option value="No">No</option>
+                                                        <option value="Si">Sí</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="misconduct-campo misconduct-comentario">
+                                                    <label class="mini-label">Comentarios</label>
+                                                    <textarea class="mo-form-control informe-comentario-textarea"
+                                                              rows="2"
+                                                              @bind="f.ComentarioMissconduct"
+                                                              @bind:event="oninput"></textarea>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="misconduct-campo">
+                                                    <div class="mini-label">Misconduct</div>
+                                                    <span class="misconduct-pill @(f.EsMissconduct ? "si" : "no")">@(f.EsMissconduct ? "Sí" : "No")</span>
+                                                </div>
+
+                                                <div class="misconduct-campo misconduct-comentario">
+                                                    <div class="mini-label">Comentarios</div>
+                                                    <div class="resumen-texto">@(string.IsNullOrWhiteSpace(f.ComentarioMissconduct) ? "—" : f.ComentarioMissconduct)</div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int auditoriaId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private bool cargando = true;
+    private string? errorMsg;
+    private bool guardando;
+    private string? mensajeGuardado;
+
+    private string usuarioActualId = "sistema";
+    private bool usuarioEsSgc;
+    private bool esRevisor;
+    private bool usuarioEsDirectivoQc;
+
+    private string vista = "detalle";
+    private bool soloMisconduct;
+
+    private enum EstadoRevision { Pendiente, Vigente, Desactualizada }
+
+    private sealed class RevisionVm
+    {
+        public int Id { get; set; }
+        public string RevisorId { get; set; } = "";
+        public string Nombre { get; set; } = "";
+        public DateTime FechaSolicitud { get; set; }
+        public DateTime? FechaConfirmacion { get; set; }
+        public EstadoRevision Estado { get; set; }
+    }
+
+    private List<RevisionVm> revisiones = new();
+    private List<RevisionVm> revisionesVigentes => revisiones
+        .Where(r => r.Estado == EstadoRevision.Vigente)
+        .OrderBy(r => r.FechaConfirmacion)
+        .ToList();
+
+    private RevisionVm? miRevision;
+    private List<MeaxAllUser> usuariosDisponibles = new();
+    private string? textoRevisor;
+    private string? errorRevision;
+    private bool procesandoRevision;
+
+    private Auditoria? auditoria;
+    private List<FilaVm> filas = new();
+    private List<GrupoVm> gruposFilas = new();
+
+    private sealed class GrupoVm
+    {
+        public int Key { get; set; }
+        public string Titulo { get; set; } = "";
+        public List<FilaVm> Filas { get; set; } = new();
+    }
+
+    private static string TipoClase(string tipo) =>
+        tipo switch
+        {
+            "NCM" => "ncm",
+            "NCm" => "ncmm",
+            "OM" => "om",
+            _ => ""
+        };
+
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
+
+    private class FilaVm
+    {
+        public int HallazgoId { get; set; }
+        public int ProcesoId { get; set; }
+        public string? Linea { get; set; }
+        public string? ClausulaAplicable { get; set; }
+        public string Proceso { get; set; } = "";
+        public string Declaracion { get; set; } = "";
+        public string Requisito { get; set; } = "";
+        public string? Evidencia { get; set; }
+        public string Tipo { get; set; } = "";
+        public string? Justificacion { get; set; }
+        public string Responsable { get; set; } = "";
+        public string Estatus { get; set; } = "";
+
+        public bool EsMissconduct { get; set; }
+        public string? ComentarioMissconduct { get; set; }
+
+        public bool EsMissconductOriginal { get; set; }
+        public string? ComentarioMissconductOriginal { get; set; }
+
+        public string EsMissconductTexto
+        {
+            get => EsMissconduct ? "Si" : "No";
+            set => EsMissconduct = value == "Si";
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+        mensajeGuardado = null;
+
+        try
+        {
+            await CargarUsuarioActual();
+
+            auditoria = await Db.Auditorias
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.AuditoriaId == auditoriaId);
+
+            if (auditoria is null)
+            {
+                cargando = false;
+                return;
+            }
+
+            var revisoresIds = await Db.InformesMisconductRevisiones
+                .AsNoTracking()
+                .Where(r => r.AuditoriaId == auditoriaId)
+                .Select(r => r.RevisorId)
+                .ToListAsync();
+
+            esRevisor = revisoresIds.Any(r => NormalizarLogin(r) == NormalizarLogin(usuarioActualId));
+
+            if (!usuarioEsSgc && !esRevisor && !usuarioEsDirectivoQc)
+            {
+                cargando = false;
+                return;
+            }
+
+            var hallazgos = await Db.Hallazgos
+                .AsNoTracking()
+                .Include(h => h.Proceso)
+                .Include(h => h.Clausula)
+                .Include(h => h.Pregunta)
+                .Include(h => h.TipoHallazgo)
+                .Include(h => h.AuditoriaProceso)
+                .Where(h => h.AuditoriaId == auditoriaId)
+                .OrderBy(h => h.HallazgoId)
+                .ToListAsync();
+
+            await CargarPersonasDisplay(hallazgos.Select(h => (string?)h.ResponsableId));
+
+            filas = hallazgos.Select(h => new FilaVm
+            {
+                HallazgoId = h.HallazgoId,
+                ProcesoId = h.ProcesoId,
+                Linea = h.AuditoriaProceso?.LineaNombre,
+                ClausulaAplicable = h.ClausulaAplicable,
+                Proceso = h.Proceso is null ? "" : $"{h.Proceso.Codigo} - {h.Proceso.Nombre}",
+                Declaracion = h.Descripcion,
+                Requisito = TextoRequisito(h),
+                Evidencia = h.Evidencia,
+                Tipo = TipoAbreviado(h),
+                Justificacion = h.JustificacionNoConformidad,
+                Responsable = MostrarPersona(h.ResponsableId),
+                Estatus = h.Estatus,
+                EsMissconduct = h.EsMissconduct,
+                EsMissconductOriginal = h.EsMissconduct,
+                ComentarioMissconduct = h.ComentarioMissconduct,
+                ComentarioMissconductOriginal = h.ComentarioMissconduct
+            }).ToList();
+
+            gruposFilas = filas
+                .GroupBy(f => f.ProcesoId)
+                .Select(g => new GrupoVm
+                {
+                    Key = g.Key,
+                    Titulo = string.IsNullOrWhiteSpace(g.First().Proceso) ? "Sin proceso" : g.First().Proceso,
+                    Filas = g
+                        .OrderBy(f => f.Linea ?? "", StringComparer.CurrentCultureIgnoreCase)
+                        .ThenBy(f => f.HallazgoId)
+                        .ToList()
+                })
+                .OrderBy(g => g.Titulo, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
+            if (usuarioEsSgc)
+            {
+                usuariosDisponibles = await Db.MeaxAllUsers
+                    .AsNoTracking()
+                    .Where(x => !string.IsNullOrWhiteSpace(x.pc_login_id))
+                    .OrderBy(x => x.username ?? x.pc_login_id)
+                    .ToListAsync();
+            }
+
+            await CargarRevisionesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    // ── Revisión del reporte ──────────────────────────────────────────────────────
+
+    private static string NormalizarLogin(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return string.Empty;
+
+        var v = valor.Trim();
+
+        if (v.Contains('\\'))
+            v = v[(v.LastIndexOf('\\') + 1)..];
+
+        if (v.Contains('@'))
+            v = v[..v.IndexOf('@')];
+
+        return v.Trim().ToUpperInvariant();
+    }
+
+    // Huella de lo que el revisor ve: si SGC cambia algo del reporte después, la revisión
+    // confirmada deja de coincidir y se marca como desactualizada.
+    private string CalcularHashContenido()
+    {
+        var sb = new StringBuilder();
+
+        foreach (var f in filas.OrderBy(f => f.HallazgoId))
+        {
+            sb.Append(f.HallazgoId).Append('|')
+              .Append(f.ProcesoId).Append('|')
+              .Append(f.Tipo).Append('|')
+              .Append(f.Declaracion?.Trim()).Append('|')
+              .Append(f.Evidencia?.Trim()).Append('|')
+              .Append(f.Justificacion?.Trim()).Append('|')
+              .Append(f.ClausulaAplicable?.Trim()).Append('|')
+              .Append(f.EsMissconductOriginal).Append('|')
+              .Append(f.ComentarioMissconductOriginal?.Trim())
+              .Append('\n');
+        }
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString())));
+    }
+
+    private async Task CargarRevisionesAsync()
+    {
+        var entidades = await Db.InformesMisconductRevisiones
+            .AsNoTracking()
+            .Where(r => r.AuditoriaId == auditoriaId)
+            .OrderBy(r => r.FechaSolicitud)
+            .ToListAsync();
+
+        await CargarPersonasDisplay(entidades.Select(e => (string?)e.RevisorId));
+
+        var hashActual = CalcularHashContenido();
+
+        revisiones = entidades.Select(e => new RevisionVm
+        {
+            Id = e.InformeMisconductRevisionId,
+            RevisorId = e.RevisorId,
+            Nombre = MostrarPersona(e.RevisorId),
+            FechaSolicitud = e.FechaSolicitud,
+            FechaConfirmacion = e.FechaConfirmacion,
+            Estado = !e.Confirmada
+                ? EstadoRevision.Pendiente
+                : string.Equals(e.HashContenido, hashActual, StringComparison.Ordinal)
+                    ? EstadoRevision.Vigente
+                    : EstadoRevision.Desactualizada
+        }).ToList();
+
+        miRevision = revisiones.FirstOrDefault(r => NormalizarLogin(r.RevisorId) == NormalizarLogin(usuarioActualId));
+    }
+
+    private static string TextoUsuario(MeaxAllUser u)
+    {
+        var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username;
+        var depto = string.IsNullOrWhiteSpace(u.department) ? "" : $" - {u.department}";
+        return $"{nombre} ({u.pc_login_id}){depto}";
+    }
+
+    private static string TextoEstadoRevision(EstadoRevision estado) => estado switch
+    {
+        EstadoRevision.Vigente => "Revisado",
+        EstadoRevision.Desactualizada => "Cambió después de revisar",
+        _ => "Pendiente"
+    };
+
+    private static string ClaseEstadoRevision(EstadoRevision estado) => estado switch
+    {
+        EstadoRevision.Vigente => "ok",
+        EstadoRevision.Desactualizada => "warn",
+        _ => "pend"
+    };
+
+    private async Task AgregarRevisor()
+    {
+        if (procesandoRevision || !usuarioEsSgc) return;
+
+        errorRevision = null;
+
+        var texto = textoRevisor?.Trim();
+
+        if (string.IsNullOrWhiteSpace(texto))
+        {
+            errorRevision = "Selecciona a una persona de la lista.";
+            return;
+        }
+
+        var usuario = usuariosDisponibles.FirstOrDefault(u =>
+            string.Equals(TextoUsuario(u), texto, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(u.pc_login_id, texto, StringComparison.OrdinalIgnoreCase));
+
+        if (usuario is null)
+        {
+            errorRevision = "No se encontró a esa persona; elige una opción de la lista.";
+            return;
+        }
+
+        if (revisiones.Any(r => NormalizarLogin(r.RevisorId) == NormalizarLogin(usuario.pc_login_id)))
+        {
+            errorRevision = "Esa persona ya tiene la revisión solicitada.";
+            return;
+        }
+
+        procesandoRevision = true;
+
+        try
+        {
+            Db.InformesMisconductRevisiones.Add(new InformeMisconductRevision
+            {
+                AuditoriaId = auditoriaId,
+                RevisorId = usuario.pc_login_id.Trim(),
+                SolicitadoPorId = usuarioActualId,
+                FechaSolicitud = DateTime.Now
+            });
+
+            await Db.SaveChangesAsync();
+            await NotificarAsync(usuario.pc_login_id);
+
+            textoRevisor = null;
+            await CargarRevisionesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorRevision = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            procesandoRevision = false;
+        }
+    }
+
+    private async Task ReenviarSolicitud(int id)
+    {
+        if (procesandoRevision || !usuarioEsSgc) return;
+
+        errorRevision = null;
+        procesandoRevision = true;
+
+        try
+        {
+            Db.ChangeTracker.Clear();
+
+            var entidad = await Db.InformesMisconductRevisiones.FirstOrDefaultAsync(r => r.InformeMisconductRevisionId == id && r.AuditoriaId == auditoriaId);
+            if (entidad is null) return;
+
+            entidad.Confirmada = false;
+            entidad.FechaConfirmacion = null;
+            entidad.HashContenido = null;
+            entidad.FechaSolicitud = DateTime.Now;
+            entidad.SolicitadoPorId = usuarioActualId;
+
+            await Db.SaveChangesAsync();
+            await NotificarAsync(entidad.RevisorId);
+
+            await CargarRevisionesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorRevision = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            procesandoRevision = false;
+        }
+    }
+
+    private async Task QuitarRevisor(int id)
+    {
+        if (procesandoRevision || !usuarioEsSgc) return;
+
+        errorRevision = null;
+        procesandoRevision = true;
+
+        try
+        {
+            Db.ChangeTracker.Clear();
+
+            var entidad = await Db.InformesMisconductRevisiones.FirstOrDefaultAsync(r => r.InformeMisconductRevisionId == id && r.AuditoriaId == auditoriaId);
+            if (entidad is null) return;
+
+            Db.InformesMisconductRevisiones.Remove(entidad);
+            await Db.SaveChangesAsync();
+
+            await CargarRevisionesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorRevision = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            procesandoRevision = false;
+        }
+    }
+
+    private async Task ConfirmarMiRevision()
+    {
+        if (procesandoRevision || miRevision is null) return;
+
+        errorMsg = null;
+        procesandoRevision = true;
+
+        try
+        {
+            Db.ChangeTracker.Clear();
+
+            var entidad = await Db.InformesMisconductRevisiones.FirstOrDefaultAsync(r => r.InformeMisconductRevisionId == miRevision.Id && r.AuditoriaId == auditoriaId);
+            if (entidad is null) return;
+
+            if (NormalizarLogin(entidad.RevisorId) != NormalizarLogin(usuarioActualId))
+                return;
+
+            entidad.Confirmada = true;
+            entidad.FechaConfirmacion = DateTime.Now;
+            entidad.HashContenido = CalcularHashContenido();
+
+            await Db.SaveChangesAsync();
+            await CargarRevisionesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            procesandoRevision = false;
+        }
+    }
+
+    private async Task NotificarAsync(string login)
+    {
+        try
+        {
+            var email = await EmailSvc.ResolverEmailAsync(login);
+
+            if (email is not null)
+                await EmailSvc.NotificarAsync(new[] { email });
+        }
+        catch
+        {
+            // El envío de correo no debe bloquear la solicitud de revisión.
+        }
+    }
+
+    private async Task ImprimirPdf() => await JS.InvokeVoidAsync("print");
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+        }
+
+        var loginNormalizado = usuarioActualId.Trim().ToUpper();
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == loginNormalizado &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
+
+        usuarioEsDirectivoQc = await AccesoInformeMisconduct.EsDirectivoCalidadAsync(Db, usuarioActualId);
+    }
+
+    private async Task GuardarCambios()
+    {
+        if (guardando || !usuarioEsSgc) return;
+
+        guardando = true;
+        errorMsg = null;
+        mensajeGuardado = null;
+
+        try
+        {
+            Db.ChangeTracker.Clear();
+
+            var cambiadas = filas.Where(f =>
+                f.EsMissconduct != f.EsMissconductOriginal ||
+                (f.ComentarioMissconduct?.Trim() ?? "") != (f.ComentarioMissconductOriginal?.Trim() ?? ""))
+                .ToList();
+
+            if (cambiadas.Count == 0)
+            {
+                mensajeGuardado = "No había cambios por guardar.";
+                return;
+            }
+
+            var ids = cambiadas.Select(f => f.HallazgoId).ToList();
+
+            var entidades = await Db.Hallazgos
+                .Where(h => ids.Contains(h.HallazgoId))
+                .ToListAsync();
+
+            foreach (var f in cambiadas)
+            {
+                var entidad = entidades.FirstOrDefault(e => e.HallazgoId == f.HallazgoId);
+                if (entidad is null) continue;
+
+                entidad.EsMissconduct = f.EsMissconduct;
+                entidad.ComentarioMissconduct = string.IsNullOrWhiteSpace(f.ComentarioMissconduct)
+                    ? null
+                    : f.ComentarioMissconduct.Trim();
+            }
+
+            await Db.SaveChangesAsync();
+
+            foreach (var f in cambiadas)
+            {
+                f.EsMissconductOriginal = f.EsMissconduct;
+                f.ComentarioMissconductOriginal = f.ComentarioMissconduct;
+            }
+
+            mensajeGuardado = $"Guardado: {cambiadas.Count} hallazgo(s) actualizado(s).";
+
+            var vigentesAntes = revisiones.Count(r => r.Estado == EstadoRevision.Vigente);
+            await CargarRevisionesAsync();
+            var desactualizadas = revisiones.Count(r => r.Estado == EstadoRevision.Desactualizada);
+
+            if (vigentesAntes > 0 && desactualizadas > 0)
+                mensajeGuardado += $" {desactualizadas} revisión(es) ya confirmada(s) quedaron desactualizadas; vuelve a pedirlas en el panel de revisión.";
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private static string TextoRequisito(Hallazgo h)
+    {
+        if (h.Clausula is not null)
+            return $"{h.Clausula.Codigo} - {h.Clausula.Descripcion}";
+
+        return h.Pregunta?.Requisito ?? "";
+    }
+
+    private static string TipoAbreviado(Hallazgo h)
+    {
+        var nombre = h.TipoHallazgo?.Nombre ?? "";
+
+        if (nombre.Contains("Mayor", StringComparison.OrdinalIgnoreCase))
+            return "NCM";
+
+        if (nombre.Contains("Menor", StringComparison.OrdinalIgnoreCase))
+            return "NCm";
+
+        if (nombre.Contains("Mejora", StringComparison.OrdinalIgnoreCase))
+            return "OM";
+
+        return nombre;
+    }
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids.Where(x => !personasDisplay.ContainsKey(x)).ToList();
+
+        if (faltantes.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return "Sin asignar";
+
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
+
+    private void Volver() => Nav.NavigateTo($"auditorias/{auditoriaId}");
+}

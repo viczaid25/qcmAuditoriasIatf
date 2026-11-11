@@ -83,6 +83,12 @@ else
             </div>
 
             <div class="metric-card">
+                <div class="metric-label">Mis evaluaciones</div>
+                <div class="metric-value">@misEvaluaciones.Count</div>
+                <div class="metric-note">Evaluaciones de desempeño recibidas</div>
+            </div>
+
+            <div class="metric-card">
                 <div class="metric-label">Sin fecha</div>
                 <div class="metric-value">@misProcesos.Count(x => !x.FechaProgramada.HasValue)</div>
                 <div class="metric-note">Procesos asignados pendientes de programar</div>
@@ -107,6 +113,7 @@ else
                         <option value="Pendientes">Solo pendientes</option>
                         <option value="Procesos">Solo procesos</option>
                         <option value="Hallazgos">Solo hallazgos</option>
+                        <option value="Evaluaciones">Solo evaluaciones</option>
                     </InputSelect>
                 </div>
 
@@ -381,6 +388,10 @@ else
                                         <td>
                                             <div class="cell-title">@item.ProcesoCodigo</div>
                                             <div class="cell-subtitle">@item.ProcesoNombre</div>
+                                            @if (!string.IsNullOrWhiteSpace(item.LineaNombre))
+                                            {
+                                                <span class="linea-pill">Línea: @item.LineaNombre</span>
+                                            }
                                         </td>
 
                                         <td>
@@ -419,6 +430,91 @@ else
                 }
             </section>
         }
+
+        @if (MostrarEvaluaciones)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Mis evaluaciones</h2>
+                        <p class="panel-subtitle">Evaluaciones de desempeño (MX-6100-F3) que SGC completó sobre tu participación como auditor.</p>
+                    </div>
+
+                    <span class="panel-badge">@evaluacionesFiltradas.Count registro(s)</span>
+                </div>
+
+                @if (evaluacionesFiltradas.Count == 0)
+                {
+                    <div class="empty-state compact">
+                        No hay evaluaciones para los filtros seleccionados.
+                    </div>
+                }
+                else
+                {
+                    <div class="mo-table-wrap" data-mo-table data-page-size="10">
+                        <table class="mo-table">
+                            <thead>
+                                <tr>
+                                    <th>Auditoría</th>
+                                    <th>Fecha de evaluación</th>
+                                    <th>Calificación</th>
+                                    <th class="text-end">Acción</th>
+                                </tr>
+                                <tr class="mo-table-filter-row">
+                                    <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
+                                    <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
+                                    <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in evaluacionesFiltradas)
+                                {
+                                    <tr @key="item.EvaluacionAuditorId">
+                                        <td>
+                                            <div class="cell-title">#@item.AuditoriaId</div>
+                                            <div class="cell-subtitle">@item.TipoAuditoria</div>
+                                            <div class="cell-subtitle">@item.FechaInicio.ToString("yyyy-MM-dd") a @item.FechaFin.ToString("yyyy-MM-dd")</div>
+                                        </td>
+
+                                        <td>
+                                            @if (item.FechaCompletada.HasValue)
+                                            {
+                                                <span class="date-pill">@item.FechaCompletada.Value.ToString("yyyy-MM-dd")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="empty-inline">—</span>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            @if (item.Calificacion.HasValue)
+                                            {
+                                                <span class="role-pill">@item.Calificacion.Value.ToString("0.##")%</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="empty-inline">—</span>
+                                            }
+                                        </td>
+
+                                        <td class="text-end">
+                                            <button type="button"
+                                                    class="table-btn table-btn-primary"
+                                                    @onclick="() => IrEvaluacion(item.AuditoriaId, item.EvaluacionAuditorId)">
+                                                Ver evaluación
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mo-table-pagination" data-mo-pagination></div>
+                }
+            </section>
+        }
     </div>
 }
 
@@ -437,6 +533,26 @@ else
     private List<MiProcesoVm> misProcesos = new();
     private List<MiHallazgoVm> misHallazgos = new();
     private List<MiPendienteVm> misPendientes = new();
+    private List<MiEvaluacionVm> misEvaluaciones = new();
+
+    private bool MostrarEvaluaciones => vistaSeleccionada == "Todo" || vistaSeleccionada == "Evaluaciones";
+
+    private List<MiEvaluacionVm> evaluacionesFiltradas =>
+        misEvaluaciones
+            .Where(x => CumpleTexto(x.TipoAuditoria, $"#{x.AuditoriaId}"))
+            .OrderByDescending(x => x.FechaCompletada ?? DateTime.MinValue)
+            .ToList();
+
+    private class MiEvaluacionVm
+    {
+        public int EvaluacionAuditorId { get; set; }
+        public int AuditoriaId { get; set; }
+        public string TipoAuditoria { get; set; } = "";
+        public DateTime FechaInicio { get; set; }
+        public DateTime FechaFin { get; set; }
+        public DateTime? FechaCompletada { get; set; }
+        public decimal? Calificacion { get; set; }
+    }
 
     private bool MostrarPendientes => vistaSeleccionada == "Todo" || vistaSeleccionada == "Pendientes";
     private bool MostrarProcesos => vistaSeleccionada == "Todo" || vistaSeleccionada == "Procesos";
@@ -495,6 +611,7 @@ else
         public int AuditoriaId { get; set; }
         public string ProcesoCodigo { get; set; } = "";
         public string ProcesoNombre { get; set; } = "";
+        public string? LineaNombre { get; set; }
         public string? TipoHallazgo { get; set; }
         public string Estatus { get; set; } = "";
         public string? EstatusValidacionSgc { get; set; }
@@ -540,6 +657,7 @@ else
 
             await CargarProcesos();
             await CargarHallazgos();
+            await CargarEvaluaciones();
             await CargarPendientes();
         }
         catch (Exception ex)
@@ -695,6 +813,7 @@ else
             .Where(x => idsHallazgoFiltrados.Contains(x.HallazgoId))
             .Include(x => x.Proceso)
             .Include(x => x.TipoHallazgo)
+            .Include(x => x.AuditoriaProceso)
             .ToListAsync();
 
         misHallazgos = hallazgosDb
@@ -713,6 +832,7 @@ else
                     AuditoriaId = x.AuditoriaId,
                     ProcesoCodigo = x.Proceso?.Codigo ?? "Sin código",
                     ProcesoNombre = x.Proceso?.Nombre ?? "Sin proceso",
+                    LineaNombre = x.AuditoriaProceso?.LineaNombre,
                     TipoHallazgo = x.TipoHallazgo?.Nombre,
                     Estatus = x.Estatus,
                     EstatusValidacionSgc = x.EstatusValidacionSgc,
@@ -726,6 +846,53 @@ else
                     Vencido = vencido,
                     EstaSemana = estaSemana
                 };
+            })
+            // El responsable de cierre no tiene nada que hacer con el hallazgo hasta que SGC
+            // lo aprueba (el flujo de 5 porqués/acción correctiva/evidencia permanece bloqueado
+            // hasta entonces), así que no debe aparecerle en Mis cosas antes de esa aprobación.
+            // El responsable (creador) sí debe seguir viéndolo, incluyendo mientras está
+            // "Pendiente SGC" o fue "Rechazado", para dar seguimiento a su propio hallazgo.
+            .Where(vm =>
+                vm.Rol != "Responsable de cierre" ||
+                string.Equals(vm.EstatusValidacionSgc, "Aprobado", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private async Task CargarEvaluaciones()
+    {
+        var login = NormalizarLogin(usuarioActualId);
+
+        // Mismo patrón que procesos/hallazgos: CoincideLogin no es traducible a SQL, así que
+        // se filtra en memoria sobre una proyección ligera y luego se consulta por id con Include.
+        var candidatas = await Db.EvaluacionesAuditor
+            .AsNoTracking()
+            .Where(e => e.Estatus == "Completada")
+            .Select(e => new { e.EvaluacionAuditorId, e.AuditorEvaluadoId })
+            .ToListAsync();
+
+        var ids = candidatas
+            .Where(e => CoincideLogin(e.AuditorEvaluadoId, login))
+            .Select(e => e.EvaluacionAuditorId)
+            .ToList();
+
+        var evaluacionesDb = await Db.EvaluacionesAuditor
+            .AsNoTracking()
+            .Where(e => ids.Contains(e.EvaluacionAuditorId))
+            .Include(e => e.Auditoria)
+            .ToListAsync();
+
+        var hoy = DateTime.Today;
+
+        misEvaluaciones = evaluacionesDb
+            .Select(e => new MiEvaluacionVm
+            {
+                EvaluacionAuditorId = e.EvaluacionAuditorId,
+                AuditoriaId = e.AuditoriaId,
+                TipoAuditoria = e.Auditoria?.TipoAuditoria ?? "Sin tipo",
+                FechaInicio = e.Auditoria?.FechaInicio ?? hoy,
+                FechaFin = e.Auditoria?.FechaFin ?? hoy,
+                FechaCompletada = e.FechaCompletada,
+                Calificacion = e.CalificacionGeneral
             })
             .ToList();
     }
@@ -785,7 +952,7 @@ else
             AgregarPendiente(
                 tipo: "Hallazgo a atender",
                 titulo: $"Hallazgo #{h.HallazgoId}",
-                subtitulo: $"{h.ProcesoCodigo} - {h.ProcesoNombre}",
+                subtitulo: SubtituloHallazgo(h),
                 descripcion: $"Estatus: {h.Estatus}. Compromiso: {h.FechaCompromiso:yyyy-MM-dd}.",
                 url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
                 fechaReferencia: h.FechaCompromiso,
@@ -797,7 +964,7 @@ else
             AgregarPendiente(
                 tipo: "Capturar 5 porqués",
                 titulo: $"Hallazgo #{h.HallazgoId}",
-                subtitulo: $"{h.ProcesoCodigo} - {h.ProcesoNombre}",
+                subtitulo: SubtituloHallazgo(h),
                 descripcion: "NC Menor aprobada por SGC pendiente de captura de 5 porqués.",
                 url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
                 fechaReferencia: h.FechaCompromiso,
@@ -811,10 +978,28 @@ else
             AgregarPendiente(
                 tipo: "Pendiente SGC",
                 titulo: $"Hallazgo #{h.HallazgoId}",
-                subtitulo: $"{h.ProcesoCodigo} - {h.ProcesoNombre}",
+                subtitulo: SubtituloHallazgo(h),
                 descripcion: "El hallazgo fue creado y está esperando validación de SGC.",
                 url: $"auditorias/{h.AuditoriaId}/hallazgos/{h.HallazgoId}",
                 fechaReferencia: h.FechaCompromiso,
+                vencido: false);
+        }
+
+        var revisionesPendientes = await Db.InformesMisconductRevisiones
+            .AsNoTracking()
+            .Where(r => !r.Confirmada)
+            .Select(r => new { r.AuditoriaId, r.RevisorId, r.FechaSolicitud })
+            .ToListAsync();
+
+        foreach (var r in revisionesPendientes.Where(r => CoincideLogin(r.RevisorId, login)))
+        {
+            AgregarPendiente(
+                tipo: "Revisión de informe",
+                titulo: $"Informe Misconduct · Auditoría #{r.AuditoriaId}",
+                subtitulo: "Revisión solicitada por SGC",
+                descripcion: "SGC te pidió revisar el informe extendido (Misconduct) y confirmar que lo revisaste.",
+                url: $"auditorias/{r.AuditoriaId}/informe-extendido",
+                fechaReferencia: r.FechaSolicitud,
                 vencido: false);
         }
 
@@ -825,6 +1010,11 @@ else
             .ThenBy(x => x.Titulo)
             .ToList();
     }
+
+    private static string SubtituloHallazgo(MiHallazgoVm h) =>
+        string.IsNullOrWhiteSpace(h.LineaNombre)
+            ? $"{h.ProcesoCodigo} - {h.ProcesoNombre}"
+            : $"{h.ProcesoCodigo} - {h.ProcesoNombre} · Línea: {h.LineaNombre}";
 
     private void AgregarPendiente(
         string tipo,
@@ -889,7 +1079,7 @@ else
         if (soloEstaSemana && !item.EstaSemana)
             return false;
 
-        if (!CumpleTexto(item.ProcesoCodigo, item.ProcesoNombre, item.TipoHallazgo, item.Rol, item.Estatus, item.EstatusValidacionSgc))
+        if (!CumpleTexto(item.ProcesoCodigo, item.ProcesoNombre, item.LineaNombre, item.TipoHallazgo, item.Rol, item.Estatus, item.EstatusValidacionSgc))
             return false;
 
         return true;
@@ -1073,6 +1263,9 @@ else
 
     private void IrChecklist(int auditoriaId, int auditoriaProcesoId) =>
         Nav.NavigateTo($"auditorias/{auditoriaId}/procesos/{auditoriaProcesoId}/checklist");
+
+    private void IrEvaluacion(int auditoriaId, int evaluacionId) =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/evaluaciones/{evaluacionId}");
 
     private void IrHallazgo(int auditoriaId, int hallazgoId) =>
         Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}");

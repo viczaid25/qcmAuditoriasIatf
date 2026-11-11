@@ -92,4 +92,49 @@ public static class SeedData
             await db.SaveChangesAsync();
         }
     }
+
+    // Guardado aparte de SeedAsync: ese método ya no vuelve a correr una vez que
+    // el catálogo de Procesos existe (ver comentario arriba), así que la matriz de
+    // competencias (MX-6100-F7) necesita su propio candado independiente para
+    // poblarse la primera vez, sin importar cuándo se agregue este catálogo.
+    public static async Task SeedCompetenciasAuditorAsync(ApplicationDbContext db)
+    {
+        if (await db.CompetenciasAuditor.AnyAsync())
+            return;
+
+        // (Nombre, Grupo, Obligatoria **, Orden) — según MX-6100-F7 rev. D.
+        var competencias = new List<(string Nombre, string Grupo, bool Obligatoria, int Orden)>
+        {
+            ("Requisitos específicos de cliente", "Conocimientos específicos", true, 1),
+            ("INTERPRETACIÓN ISO 9001 E IATF 16949", "Conocimientos específicos", true, 2),
+            ("Auditor Interno ISO 19011", "Conocimientos específicos", true, 3),
+            ("Core Tools - AMEF", "Conocimientos específicos", true, 4),
+            ("Core Tools - APQP", "Conocimientos específicos", true, 5),
+            ("Core Tools - PPAP", "Conocimientos específicos", true, 6),
+            ("Core Tools - MSA", "Conocimientos específicos", true, 7),
+            ("Core Tools - SPC", "Conocimientos específicos", true, 8),
+            ("Core Tools - CP", "Conocimientos específicos", true, 9),
+            ("GD&T", "Conocimientos específicos", false, 10),
+            ("8D's", "Conocimientos específicos", false, 11),
+            ("CQI-8 LPA", "Conocimientos específicos", false, 12),
+            ("Gestión de Riesgos ISO 31000:2018", "Conocimientos específicos", true, 13),
+            ("CQI-14", "Conocimientos CSR", false, 14),
+            ("CQI-15", "Conocimientos CSR", false, 15),
+            ("Soldadura IPC610 / 7711", "Conocimientos CSR", false, 16),
+        };
+
+        foreach (var c in competencias)
+        {
+            db.CompetenciasAuditor.Add(new CompetenciaAuditor
+            {
+                Nombre = c.Nombre,
+                Grupo = c.Grupo,
+                Obligatoria = c.Obligatoria,
+                Orden = c.Orden,
+                Activo = true
+            });
+        }
+
+        await db.SaveChangesAsync();
+    }
 }

@@ -6,6 +6,10 @@ namespace qcmAuditoriasIatf.Models.Hallazgos;
 [Table("qmcAudHallazgoSeguimiento")]
 public class HallazgoSeguimiento
 {
+    // Las ediciones que SGC hace a un hallazgo ya aprobado se guardan como seguimiento cuyo
+    // comentario empieza con este prefijo y lista un cambio por línea ("Campo: antes → después").
+    public const string PrefijoEdicionSgc = "Edición SGC:";
+
     [Key]
     public int HallazgoSeguimientoId { get; set; }
 

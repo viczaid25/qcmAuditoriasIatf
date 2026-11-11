@@ -183,6 +183,129 @@ namespace qcmAuditoriasIatf.Migrations
                     b.ToTable("qmcAudAuditoriaProceso");
                 });
 
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Auditorias.EvaluacionAuditor", b =>
+                {
+                    b.Property<int>("EvaluacionAuditorId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EvaluacionAuditorId"));
+
+                    b.Property<string>("AuditorEvaluadoId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("AuditoriaId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("CalificacionGeneral")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("CompletadaPorId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Estatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("FechaCompletada")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaEvaluacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ResponsablesEvaluacion")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("TotalHorasAuditadas")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("EvaluacionAuditorId");
+
+                    b.HasIndex("AuditoriaId", "AuditorEvaluadoId")
+                        .IsUnique();
+
+                    b.ToTable("qmcAudEvaluacionAuditor");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Auditorias.EvaluacionAuditorRespuesta", b =>
+                {
+                    b.Property<int>("EvaluacionAuditorRespuestaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EvaluacionAuditorRespuestaId"));
+
+                    b.Property<int?>("Calificacion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Comentario")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("EvaluacionAuditorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NumeroPregunta")
+                        .HasColumnType("int");
+
+                    b.HasKey("EvaluacionAuditorRespuestaId");
+
+                    b.HasIndex("EvaluacionAuditorId", "NumeroPregunta")
+                        .IsUnique();
+
+                    b.ToTable("qmcAudEvaluacionAuditorRespuesta");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Auditorias.InformeMisconductRevision", b =>
+                {
+                    b.Property<int>("InformeMisconductRevisionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InformeMisconductRevisionId"));
+
+                    b.Property<int>("AuditoriaId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Confirmada")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("FechaConfirmacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaSolicitud")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("HashContenido")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("RevisorId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SolicitadoPorId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("InformeMisconductRevisionId");
+
+                    b.HasIndex("AuditoriaId", "RevisorId")
+                        .IsUnique();
+
+                    b.ToTable("qmcAudInformeMisconductRevision");
+                });
+
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.Auditor", b =>
                 {
                     b.Property<int>("AuditorId")
@@ -201,6 +324,9 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<string>("Email")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("EsAuditorLider")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Funcion")
                         .HasMaxLength(200)
@@ -232,6 +358,40 @@ namespace qcmAuditoriasIatf.Migrations
                         .HasDatabaseName("IX_qmcAudAuditor_PcLoginId");
 
                     b.ToTable("qmcAudAuditor");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.AuditorCompetenciaCalificacion", b =>
+                {
+                    b.Property<int>("AuditorCompetenciaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AuditorCompetenciaId"));
+
+                    b.Property<string>("ActualizadoPorId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("AuditorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CompetenciaAuditorId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("TieneCompetencia")
+                        .HasColumnType("bit");
+
+                    b.HasKey("AuditorCompetenciaId");
+
+                    b.HasIndex("CompetenciaAuditorId");
+
+                    b.HasIndex("AuditorId", "CompetenciaAuditorId")
+                        .IsUnique();
+
+                    b.ToTable("qmcAudAuditorCompetencia");
                 });
 
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.ChecklistPregunta", b =>
@@ -289,6 +449,37 @@ namespace qcmAuditoriasIatf.Migrations
                     b.HasKey("ClausulaId");
 
                     b.ToTable("qmcAudClausulaIATF");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.CompetenciaAuditor", b =>
+                {
+                    b.Property<int>("CompetenciaAuditorId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CompetenciaAuditorId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Grupo")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<bool>("Obligatoria")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
+                    b.HasKey("CompetenciaAuditorId");
+
+                    b.ToTable("qmcAudCompetenciaAuditor");
                 });
 
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.Proceso", b =>
@@ -393,6 +584,9 @@ namespace qcmAuditoriasIatf.Migrations
 
                     b.Property<DateTime>("FechaCarga")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaCertificado")
+                        .HasColumnType("date");
 
                     b.Property<string>("NombreOriginal")
                         .IsRequired()
@@ -527,6 +721,10 @@ namespace qcmAuditoriasIatf.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("EvidenciaVerificacion")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<DateTime>("FechaImplementacion")
                         .HasColumnType("datetime2");
 
@@ -568,8 +766,16 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<int>("AuditoriaProcesoId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ClausulaAplicable")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<int?>("ClausulaId")
                         .HasColumnType("int");
+
+                    b.Property<string>("ComentarioMissconduct")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<string>("ComentarioRevisionSgc")
                         .HasMaxLength(2000)
@@ -586,6 +792,9 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Property<string>("Descripcion")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("EsMissconduct")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Estatus")
                         .IsRequired()
@@ -863,6 +1072,58 @@ namespace qcmAuditoriasIatf.Migrations
                     b.Navigation("UnidadNegocio");
                 });
 
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Auditorias.EvaluacionAuditor", b =>
+                {
+                    b.HasOne("qcmAuditoriasIatf.Models.Auditorias.Auditoria", "Auditoria")
+                        .WithMany("EvaluacionesAuditor")
+                        .HasForeignKey("AuditoriaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Auditoria");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Auditorias.EvaluacionAuditorRespuesta", b =>
+                {
+                    b.HasOne("qcmAuditoriasIatf.Models.Auditorias.EvaluacionAuditor", "Evaluacion")
+                        .WithMany("Respuestas")
+                        .HasForeignKey("EvaluacionAuditorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Evaluacion");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Auditorias.InformeMisconductRevision", b =>
+                {
+                    b.HasOne("qcmAuditoriasIatf.Models.Auditorias.Auditoria", "Auditoria")
+                        .WithMany()
+                        .HasForeignKey("AuditoriaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Auditoria");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.AuditorCompetenciaCalificacion", b =>
+                {
+                    b.HasOne("qcmAuditoriasIatf.Models.Catalogos.Auditor", "Auditor")
+                        .WithMany()
+                        .HasForeignKey("AuditorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("qcmAuditoriasIatf.Models.Catalogos.CompetenciaAuditor", "Competencia")
+                        .WithMany("Calificaciones")
+                        .HasForeignKey("CompetenciaAuditorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Auditor");
+
+                    b.Navigation("Competencia");
+                });
+
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.ChecklistPregunta", b =>
                 {
                     b.HasOne("qcmAuditoriasIatf.Models.Catalogos.ClausulaIATF", "Clausula")
@@ -980,7 +1241,14 @@ namespace qcmAuditoriasIatf.Migrations
 
                     b.Navigation("AuditoriaProcesos");
 
+                    b.Navigation("EvaluacionesAuditor");
+
                     b.Navigation("Hallazgos");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Auditorias.EvaluacionAuditor", b =>
+                {
+                    b.Navigation("Respuestas");
                 });
 
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.ChecklistPregunta", b =>
@@ -991,6 +1259,11 @@ namespace qcmAuditoriasIatf.Migrations
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.ClausulaIATF", b =>
                 {
                     b.Navigation("ChecklistPreguntas");
+                });
+
+            modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.CompetenciaAuditor", b =>
+                {
+                    b.Navigation("Calificaciones");
                 });
 
             modelBuilder.Entity("qcmAuditoriasIatf.Models.Catalogos.Proceso", b =>

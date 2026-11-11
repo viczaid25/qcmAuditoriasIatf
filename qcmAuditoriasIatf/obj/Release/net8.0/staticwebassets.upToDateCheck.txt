@@ -1,11 +1,13 @@
 wwwroot\app.css
 wwwroot\bootstrap\bootstrap.min.css
 wwwroot\bootstrap\bootstrap.min.css.map
-wwwroot\favicon.png
+wwwroot\favicon.ico
 wwwroot\images\favicon.ico
 wwwroot\images\icons\icon-192.png
 wwwroot\images\icons\icon-512.png
 wwwroot\images\logo.png
 wwwroot\js\calendar-export.js
-wwwroot\css\meaxone-template.css
 wwwroot\js\meaxone-table.js
+wwwroot\css\meaxone-template.css
+wwwroot\images\logo-informe.svg
+wwwroot\images\logo-topbar.webp

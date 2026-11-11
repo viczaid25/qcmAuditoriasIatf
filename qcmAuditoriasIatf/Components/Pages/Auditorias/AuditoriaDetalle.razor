@@ -7,6 +7,7 @@
 @using qcmAuditoriasIatf.Models.Auditorias
 @using qcmAuditoriasIatf.Models.Catalogos
 @using qcmAuditoriasIatf.Models.Hallazgos
+@using qcmAuditoriasIatf.Services
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
 
@@ -108,6 +109,31 @@ else
                         Ver informe
                     </button>
 
+                    @if (!usuarioEsSgc && usuarioEsDirectivoQc)
+                    {
+                        <button type="button" class="hero-btn" @onclick="IrInformeExtendido">
+                            Informe extendido (Misconduct)
+                        </button>
+                    }
+
+                    @if (usuarioEsSgc)
+                    {
+                        <button type="button" class="hero-btn" @onclick="IrInformeExtendido">
+                            Informe extendido (Misconduct)
+                        </button>
+
+                        <button type="button" class="hero-btn" @onclick="IrEvaluacionesAuditores">
+                            Evaluación de auditores
+                        </button>
+
+                        @if (string.Equals(auditoria.Estatus, "Cerrada", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <button type="button" class="hero-btn" @onclick="GenerarEvaluacionesManual" disabled="@generandoEvaluaciones" title="Crea el pendiente de evaluación para quien participó como auditor principal o segundo auditor y todavía no lo tenga">
+                                @(generandoEvaluaciones ? "Generando..." : "Generar evaluaciones pendientes")
+                            </button>
+                        }
+                    }
+
                     <button type="button" class="hero-btn" @onclick="IrCalendario">
                         Calendario
                     </button>
@@ -124,6 +150,11 @@ else
                     }
                 </div>
             </div>
+
+            @if (!string.IsNullOrWhiteSpace(mensajeEvaluaciones))
+            {
+                <div class="evaluaciones-msg">@mensajeEvaluaciones</div>
+            }
 
             <div class="auditoria-text-grid">
                 <div class="text-card">
@@ -485,6 +516,7 @@ else
 
     private string usuarioActualId = "sistema";
     private bool usuarioEsSgc;
+    private bool usuarioEsDirectivoQc;
     private bool mostrarConfirmEliminar;
     private bool eliminando;
 
@@ -495,6 +527,9 @@ else
     private bool editandoEstatus;
     private bool guardandoEstatus;
     private string estatusEdit = "Planeada";
+
+    private bool generandoEvaluaciones;
+    private string? mensajeEvaluaciones;
 
     private bool UsuarioActualEsAuditorLider =>
         auditoria is not null &&
@@ -638,6 +673,8 @@ else
                 x.Activo &&
                 x.PcLoginId.ToUpper() == loginNormalizado &&
                 (x.Perfil == "SGC" || x.Perfil == "Administrador"));
+
+        usuarioEsDirectivoQc = await AccesoInformeMisconduct.EsDirectivoCalidadAsync(Db, usuarioActualId);
     }
 
     private void PrepararEliminarAuditoria()
@@ -769,6 +806,10 @@ else
 
     private void IrInforme() => Nav.NavigateTo($"auditorias/{id}/informe");
 
+    private void IrInformeExtendido() => Nav.NavigateTo($"auditorias/{id}/informe-extendido");
+
+    private void IrEvaluacionesAuditores() => Nav.NavigateTo("interfaces/sgc/evaluaciones-auditores");
+
     private void EmpezarEditarConclusiones()
     {
         conclusionesEdit = auditoria?.Conclusiones;
@@ -849,9 +890,17 @@ else
 
             if (entity is not null)
             {
+                var seEstaCerrando = !string.Equals(entity.Estatus, "Cerrada", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(estatusEdit, "Cerrada", StringComparison.OrdinalIgnoreCase);
+
                 entity.Estatus = estatusEdit;
                 await Db.SaveChangesAsync();
                 auditoria.Estatus = entity.Estatus;
+
+                if (seEstaCerrando)
+                {
+                    await GenerarEvaluacionesPendientesAsync(id);
+                }
             }
 
             editandoEstatus = false;
@@ -863,6 +912,87 @@ else
         finally
         {
             guardandoEstatus = false;
+        }
+    }
+
+    private async Task<int> GenerarEvaluacionesPendientesAsync(int auditoriaId)
+    {
+        // Se evalúa a quien haya participado como auditor principal o segundo auditor
+        // en cualquier proceso de la auditoría (los observadores no se evalúan). Es
+        // idempotente: si ya existe una evaluación para esa persona en esta auditoría,
+        // no se duplica. Devuelve cuántas evaluaciones nuevas se crearon.
+        var procesosAud = await Db.AuditoriaProcesos
+            .Where(p => p.AuditoriaId == auditoriaId)
+            .ToListAsync();
+
+        var logins = procesosAud
+            .SelectMany(p => new[] { p.AuditorAsignadoId, p.SegundoAuditorId })
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (logins.Count == 0)
+            return 0;
+
+        var existentes = await Db.EvaluacionesAuditor
+            .Where(e => e.AuditoriaId == auditoriaId)
+            .Select(e => e.AuditorEvaluadoId)
+            .ToListAsync();
+
+        var existentesNorm = existentes
+            .Select(x => x.Trim().ToUpperInvariant())
+            .ToHashSet();
+
+        var creadas = 0;
+
+        foreach (var login in logins)
+        {
+            if (existentesNorm.Contains(login.ToUpperInvariant()))
+                continue;
+
+            Db.EvaluacionesAuditor.Add(new EvaluacionAuditor
+            {
+                AuditoriaId = auditoriaId,
+                AuditorEvaluadoId = login,
+                Estatus = "Pendiente",
+                FechaCreacion = DateTime.Now
+            });
+
+            creadas++;
+        }
+
+        if (creadas > 0)
+        {
+            await Db.SaveChangesAsync();
+        }
+
+        return creadas;
+    }
+
+    private async Task GenerarEvaluacionesManual()
+    {
+        if (generandoEvaluaciones || !usuarioEsSgc) return;
+
+        generandoEvaluaciones = true;
+        errorMsg = null;
+        mensajeEvaluaciones = null;
+
+        try
+        {
+            var creadas = await GenerarEvaluacionesPendientesAsync(id);
+
+            mensajeEvaluaciones = creadas > 0
+                ? $"Se generaron {creadas} evaluación(es) pendiente(s)."
+                : "No había nada nuevo que generar: todos los auditores elegibles ya tienen su evaluación.";
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            generandoEvaluaciones = false;
         }
     }
 

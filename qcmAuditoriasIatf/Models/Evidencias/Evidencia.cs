@@ -25,6 +25,11 @@ public class Evidencia
 
     public DateTime FechaCarga { get; set; } = DateTime.Now;
 
+    // Fecha en que se tomó el curso/certificación; solo aplica a certificados de
+    // competencias y de auditor líder (la vigencia de 2 años se calcula a partir de ella).
+    [Column(TypeName = "date")]
+    public DateTime? FechaCertificado { get; set; }
+
     [Required]
     public string UsuarioId { get; set; } = "sistema";
 }

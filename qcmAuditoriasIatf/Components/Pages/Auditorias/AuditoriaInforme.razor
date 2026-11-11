@@ -51,7 +51,7 @@ else
 
         <div class="informe-doc">
             <div class="informe-header">
-                <img src="images/logo.png" class="informe-logo" alt="Logo" onerror="this.style.display='none'" />
+                <img src="images/logo-informe.svg" class="informe-logo" alt="Logo" onerror="this.style.display='none'" />
                 <div>
                     <div class="informe-empresa">Mitsubishi Electric Automotive de México, S.A. de C.V.</div>
                     <h1>Informe de auditoría interna</h1>
@@ -127,44 +127,96 @@ else
                 }
                 else
                 {
-                    <div class="informe-table-wrap">
-                        <table class="informe-hallazgos-table">
-                            <thead>
-                                <tr>
-                                    <th>No.</th>
-                                    <th>Proceso</th>
-                                    <th>Declaración</th>
-                                    <th>Requisito</th>
-                                    <th>Evidencia</th>
-                                    <th>Tipo</th>
-                                    <th>Justificación</th>
-                                    <th>Responsable</th>
-                                    <th>Estatus</th>
-                                    <th>Entrega de análisis (20 días)</th>
-                                    <th>Implementación y cierre (45 días)</th>
-                                    <th>Verificación</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var h in hallazgos)
+                    <div class="informe-findings">
+                        @foreach (var grupo in hallazgosPorProceso)
+                        {
+                            <div class="informe-proceso-group" @key="grupo.Key">
+                            <h3 class="informe-proceso-title">
+                                <span>@grupo.Titulo</span>
+                                <span class="informe-proceso-count">@grupo.Hallazgos.Count hallazgo(s)</span>
+                            </h3>
+
+                        @foreach (var h in grupo.Hallazgos)
+                        {
+                            var requisito = TextoRequisito(h);
+                            var linea = h.AuditoriaProceso?.LineaNombre;
+                            var tieneSeguimiento =
+                                !string.IsNullOrWhiteSpace(h.SeguimientoEntregaAnalisis) ||
+                                !string.IsNullOrWhiteSpace(h.SeguimientoImplementacionCierre) ||
+                                !string.IsNullOrWhiteSpace(h.SeguimientoVerificacion);
+
+                            <div class="informe-finding" @key="h.HallazgoId">
+                                <div class="informe-finding-head">
+                                    <span class="informe-finding-no">No. @h.HallazgoId</span>
+
+                                    @if (!string.IsNullOrWhiteSpace(linea))
+                                    {
+                                        <span class="informe-finding-chip linea">Línea auditada: @linea</span>
+                                    }
+
+                                    <span class="informe-finding-chip @TipoClase(h)">@TipoAbreviado(h)</span>
+
+                                    @if (!string.IsNullOrWhiteSpace(h.ClausulaAplicable))
+                                    {
+                                        <span class="informe-finding-chip">Cláusula: @h.ClausulaAplicable</span>
+                                    }
+
+                                    <span class="informe-finding-chip no-print">Estatus: @h.Estatus</span>
+                                    <span class="informe-finding-chip no-print">Responsable: @MostrarPersona(h.ResponsableId)</span>
+                                </div>
+
+                                <div class="informe-finding-body">
+                                    <div class="informe-finding-block">
+                                        <div class="mini-label">Declaración</div>
+                                        <p>@h.Descripcion</p>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(requisito))
+                                    {
+                                        <div class="informe-finding-block">
+                                            <div class="mini-label">Requisito</div>
+                                            <p>@requisito</p>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(h.Evidencia))
+                                    {
+                                        <div class="informe-finding-block">
+                                            <div class="mini-label">Evidencia</div>
+                                            <p>@h.Evidencia</p>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(h.JustificacionNoConformidad))
+                                    {
+                                        <div class="informe-finding-block">
+                                            <div class="mini-label">Justificación</div>
+                                            <p>@h.JustificacionNoConformidad</p>
+                                        </div>
+                                    }
+                                </div>
+
+                                @if (tieneSeguimiento)
                                 {
-                                    <tr @key="h.HallazgoId">
-                                        <td>@h.HallazgoId</td>
-                                        <td>@(h.Proceso is null ? "" : $"{h.Proceso.Codigo} - {h.Proceso.Nombre}")</td>
-                                        <td>@h.Descripcion</td>
-                                        <td>@TextoRequisito(h)</td>
-                                        <td>@h.Evidencia</td>
-                                        <td>@TipoAbreviado(h)</td>
-                                        <td>@h.JustificacionNoConformidad</td>
-                                        <td>@MostrarPersona(h.ResponsableId)</td>
-                                        <td>@h.Estatus</td>
-                                        <td>@h.SeguimientoEntregaAnalisis</td>
-                                        <td>@h.SeguimientoImplementacionCierre</td>
-                                        <td>@h.SeguimientoVerificacion</td>
-                                    </tr>
+                                    <div class="informe-finding-seguimiento no-print">
+                                        <div>
+                                            <div class="mini-label">Entrega de análisis (20 días)</div>
+                                            <p>@(h.SeguimientoEntregaAnalisis ?? "—")</p>
+                                        </div>
+                                        <div>
+                                            <div class="mini-label">Implementación y cierre (45 días)</div>
+                                            <p>@(h.SeguimientoImplementacionCierre ?? "—")</p>
+                                        </div>
+                                        <div>
+                                            <div class="mini-label">Verificación</div>
+                                            <p>@(h.SeguimientoVerificacion ?? "—")</p>
+                                        </div>
+                                    </div>
                                 }
-                            </tbody>
-                        </table>
+                            </div>
+                        }
+                            </div>
+                        }
                     </div>
                 }
             </div>
@@ -192,7 +244,15 @@ else
 
     private Auditoria? auditoria;
     private List<Hallazgo> hallazgos = new();
+    private List<GrupoProcesoVm> hallazgosPorProceso = new();
     private List<string> auditoresParticipantes = new();
+
+    private class GrupoProcesoVm
+    {
+        public int Key { get; set; }
+        public string Titulo { get; set; } = "";
+        public List<Hallazgo> Hallazgos { get; set; } = new();
+    }
 
     private int totalNCM;
     private int totalNCm;
@@ -228,9 +288,26 @@ else
                 .Include(h => h.Clausula)
                 .Include(h => h.Pregunta)
                 .Include(h => h.TipoHallazgo)
+                .Include(h => h.AuditoriaProceso)
                 .Where(h => h.AuditoriaId == auditoriaId)
                 .OrderBy(h => h.HallazgoId)
                 .ToListAsync();
+
+            hallazgosPorProceso = hallazgos
+                .GroupBy(h => h.ProcesoId)
+                .Select(g => new GrupoProcesoVm
+                {
+                    Key = g.Key,
+                    Titulo = g.First().Proceso is null
+                        ? "Sin proceso"
+                        : $"{g.First().Proceso!.Codigo} - {g.First().Proceso!.Nombre}",
+                    Hallazgos = g
+                        .OrderBy(h => h.AuditoriaProceso?.LineaNombre ?? "", StringComparer.CurrentCultureIgnoreCase)
+                        .ThenBy(h => h.HallazgoId)
+                        .ToList()
+                })
+                .OrderBy(g => g.Titulo, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
 
             totalNCM = hallazgos.Count(h => string.Equals(h.TipoHallazgo?.Nombre, "NC Mayor", StringComparison.OrdinalIgnoreCase));
             totalNCm = hallazgos.Count(h => string.Equals(h.TipoHallazgo?.Nombre, "NC Menor", StringComparison.OrdinalIgnoreCase));
@@ -287,6 +364,15 @@ else
 
         return nombre;
     }
+
+    private static string TipoClase(Hallazgo h) =>
+        TipoAbreviado(h) switch
+        {
+            "NCM" => "ncm",
+            "NCm" => "ncmm",
+            "OM" => "om",
+            _ => ""
+        };
 
     private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
     {

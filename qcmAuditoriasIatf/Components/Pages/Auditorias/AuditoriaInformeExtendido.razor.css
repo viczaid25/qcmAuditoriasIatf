@@ -1,0 +1,554 @@
+.informe-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.informe-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.informe-tabs {
+    display: inline-flex;
+    padding: 0.2rem;
+    border-radius: 12px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+}
+
+.informe-tab {
+    padding: 0.45rem 0.9rem;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+    .informe-tab.active {
+        background: #fff;
+        color: #1d4ed8;
+        box-shadow: 0 2px 6px rgba(15,23,42,0.10);
+    }
+
+.informe-revisado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.5rem;
+    margin: -0.25rem 0 1.25rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: 12px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    font-size: 0.9rem;
+}
+
+.revision-aviso {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.revision-sub {
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+.revision-panel .panel-head-simple h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #1d4ed8;
+}
+
+.revision-lista {
+    display: grid;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.revision-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.revision-nombre {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.revision-estado {
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+    .revision-estado.ok {
+        background: #ecfdf5;
+        color: #059669;
+    }
+
+    .revision-estado.warn {
+        background: #fffbeb;
+        color: #b45309;
+    }
+
+    .revision-estado.pend {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+.revision-acciones {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.revision-agregar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+    .revision-agregar input {
+        flex: 1 1 320px;
+        min-width: 0;
+    }
+
+.table-btn {
+    min-height: 32px;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 0.78rem;
+}
+
+.table-btn-xs {
+    min-height: 26px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.72rem;
+}
+
+.table-btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-color: transparent;
+    color: #fff;
+}
+
+.resumen-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.resumen-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.resumen-conteo {
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.resumen-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+    .resumen-table th,
+    .resumen-table td {
+        border: 1px solid #e2e8f0;
+        padding: 0.6rem 0.7rem;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .resumen-table th {
+        background: #f8fafc;
+        color: #475569;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .resumen-table tr.misconduct-si td {
+        background: #fef2f2;
+    }
+
+    .resumen-table tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+.resumen-proceso {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.resumen-sub {
+    color: #64748b;
+    font-size: 0.78rem;
+}
+
+.resumen-texto {
+    white-space: pre-wrap;
+    line-height: 1.45;
+    color: #334155;
+}
+
+.resumen-centro {
+    text-align: center !important;
+}
+
+.misconduct-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.22rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+    .misconduct-pill.si {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .misconduct-pill.no {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+.informe-save-ok {
+    color: #059669;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.informe-doc {
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 14px 30px rgba(15,23,42,0.06);
+    padding: 2rem 2.25rem;
+    color: #1e293b;
+    font-family: 'Montserrat', Arial, sans-serif;
+}
+
+.informe-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 2px solid #1d4ed8;
+}
+
+.informe-logo {
+    height: 48px;
+    width: auto;
+}
+
+.informe-empresa {
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.informe-header h1 {
+    margin: 0.15rem 0 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.informe-meta-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+}
+
+    .informe-meta-table th,
+    .informe-meta-table td {
+        border: 1px solid #e2e8f0;
+        padding: 0.55rem 0.75rem;
+        text-align: left;
+        font-size: 0.9rem;
+    }
+
+    .informe-meta-table th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        width: 12%;
+    }
+
+    .informe-meta-table td {
+        width: 38%;
+    }
+
+.informe-section {
+    margin-bottom: 1.5rem;
+}
+
+    .informe-section h2 {
+        font-size: 1rem;
+        font-weight: 800;
+        color: #1d4ed8;
+        margin: 0 0 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+.informe-section-note {
+    margin: 0 0 1rem;
+    color: #64748b;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.informe-findings {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.informe-proceso-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.informe-proceso-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.6rem 0.9rem;
+    border-radius: 12px;
+    background: #eff6ff;
+    border-left: 4px solid #1d4ed8;
+    color: #1e3a8a;
+    font-size: 0.95rem;
+    font-weight: 800;
+    break-after: avoid;
+    page-break-after: avoid;
+}
+
+.informe-proceso-count {
+    color: #475569;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.informe-finding-chip.linea {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.informe-finding {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1rem 1.1rem;
+    background: #fdfdfe;
+}
+
+.informe-finding-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.informe-finding-no {
+    font-weight: 800;
+    color: #0f172a;
+    font-size: 0.95rem;
+    margin-right: 0.25rem;
+}
+
+.informe-finding-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.28rem 0.65rem;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 0.76rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+    .informe-finding-chip.ncm {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .informe-finding-chip.ncmm {
+        background: #fff7ed;
+        color: #ea580c;
+    }
+
+    .informe-finding-chip.om {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+.informe-finding-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.mini-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.informe-finding-block p {
+    margin: 0;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    color: #334155;
+    font-size: 0.88rem;
+}
+
+.informe-finding.misconduct-si {
+    border-color: #fca5a5;
+    background: #fef2f2;
+}
+
+.informe-misconduct {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 1rem;
+    margin-top: 0.9rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed #cbd5e1;
+}
+
+.misconduct-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.informe-missconduct-select {
+    min-height: 42px;
+    min-width: 110px;
+}
+
+.informe-comentario-textarea {
+    width: 100%;
+    min-width: 0;
+    min-height: 60px;
+    resize: vertical;
+    border-radius: 12px;
+    line-height: 1.4;
+}
+
+.empty-state {
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+.empty-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.45rem;
+}
+
+.empty-text {
+    color: #64748b;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+.panel-card {
+    padding: 1.25rem;
+    border-radius: 24px;
+    background: rgba(255,255,255,0.94);
+    border: 1px solid rgba(226,232,240,0.95);
+    box-shadow: 0 14px 30px rgba(15,23,42,0.06);
+}
+
+.informe-loading {
+    display: grid;
+}
+
+.informe-skeleton {
+    height: 500px;
+    border-radius: 20px;
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 37%, #e5e7eb 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+
+    100% {
+        background-position: 0 0;
+    }
+}
+
+
+@media print {
+    .informe-finding {
+        border-color: #cbd5e1;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+}
+
+@media (max-width: 900px) {
+    .informe-doc {
+        padding: 1.25rem;
+    }
+
+    .informe-misconduct {
+        grid-template-columns: 1fr;
+    }
+}

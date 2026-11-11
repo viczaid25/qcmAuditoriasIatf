@@ -6,6 +6,7 @@
 @using qcmAuditoriasIatf.Models.Hallazgos
 @inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 @attribute [Authorize]
 
@@ -44,32 +45,56 @@ else
         </section>
 
         <section class="global-metrics-grid">
-            <div class="metric-card">
+            <div class="metric-card clickable @(TarjetaActiva("total") ? "active" : "")"
+                 role="button" tabindex="0"
+                 title="Ver estos hallazgos en la tabla"
+                 @onclick='() => SeleccionarTarjeta("total")'
+                 @onkeydown='e => { if (e.Key == "Enter" || e.Key == " ") return SeleccionarTarjeta("total"); return Task.CompletedTask; }'>
                 <div class="metric-label">Total</div>
                 <div class="metric-value">@total</div>
                 <div class="metric-note">Hallazgos registrados</div>
             </div>
-            <div class="metric-card">
+            <div class="metric-card clickable @(TarjetaActiva("pendiente") ? "active" : "")"
+                 role="button" tabindex="0"
+                 title="Ver estos hallazgos en la tabla"
+                 @onclick='() => SeleccionarTarjeta("pendiente")'
+                 @onkeydown='e => { if (e.Key == "Enter" || e.Key == " ") return SeleccionarTarjeta("pendiente"); return Task.CompletedTask; }'>
                 <div class="metric-label">Pendiente SGC</div>
                 <div class="metric-value">@pendientesSgc</div>
                 <div class="metric-note">Esperando validación</div>
             </div>
-            <div class="metric-card">
+            <div class="metric-card clickable @(TarjetaActiva("aprobado") ? "active" : "")"
+                 role="button" tabindex="0"
+                 title="Ver estos hallazgos en la tabla"
+                 @onclick='() => SeleccionarTarjeta("aprobado")'
+                 @onkeydown='e => { if (e.Key == "Enter" || e.Key == " ") return SeleccionarTarjeta("aprobado"); return Task.CompletedTask; }'>
                 <div class="metric-label">Aprobados SGC</div>
                 <div class="metric-value">@aprobadosSgc</div>
                 <div class="metric-note">Liberados al flujo</div>
             </div>
-            <div class="metric-card">
+            <div class="metric-card clickable @(TarjetaActiva("rechazado") ? "active" : "")"
+                 role="button" tabindex="0"
+                 title="Ver estos hallazgos en la tabla"
+                 @onclick='() => SeleccionarTarjeta("rechazado")'
+                 @onkeydown='e => { if (e.Key == "Enter" || e.Key == " ") return SeleccionarTarjeta("rechazado"); return Task.CompletedTask; }'>
                 <div class="metric-label">Rechazados SGC</div>
                 <div class="metric-value">@rechazadosSgc</div>
                 <div class="metric-note">Con observaciones</div>
             </div>
-            <div class="metric-card">
+            <div class="metric-card clickable @(TarjetaActiva("abierto") ? "active" : "")"
+                 role="button" tabindex="0"
+                 title="Ver estos hallazgos en la tabla"
+                 @onclick='() => SeleccionarTarjeta("abierto")'
+                 @onkeydown='e => { if (e.Key == "Enter" || e.Key == " ") return SeleccionarTarjeta("abierto"); return Task.CompletedTask; }'>
                 <div class="metric-label">Abiertos</div>
                 <div class="metric-value">@abiertos</div>
                 <div class="metric-note">En operación o seguimiento</div>
             </div>
-            <div class="metric-card">
+            <div class="metric-card clickable @(TarjetaActiva("cerrado") ? "active" : "")"
+                 role="button" tabindex="0"
+                 title="Ver estos hallazgos en la tabla"
+                 @onclick='() => SeleccionarTarjeta("cerrado")'
+                 @onkeydown='e => { if (e.Key == "Enter" || e.Key == " ") return SeleccionarTarjeta("cerrado"); return Task.CompletedTask; }'>
                 <div class="metric-label">Cerrados</div>
                 <div class="metric-value">@cerrados</div>
                 <div class="metric-note">Ya finalizados</div>
@@ -80,7 +105,7 @@ else
             <div class="panel-head">
                 <div>
                     <h2>Filtros</h2>
-                    <p class="panel-subtitle">Refina por auditoría, estatus o texto. Solo se muestran hallazgos ya aprobados por SGC.</p>
+                    <p class="panel-subtitle">Refina por auditoría, validación SGC, estatus o texto. Haz clic en una tarjeta de arriba para ver esos hallazgos. Por defecto solo se muestran los aprobados por SGC.</p>
                 </div>
                 <span class="panel-badge">Mostrando @hallazgos.Count</span>
             </div>
@@ -98,9 +123,20 @@ else
                 </div>
 
                 <div class="col-md-2">
+                    <label class="form-label">Validación SGC</label>
+                    <InputSelect class="mo-form-select" @bind-Value="validacionSeleccionada">
+                        <option value="">-- Todas --</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Aprobado">Aprobado</option>
+                        <option value="Rechazado">Rechazado</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-2">
                     <label class="form-label">Estatus operativo</label>
                     <InputSelect class="mo-form-select" @bind-Value="estatusSeleccionado">
                         <option value="">-- Todos --</option>
+                        <option value="@EstatusAbiertos">Abierto o En Proceso</option>
                         <option value="Pendiente SGC">Pendiente SGC</option>
                         <option value="Abierto">Abierto</option>
                         <option value="En Proceso">En Proceso</option>
@@ -108,7 +144,7 @@ else
                     </InputSelect>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-2">
                     <label class="form-label">Buscar</label>
                     <InputText class="mo-form-control" @bind-Value="textoBusqueda" placeholder="Descripción, responsable..." />
                 </div>
@@ -124,13 +160,21 @@ else
             </div>
         </section>
 
-        <section class="panel-card">
+        <section class="panel-card" id="bandeja-global">
             <div class="panel-head">
                 <div>
                     <h2>Bandeja global de hallazgos</h2>
                     <p class="panel-subtitle">Ordenados por auditoría más reciente.</p>
                 </div>
                 <span class="panel-badge">@hallazgos.Count registro(s)</span>
+            </div>
+
+            <div class="seg-leyenda">
+                <span class="seg-leyenda-item"><span class="seg-step done">✓</span> Completado</span>
+                <span class="seg-leyenda-item"><span class="seg-step current">●</span> En curso</span>
+                <span class="seg-leyenda-item"><span class="seg-step blocked">!</span> Rechazado / requiere corrección</span>
+                <span class="seg-leyenda-item"><span class="seg-step pending"></span> Pendiente</span>
+                <span class="seg-leyenda-nota">Etapas: 1 Validación SGC · 2 Análisis (5 porqués o acción correctiva) · 3 Evidencia · 4 Verificación QMS · 5 Cierre</span>
             </div>
 
             @if (hallazgos.Count == 0)
@@ -150,6 +194,8 @@ else
                                 <th>Proceso</th>
                                 <th>Línea</th>
                                 <th>Tipo</th>
+                                <th>Seguimiento</th>
+                                <th>5 Porqués</th>
                                 <th>Descripción</th>
                                 <th>Responsables</th>
                                 <th>Fechas</th>
@@ -158,27 +204,31 @@ else
                             </tr>
                             <tr class="mo-table-filter-row">
                                 <th><input class="mo-th-filter" data-mo-filter-col="0" placeholder="Filtrar…"></th>
-                                <th><input class="mo-th-filter" data-mo-filter-col="1" placeholder="Filtrar…"></th>
-                                <th><input class="mo-th-filter" data-mo-filter-col="2" placeholder="Filtrar…"></th>
-                                <th><input class="mo-th-filter" data-mo-filter-col="3" placeholder="Filtrar…"></th>
-                                <th><input class="mo-th-filter" data-mo-filter-col="4" placeholder="Filtrar…"></th>
-                                <th><input class="mo-th-filter" data-mo-filter-col="5" placeholder="Filtrar…"></th>
-                                <th><input class="mo-th-filter" data-mo-filter-col="6" placeholder="Filtrar…"></th>
+                                <th><select class="mo-th-filter" data-mo-filter-col="1" data-mo-auto><option value="">Todos</option></select></th>
+                                <th><select class="mo-th-filter" data-mo-filter-col="2" data-mo-auto><option value="">Todos</option></select></th>
+                                <th><select class="mo-th-filter" data-mo-filter-col="3" data-mo-auto><option value="">Todos</option></select></th>
+                                <th><select class="mo-th-filter" data-mo-filter-col="4" data-mo-auto><option value="">Todos</option></select></th>
+                                <th><select class="mo-th-filter" data-mo-filter-col="5" data-mo-auto><option value="">Todos</option></select></th>
+                                <th><select class="mo-th-filter" data-mo-filter-col="6" data-mo-auto><option value="">Todos</option></select></th>
                                 <th><input class="mo-th-filter" data-mo-filter-col="7" placeholder="Filtrar…"></th>
                                 <th><input class="mo-th-filter" data-mo-filter-col="8" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="9" placeholder="Filtrar…"></th>
+                                <th><select class="mo-th-filter" data-mo-filter-col="10" data-mo-auto><option value="">Todos</option></select></th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var h in hallazgos)
                             {
-                                <tr @key="h.HallazgoId">
+                                var seg = Seguimiento(h);
+
+                                <tr @key="h.HallazgoId" class="@(seg.Alerta ? "row-alerta" : "")">
                                     <td>
                                         <div class="id-pill">#@h.HallazgoId</div>
                                         <div class="cell-subtitle">@TextoClausula(h)</div>
                                     </td>
 
-                                    <td>
+                                    <td data-mo-value="@ValorAuditoria(h)">
                                         @if (h.Auditoria is not null)
                                         {
                                             <div class="cell-title">@h.Auditoria.TipoAuditoria</div>
@@ -191,11 +241,11 @@ else
                                         }
                                     </td>
 
-                                    <td>
+                                    <td data-mo-value="@TextoProceso(h)">
                                         <div class="cell-title">@TextoProceso(h)</div>
                                     </td>
 
-                                    <td>
+                                    <td data-mo-value="@(string.IsNullOrWhiteSpace(h.AuditoriaProceso?.LineaNombre) ? "Sin línea" : h.AuditoriaProceso!.LineaNombre!.Trim())">
                                         @if (string.IsNullOrWhiteSpace(h.AuditoriaProceso?.LineaNombre))
                                         {
                                             <span class="empty-inline">—</span>
@@ -206,19 +256,52 @@ else
                                         }
                                     </td>
 
-                                    <td>
+                                    <td data-mo-value="@(h.TipoHallazgo?.Nombre ?? "Sin tipo")">
                                         <span class="tipo-pill @GetTipoClass(h.TipoHallazgo?.Nombre)">
                                             @(h.TipoHallazgo?.Nombre ?? "Sin tipo")
                                         </span>
                                     </td>
 
+                                    <td data-mo-value="@seg.Atiende">
+                                        <div class="seg-stepper">
+                                            @for (var i = 0; i < seg.Pasos.Count; i++)
+                                            {
+                                                var paso = seg.Pasos[i];
+
+                                                <span class="seg-step @ClasePaso(paso.Estado)" title="@(i + 1). @paso.Nombre — @TextoPaso(paso.Estado)">@IconoPaso(paso.Estado)</span>
+
+                                                @if (i < seg.Pasos.Count - 1)
+                                                {
+                                                    <span class="seg-line @(paso.Estado == PasoEstado.Hecho ? "done" : "")"></span>
+                                                }
+                                            }
+                                        </div>
+
+                                        <div class="seg-etapa">@seg.Etapa</div>
+                                        <span class="seg-pill @seg.ClasePill">@seg.TextoPill</span>
+
+                                        @if (!string.IsNullOrWhiteSpace(seg.Siguiente))
+                                        {
+                                            <div class="seg-siguiente">@seg.Siguiente</div>
+                                        }
+
+                                        @if (seg.DiasVencido > 0)
+                                        {
+                                            <div class="seg-vencido">Vencido hace @seg.DiasVencido día(s)</div>
+                                        }
+                                    </td>
+
+                                    <td data-mo-value="@seg.CincoPorQues">
+                                        <span class="cpq-pill @seg.ClaseCincoPorQues">@seg.CincoPorQues</span>
+                                    </td>
+
                                     <td>
                                         <div class="desc-cell">@h.Descripcion</div>
-                                        @if (!string.IsNullOrWhiteSpace(h.JustificacionNoConformidad))
+                                        @if (!string.IsNullOrWhiteSpace(h.Evidencia))
                                         {
                                             <div class="evidencia-box">
-                                                <div class="mini-label">Justificación NC</div>
-                                                <div>@h.JustificacionNoConformidad</div>
+                                                <div class="mini-label">Evidencia</div>
+                                                <div>@h.Evidencia</div>
                                             </div>
                                         }
                                     </td>
@@ -247,7 +330,7 @@ else
                                         }
                                     </td>
 
-                                    <td>
+                                    <td data-mo-value="@h.Estatus">
                                         <div class="status-stack">
                                             <span class="validacion-pill @GetValidacionClass(h.EstatusValidacionSgc)">
                                                 @h.EstatusValidacionSgc
@@ -291,7 +374,10 @@ else
 
     private int auditoriaIdSeleccionada = 0;
     private string estatusSeleccionado = "";
+    private string validacionSeleccionada = "Aprobado"; // por defecto, solo los ya aprobados por SGC
     private string textoBusqueda = "";
+
+    private const string EstatusAbiertos = "__abiertos";
 
     private int total;
     private int abiertos;
@@ -370,13 +456,19 @@ else
             .Include(h => h.TipoHallazgo)
             .Include(h => h.Auditoria)
             .Include(h => h.AuditoriaProceso)
-            .Where(h => h.EstatusValidacionSgc == "Aprobado") // solo hallazgos que ya pasaron la validación SGC inicial
+            .Include(h => h.CincoPorQue)
+            .Include(h => h.AccionesCorrectivas)
             .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(validacionSeleccionada))
+            q = q.Where(h => h.EstatusValidacionSgc == validacionSeleccionada);
 
         if (auditoriaIdSeleccionada > 0)
             q = q.Where(h => h.AuditoriaId == auditoriaIdSeleccionada);
 
-        if (!string.IsNullOrWhiteSpace(estatusSeleccionado))
+        if (estatusSeleccionado == EstatusAbiertos)
+            q = q.Where(h => h.Estatus == "Abierto" || h.Estatus == "En Proceso");
+        else if (!string.IsNullOrWhiteSpace(estatusSeleccionado))
             q = q.Where(h => h.Estatus == estatusSeleccionado);
 
         if (!string.IsNullOrWhiteSpace(textoBusqueda))
@@ -396,6 +488,8 @@ else
             .ThenByDescending(h => h.HallazgoId)
             .ToListAsync();
 
+        await CargarDatosSeguimiento();
+
         await CargarPersonasDisplay(
             hallazgos.SelectMany(h => new string?[]
             {
@@ -404,6 +498,235 @@ else
                 h.CreadoPorId
             }));
     }
+
+    // ── Seguimiento visual (etapas del flujo) ─────────────────────────────────────
+
+    private enum PasoEstado { Pendiente, EnCurso, Rechazado, Hecho }
+
+    private sealed record PasoVm(string Nombre, PasoEstado Estado);
+
+    private sealed class SeguimientoVm
+    {
+        public List<PasoVm> Pasos { get; set; } = new();
+        public string Etapa { get; set; } = "";
+        public string Atiende { get; set; } = "";
+        public string TextoPill { get; set; } = "";
+        public string ClasePill { get; set; } = "";
+        public string Siguiente { get; set; } = "";
+        public int DiasVencido { get; set; }
+        public bool Alerta { get; set; }
+        public string CincoPorQues { get; set; } = "";
+        public string ClaseCincoPorQues { get; set; } = "";
+    }
+
+    private readonly Dictionary<int, DateTime> ultimaEvidenciaPorHallazgo = new();
+    private readonly Dictionary<int, DateTime> ultimoRechazoQmsPorHallazgo = new();
+    private readonly Dictionary<int, SeguimientoVm> seguimientoCache = new();
+
+    private async Task CargarDatosSeguimiento()
+    {
+        ultimaEvidenciaPorHallazgo.Clear();
+        ultimoRechazoQmsPorHallazgo.Clear();
+        seguimientoCache.Clear();
+
+        var ids = hallazgos.Select(h => h.HallazgoId).ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var evidencias = await Db.Evidencias
+            .AsNoTracking()
+            .Where(e => e.ReferenciaTipo == "Hallazgo" && ids.Contains(e.ReferenciaId))
+            .Select(e => new { e.ReferenciaId, e.FechaCarga })
+            .ToListAsync();
+
+        foreach (var g in evidencias.GroupBy(e => e.ReferenciaId))
+            ultimaEvidenciaPorHallazgo[g.Key] = g.Max(x => x.FechaCarga);
+
+        var rechazos = await Db.HallazgoSeguimientos
+            .AsNoTracking()
+            .Where(s => ids.Contains(s.HallazgoId) && s.Comentario.StartsWith("QMS rechazó"))
+            .Select(s => new { s.HallazgoId, s.FechaRegistro })
+            .ToListAsync();
+
+        foreach (var g in rechazos.GroupBy(r => r.HallazgoId))
+            ultimoRechazoQmsPorHallazgo[g.Key] = g.Max(x => x.FechaRegistro);
+    }
+
+    private SeguimientoVm Seguimiento(Hallazgo h)
+    {
+        if (!seguimientoCache.TryGetValue(h.HallazgoId, out var vm))
+        {
+            vm = ConstruirSeguimiento(h);
+            seguimientoCache[h.HallazgoId] = vm;
+        }
+
+        return vm;
+    }
+
+    private SeguimientoVm ConstruirSeguimiento(Hallazgo h)
+    {
+        var esNcMenor = string.Equals(h.TipoHallazgo?.Nombre, "NC Menor", StringComparison.OrdinalIgnoreCase);
+        var cerrado = string.Equals(h.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase);
+        var validacion = string.IsNullOrWhiteSpace(h.EstatusValidacionSgc) ? "Aprobado" : h.EstatusValidacionSgc;
+
+        var accion = h.AccionesCorrectivas.OrderByDescending(a => a.AccionCorrectivaId).FirstOrDefault();
+
+        // Estado del análisis: 5 porqués (NC Menor) o acción correctiva (resto).
+        var analisis = esNcMenor
+            ? h.CincoPorQue?.Estatus ?? "Sin captura"
+            : accion?.EstatusValidacion ?? "Sin captura";
+
+        var nombreAnalisis = esNcMenor ? "5 Porqués" : "Acción correctiva";
+
+        var vm = new SeguimientoVm
+        {
+            CincoPorQues = esNcMenor
+                ? analisis switch
+                {
+                    "Aprobado" => "Aprobado",
+                    "Pendiente" => "En revisión SGC",
+                    "Rechazado" => "Rechazado",
+                    _ => "Sin captura"
+                }
+                : "No aplica"
+        };
+
+        vm.ClaseCincoPorQues = vm.CincoPorQues switch
+        {
+            "Aprobado" => "ok",
+            "En revisión SGC" => "wait",
+            "Rechazado" => "bad",
+            "Sin captura" => "none",
+            _ => "na"
+        };
+
+        var nombres = new[] { "Validación SGC", nombreAnalisis, "Evidencia", "Verificación QMS", "Cierre" };
+        var estados = new PasoEstado[5];
+
+        if (cerrado)
+        {
+            Array.Fill(estados, PasoEstado.Hecho);
+            vm.Etapa = "Cerrado";
+            vm.Atiende = "Sin pendientes";
+            vm.TextoPill = "Cerrado";
+            vm.ClasePill = "done";
+        }
+        else
+        {
+            string etapa, atiende, siguiente;
+            var rechazado = false;
+
+            if (validacion.Equals("Pendiente", StringComparison.OrdinalIgnoreCase))
+            {
+                (etapa, atiende, siguiente) = ("Validación SGC", "SGC", "SGC debe validar el hallazgo.");
+                estados[0] = PasoEstado.EnCurso;
+            }
+            else if (validacion.Equals("Rechazado", StringComparison.OrdinalIgnoreCase))
+            {
+                (etapa, atiende, siguiente) = ("Validación SGC", "Auditor", "Corregir el hallazgo y reenviarlo a SGC.");
+                estados[0] = PasoEstado.Rechazado;
+                rechazado = true;
+            }
+            else
+            {
+                estados[0] = PasoEstado.Hecho;
+
+                if (analisis.Equals("Aprobado", StringComparison.OrdinalIgnoreCase))
+                {
+                    estados[1] = PasoEstado.Hecho;
+
+                    ultimaEvidenciaPorHallazgo.TryGetValue(h.HallazgoId, out var ultimaEvidencia);
+                    var hayEvidencia = ultimaEvidenciaPorHallazgo.ContainsKey(h.HallazgoId);
+                    var hayRechazoQms = ultimoRechazoQmsPorHallazgo.TryGetValue(h.HallazgoId, out var rechazoQms);
+
+                    if (hayRechazoQms && (!hayEvidencia || rechazoQms > ultimaEvidencia))
+                    {
+                        estados[2] = PasoEstado.Rechazado;
+                        (etapa, atiende, siguiente) = ("Evidencia", "Responsable de cierre", "QMS rechazó la evidencia: subir una nueva.");
+                        rechazado = true;
+                    }
+                    else if (hayEvidencia)
+                    {
+                        estados[2] = PasoEstado.Hecho;
+                        estados[3] = PasoEstado.EnCurso;
+                        (etapa, atiende, siguiente) = ("Verificación QMS", "QMS", "QMS debe verificar la evidencia y cerrar.");
+                    }
+                    else
+                    {
+                        estados[2] = PasoEstado.EnCurso;
+                        (etapa, atiende, siguiente) = ("Evidencia", "Responsable de cierre", "Subir la evidencia de la solución.");
+                    }
+                }
+                else if (analisis.Equals("Pendiente", StringComparison.OrdinalIgnoreCase))
+                {
+                    estados[1] = PasoEstado.EnCurso;
+                    (etapa, atiende, siguiente) = (nombreAnalisis, "SGC", esNcMenor ? "SGC debe revisar los 5 porqués." : "SGC debe validar la acción correctiva.");
+                }
+                else if (analisis.Equals("Rechazado", StringComparison.OrdinalIgnoreCase))
+                {
+                    estados[1] = PasoEstado.Rechazado;
+                    (etapa, atiende, siguiente) = (nombreAnalisis, "Responsable de cierre", esNcMenor ? "SGC rechazó los 5 porqués: corregirlos." : "SGC rechazó la acción correctiva: corregirla.");
+                    rechazado = true;
+                }
+                else
+                {
+                    estados[1] = PasoEstado.EnCurso;
+                    (etapa, atiende, siguiente) = (nombreAnalisis, "Responsable de cierre", esNcMenor ? "Capturar los 5 porqués." : "Adjuntar el archivo de acción correctiva.");
+                }
+            }
+
+            vm.Etapa = etapa;
+            vm.Atiende = atiende;
+            vm.Siguiente = siguiente;
+            vm.TextoPill = rechazado ? $"Corregir: {atiende}" : $"Requiere: {atiende}";
+            vm.ClasePill = rechazado
+                ? "bad"
+                : atiende switch
+                {
+                    "SGC" => "sgc",
+                    "QMS" => "qms",
+                    "Auditor" => "auditor",
+                    _ => "resp"
+                };
+
+            vm.Alerta = rechazado;
+        }
+
+        vm.Pasos = nombres.Select((n, i) => new PasoVm(n, estados[i])).ToList();
+
+        if (!cerrado && h.FechaCompromiso.Date < DateTime.Today)
+        {
+            vm.DiasVencido = (DateTime.Today - h.FechaCompromiso.Date).Days;
+            vm.Alerta = true;
+        }
+
+        return vm;
+    }
+
+    private static string ClasePaso(PasoEstado estado) => estado switch
+    {
+        PasoEstado.Hecho => "done",
+        PasoEstado.EnCurso => "current",
+        PasoEstado.Rechazado => "blocked",
+        _ => "pending"
+    };
+
+    private static string IconoPaso(PasoEstado estado) => estado switch
+    {
+        PasoEstado.Hecho => "✓",
+        PasoEstado.EnCurso => "●",
+        PasoEstado.Rechazado => "!",
+        _ => ""
+    };
+
+    private static string TextoPaso(PasoEstado estado) => estado switch
+    {
+        PasoEstado.Hecho => "Completado",
+        PasoEstado.EnCurso => "En curso",
+        PasoEstado.Rechazado => "Rechazado / requiere corrección",
+        _ => "Pendiente"
+    };
 
     private async Task AplicarFiltros()
     {
@@ -415,13 +738,55 @@ else
     {
         auditoriaIdSeleccionada = 0;
         estatusSeleccionado = "";
+        validacionSeleccionada = "Aprobado";
         textoBusqueda = "";
         await CargarResumen();
         await CargarHallazgos();
     }
 
+    private bool TarjetaActiva(string tarjeta) =>
+        tarjeta switch
+        {
+            "total" => validacionSeleccionada == "" && estatusSeleccionado == "",
+            "pendiente" => validacionSeleccionada == "Pendiente" && estatusSeleccionado == "",
+            "aprobado" => validacionSeleccionada == "Aprobado" && estatusSeleccionado == "",
+            "rechazado" => validacionSeleccionada == "Rechazado" && estatusSeleccionado == "",
+            "abierto" => validacionSeleccionada == "" && estatusSeleccionado == EstatusAbiertos,
+            "cerrado" => validacionSeleccionada == "" && estatusSeleccionado == "Cerrado",
+            _ => false
+        };
+
+    private async Task SeleccionarTarjeta(string tarjeta)
+    {
+        (validacionSeleccionada, estatusSeleccionado) = tarjeta switch
+        {
+            "pendiente" => ("Pendiente", ""),
+            "aprobado" => ("Aprobado", ""),
+            "rechazado" => ("Rechazado", ""),
+            "abierto" => ("", EstatusAbiertos),
+            "cerrado" => ("", "Cerrado"),
+            _ => ("", "")
+        };
+
+        await CargarHallazgos();
+
+        try
+        {
+            await JS.InvokeVoidAsync("moTable.scrollTo", "bandeja-global");
+        }
+        catch
+        {
+            // El desplazamiento es solo una comodidad; no debe romper el filtro.
+        }
+    }
+
     private static string TextoAuditoria(Auditoria a) =>
         $"#{a.AuditoriaId} · {a.TipoAuditoria} | {a.FechaInicio:yyyy-MM-dd} a {a.FechaFin:yyyy-MM-dd}";
+
+    private static string ValorAuditoria(Hallazgo h) =>
+        h.Auditoria is null
+            ? "Sin auditoría"
+            : $"#{h.AuditoriaId} · {h.Auditoria.TipoAuditoria} · {h.Auditoria.FechaInicio:yyyy-MM-dd} – {h.Auditoria.FechaFin:yyyy-MM-dd}";
 
     private static string TextoProceso(Hallazgo h) =>
         h.Proceso is null ? "Sin proceso" : $"{h.Proceso.Codigo} - {h.Proceso.Nombre}";

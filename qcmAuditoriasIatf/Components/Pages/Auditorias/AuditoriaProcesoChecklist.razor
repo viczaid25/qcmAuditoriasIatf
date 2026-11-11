@@ -82,6 +82,11 @@ else
                     Volver
                 </button>
             </div>
+
+            @if (!string.IsNullOrWhiteSpace(mensajeGuardado))
+            {
+                <div class="checklist-save-ok">@mensajeGuardado</div>
+            }
         </section>
 
         <section class="checklist-metrics">
@@ -254,6 +259,11 @@ else
                         <button type="button" class="mo-btn mo-btn-secondary-outline mo-btn-lg" @onclick="Volver" disabled="@guardando">
                             Volver
                         </button>
+
+                        @if (!string.IsNullOrWhiteSpace(mensajeGuardado))
+                        {
+                            <span class="checklist-save-ok">@mensajeGuardado</span>
+                        }
                     </div>
                 </div>
             </section>
@@ -268,6 +278,7 @@ else
     private bool cargando = true;
     private bool guardando;
     private string? errorMsg;
+    private string? mensajeGuardado;
 
     private AuditoriaProceso? ap;
     private List<RowVm> rows = new();
@@ -388,6 +399,7 @@ else
         if (guardando) return;
         guardando = true;
         errorMsg = null;
+        mensajeGuardado = null;
 
         try
         {
@@ -396,6 +408,7 @@ else
                 .ToListAsync();
 
             var map = entidades.ToDictionary(x => x.PreguntaId, x => x);
+            var cambios = 0;
 
             foreach (var row in rows)
             {
@@ -408,6 +421,8 @@ else
 
                 if (!cumpleEditado && !evidenciaEditada && !comentariosEditados)
                     continue; // Esta pregunta no la tocó este usuario; no pisar lo que haya en la base.
+
+                cambios++;
 
                 if (cumpleEditado)
                     e.Cumple = string.IsNullOrWhiteSpace(row.Cumple) ? "Pendiente" : row.Cumple;
@@ -422,10 +437,19 @@ else
                     e.AuditorId = ap.AuditorAsignadoId!;
 
                 e.FechaRegistro = DateTime.Now;
+
+                // Ya se guardó: este es el nuevo punto de referencia para detectar
+                // cambios en el próximo "Guardar" sin salir de la pantalla.
+                row.CumpleOriginal = row.Cumple;
+                row.EvidenciaOriginal = row.Evidencia;
+                row.ComentariosOriginal = row.Comentarios;
             }
 
             await Db.SaveChangesAsync();
-            Nav.NavigateTo($"auditorias/{auditoriaId}");
+
+            mensajeGuardado = cambios > 0
+                ? $"Checklist guardado ({cambios} pregunta(s) actualizada(s))."
+                : "No había cambios por guardar.";
         }
         catch (Exception ex)
         {

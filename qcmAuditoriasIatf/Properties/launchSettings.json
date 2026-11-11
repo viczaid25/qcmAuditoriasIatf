@@ -16,7 +16,8 @@
         "launchUrl": "b",
         "applicationUrl": "http://localhost:5148",
         "environmentVariables": {
-          "ASPNETCORE_ENVIRONMENT": "Development"
+          "ASPNETCORE_ENVIRONMENT": "Development",
+          "ConnectionStrings__DefaultConnection": "Server=10.228.25.13;Database=meax_db;User Id=dbadmin;Password=Mexico.123;TrustServerCertificate=True;"
         }
       },
       "https": {
@@ -26,14 +27,16 @@
         "launchUrl": "b",
         "applicationUrl": "https://localhost:7271;http://localhost:5148",
         "environmentVariables": {
-          "ASPNETCORE_ENVIRONMENT": "Development"
+          "ASPNETCORE_ENVIRONMENT": "Development",
+          "ConnectionStrings__DefaultConnection": "Server=10.228.25.13;Database=meax_db;User Id=dbadmin;Password=Mexico.123;TrustServerCertificate=True;"
         }
       },
       "IIS Express": {
         "commandName": "IISExpress",
         "launchBrowser": true,
         "environmentVariables": {
-          "ASPNETCORE_ENVIRONMENT": "Development"
+          "ASPNETCORE_ENVIRONMENT": "Development",
+          "ConnectionStrings__DefaultConnection": "Server=10.228.25.13;Database=meax_db;User Id=dbadmin;Password=Mexico.123;TrustServerCertificate=True;"
         }
       }
     }

@@ -1,10 +1,11 @@
-﻿@page "/"
+@page "/"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using qcmAuditoriasIatf.Data
 @using System.Security.Claims
 @inject ApplicationDbContext Db
+@inject NavigationManager Nav
 
 @attribute [Authorize]
 
@@ -37,30 +38,115 @@ else
             </div>
         </div>
 
-        <section class="dashboard-cards">
-            <a class="dashboard-card" href="auditorias">
-                <div class="dashboard-card-title">Auditorías</div>
-                <div class="dashboard-card-value">@totalAuditorias</div>
-                <div class="dashboard-card-text">Registros totales del sistema</div>
-            </a>
+        <section class="dashboard-section">
+            <div class="dashboard-section-head">
+                <h2>Mi trabajo</h2>
+                <p>Lo que te toca a ti como auditor, según tus procesos y hallazgos asignados.</p>
+            </div>
 
-            <a class="dashboard-card" href="procesos">
-                <div class="dashboard-card-title">Procesos</div>
-                <div class="dashboard-card-value">@totalProcesos</div>
-                <div class="dashboard-card-text">Procesos dados de alta</div>
-            </a>
+            <div class="dashboard-cards">
+                <a class="dashboard-card @(misProcesosSinFecha > 0 ? "urgent" : "calm")" href="mis-cosas">
+                    <div class="dashboard-card-title">Procesos sin fecha</div>
+                    <div class="dashboard-card-value">@misProcesosSinFecha</div>
+                    <div class="dashboard-card-text">Asignados a ti, todavía sin programar</div>
+                </a>
 
-            <a class="dashboard-card" href="auditores">
-                <div class="dashboard-card-title">Auditores activos</div>
-                <div class="dashboard-card-value">@totalAuditoresActivos</div>
-                <div class="dashboard-card-text">Equipo disponible para asignación</div>
-            </a>
+                <a class="dashboard-card @(misHallazgosPorAtender > 0 ? "urgent" : "calm")" href="mis-cosas">
+                    <div class="dashboard-card-title">Hallazgos por atender</div>
+                    <div class="dashboard-card-value">@misHallazgosPorAtender</div>
+                    <div class="dashboard-card-text">Donde eres responsable de cierre</div>
+                </a>
 
-            <a class="dashboard-card" href="auditorias">
-                <div class="dashboard-card-title">Hallazgos abiertos</div>
-                <div class="dashboard-card-value">@totalHallazgosAbiertos</div>
-                <div class="dashboard-card-text">Pendientes de seguimiento o cierre</div>
-            </a>
+                <a class="dashboard-card @(misHallazgosPendienteSgc > 0 ? "urgent" : "calm")" href="mis-cosas">
+                    <div class="dashboard-card-title">Mis hallazgos en Pendiente SGC</div>
+                    <div class="dashboard-card-value">@misHallazgosPendienteSgc</div>
+                    <div class="dashboard-card-text">Que tú registraste, a la espera de validación</div>
+                </a>
+
+                <a class="dashboard-card calm" href="mis-cosas">
+                    <div class="dashboard-card-title">Procesos asignados</div>
+                    <div class="dashboard-card-value">@misProcesosActivos</div>
+                    <div class="dashboard-card-text">Como principal, segundo u observador</div>
+                </a>
+            </div>
+        </section>
+
+        @if (usuarioEsSgc)
+        {
+            <section class="dashboard-section">
+                <div class="dashboard-section-head">
+                    <div>
+                        <h2>Bandejas SGC</h2>
+                        <p>Validaciones y evaluaciones esperando revisión del equipo SGC.</p>
+                    </div>
+                    <span class="dashboard-section-badge">SGC</span>
+                </div>
+
+                <div class="dashboard-cards dashboard-cards-5">
+                    <a class="dashboard-card @(pendientesValidacionSgc > 0 ? "urgent" : "calm")" href="interfaces/sgc/hallazgos">
+                        <div class="dashboard-card-title">Validación SGC</div>
+                        <div class="dashboard-card-value">@pendientesValidacionSgc</div>
+                        <div class="dashboard-card-text">Hallazgos nuevos por aprobar</div>
+                    </a>
+
+                    <a class="dashboard-card @(pendientesCincoPorques > 0 ? "urgent" : "calm")" href="interfaces/sgc/cinco-porques">
+                        <div class="dashboard-card-title">5 Porqués</div>
+                        <div class="dashboard-card-value">@pendientesCincoPorques</div>
+                        <div class="dashboard-card-text">Análisis de causa por revisar</div>
+                    </a>
+
+                    <a class="dashboard-card @(pendientesAccionesCorrectivas > 0 ? "urgent" : "calm")" href="interfaces/sgc/acciones-correctivas">
+                        <div class="dashboard-card-title">Acciones correctivas</div>
+                        <div class="dashboard-card-value">@pendientesAccionesCorrectivas</div>
+                        <div class="dashboard-card-text">Archivos NC Mayor por revisar</div>
+                    </a>
+
+                    <a class="dashboard-card @(pendientesVerificacionQms > 0 ? "urgent" : "calm")" href="interfaces/qms/verificacion-hallazgos">
+                        <div class="dashboard-card-title">Verificación QMS</div>
+                        <div class="dashboard-card-value">@pendientesVerificacionQms</div>
+                        <div class="dashboard-card-text">Evidencia de cierre por verificar</div>
+                    </a>
+
+                    <a class="dashboard-card @(pendientesEvaluaciones > 0 ? "urgent" : "calm")" href="interfaces/sgc/evaluaciones-auditores">
+                        <div class="dashboard-card-title">Evaluación de auditores</div>
+                        <div class="dashboard-card-value">@pendientesEvaluaciones</div>
+                        <div class="dashboard-card-text">Evaluaciones por capturar</div>
+                    </a>
+                </div>
+            </section>
+        }
+
+        <section class="dashboard-section">
+            <div class="dashboard-section-head">
+                <h2>Panorama general</h2>
+                <p>Totales del sistema, para tener contexto rápido.</p>
+            </div>
+
+            <div class="dashboard-cards">
+                <a class="dashboard-card neutral" href="auditorias">
+                    <div class="dashboard-card-title">Auditorías</div>
+                    <div class="dashboard-card-value">@totalAuditorias</div>
+                    <div class="dashboard-card-text">Registros totales del sistema</div>
+                </a>
+
+                <a class="dashboard-card neutral" href="procesos">
+                    <div class="dashboard-card-title">Procesos</div>
+                    <div class="dashboard-card-value">@totalProcesos</div>
+                    <div class="dashboard-card-text">Procesos dados de alta</div>
+                </a>
+
+                <a class="dashboard-card neutral" href="auditores">
+                    <div class="dashboard-card-title">Auditores activos</div>
+                    <div class="dashboard-card-value">@totalAuditoresActivos</div>
+                    <div class="dashboard-card-text">Equipo disponible para asignación</div>
+                </a>
+
+                <a class="dashboard-card neutral" href="hallazgos">
+                    <div class="dashboard-card-title">Hallazgos abiertos</div>
+                    <div class="dashboard-card-value">@totalHallazgosAbiertos</div>
+                    <div class="dashboard-card-text">Pendientes de seguimiento o cierre</div>
+                </a>
+            </div>
         </section>
 
         <section class="dashboard-grid">
@@ -68,8 +154,8 @@ else
                 <h2>Acciones rápidas</h2>
                 <div class="quick-actions">
                     <a href="auditorias/nueva" class="quick-action">Nueva auditoría</a>
-                    <a href="procesos/nuevo" class="quick-action">Nuevo proceso</a>
-                    <a href="auditores/nuevo" class="quick-action">Alta auditor</a>
+                    <a href="mis-cosas" class="quick-action">Mis cosas</a>
+                    <a href="procesos/nuevo" class="quick-action quick-action-outline">Nuevo proceso</a>
                     <a href="auditorias" class="quick-action quick-action-outline">Ir a auditorías</a>
                 </div>
             </div>
@@ -103,6 +189,7 @@ else
 
     private string usuarioActualId = "sistema";
     private string nombreVisible = "Usuario";
+    private bool usuarioEsSgc;
 
     private int totalAuditorias;
     private int totalProcesos;
@@ -111,10 +198,28 @@ else
     private int totalHallazgosEnProceso;
     private int totalHallazgosCerrados;
 
+    private int misProcesosSinFecha;
+    private int misProcesosActivos;
+    private int misHallazgosPorAtender;
+    private int misHallazgosPendienteSgc;
+
+    private int pendientesValidacionSgc;
+    private int pendientesCincoPorques;
+    private int pendientesAccionesCorrectivas;
+    private int pendientesVerificacionQms;
+    private int pendientesEvaluaciones;
+
     protected override async Task OnInitializedAsync()
     {
         await CargarUsuario();
         await CargarDashboard();
+        await CargarResumenPersonal();
+
+        if (usuarioEsSgc)
+        {
+            await CargarResumenSgc();
+        }
+
         cargando = false;
     }
 
@@ -138,6 +243,15 @@ else
                 ?? user.FindFirst(ClaimTypes.Name)?.Value
                 ?? usuarioActualId;
         }
+
+        var loginNormalizado = usuarioActualId.Trim().ToUpper();
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == loginNormalizado &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
     }
 
     private async Task CargarDashboard()
@@ -148,5 +262,96 @@ else
         totalHallazgosAbiertos = await Db.Hallazgos.CountAsync(h => h.Estatus == "Abierto");
         totalHallazgosEnProceso = await Db.Hallazgos.CountAsync(h => h.Estatus == "En Proceso");
         totalHallazgosCerrados = await Db.Hallazgos.CountAsync(h => h.Estatus == "Cerrado");
+    }
+
+    private async Task CargarResumenPersonal()
+    {
+        var login = NormalizarLogin(usuarioActualId);
+
+        // CoincideLogin no es traducible a SQL (limpia dominio\usuario / usuario@dominio),
+        // así que se resuelve con una proyección ligera y se filtra en cliente — mismo
+        // patrón que usa Mis cosas.
+        var candidatosProceso = await Db.AuditoriaProcesos
+            .AsNoTracking()
+            .Select(x => new
+            {
+                x.AuditorAsignadoId,
+                x.SegundoAuditorId,
+                x.ObservadorId,
+                x.FechaProgramada
+            })
+            .ToListAsync();
+
+        var misProcesos = candidatosProceso
+            .Where(x =>
+                CoincideLogin(x.AuditorAsignadoId, login) ||
+                CoincideLogin(x.SegundoAuditorId, login) ||
+                CoincideLogin(x.ObservadorId, login))
+            .ToList();
+
+        misProcesosActivos = misProcesos.Count;
+        misProcesosSinFecha = misProcesos.Count(x => !x.FechaProgramada.HasValue);
+
+        var candidatosHallazgo = await Db.Hallazgos
+            .AsNoTracking()
+            .Select(x => new
+            {
+                x.ResponsableId,
+                x.ResponsableCierreId,
+                x.EstatusValidacionSgc,
+                x.Estatus
+            })
+            .ToListAsync();
+
+        misHallazgosPorAtender = candidatosHallazgo.Count(x =>
+            CoincideLogin(x.ResponsableCierreId, login) &&
+            string.Equals(x.EstatusValidacionSgc, "Aprobado", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(x.Estatus, "Cerrado", StringComparison.OrdinalIgnoreCase));
+
+        misHallazgosPendienteSgc = candidatosHallazgo.Count(x =>
+            CoincideLogin(x.ResponsableId, login) &&
+            string.Equals(x.EstatusValidacionSgc, "Pendiente", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task CargarResumenSgc()
+    {
+        pendientesValidacionSgc = await Db.Hallazgos.CountAsync(h => h.EstatusValidacionSgc == "Pendiente");
+        pendientesCincoPorques = await Db.HallazgosCincoPorQue.CountAsync(x => x.Estatus == "Pendiente");
+        pendientesAccionesCorrectivas = await Db.AccionesCorrectivas.CountAsync(x => x.EstatusValidacion == "Pendiente");
+        pendientesEvaluaciones = await Db.EvaluacionesAuditor.CountAsync(x => x.Estatus == "Pendiente");
+
+        var idsConEvidencia = await Db.Evidencias
+            .AsNoTracking()
+            .Where(e => e.ReferenciaTipo == "Hallazgo")
+            .Select(e => e.ReferenciaId)
+            .Distinct()
+            .ToListAsync();
+
+        pendientesVerificacionQms = await Db.Hallazgos
+            .CountAsync(h => h.Estatus != "Cerrado" && idsConEvidencia.Contains(h.HallazgoId));
+    }
+
+    private static string NormalizarLogin(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return string.Empty;
+
+        var v = valor.Trim();
+
+        if (v.Contains("\\"))
+            v = v[(v.LastIndexOf('\\') + 1)..];
+
+        if (v.Contains("@"))
+            v = v[..v.IndexOf('@')];
+
+        return v.Trim().ToUpperInvariant();
+    }
+
+    private static bool CoincideLogin(string? valorDb, string loginNormalizado)
+    {
+        if (string.IsNullOrWhiteSpace(valorDb) || string.IsNullOrWhiteSpace(loginNormalizado))
+            return false;
+
+        return NormalizarLogin(valorDb) == loginNormalizado;
     }
 }

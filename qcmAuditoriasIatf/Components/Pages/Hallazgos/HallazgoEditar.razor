@@ -19,6 +19,11 @@
     <div class="alert alert-danger">@errorMsg</div>
 }
 
+@if (!string.IsNullOrWhiteSpace(infoMsg))
+{
+    <div class="alert alert-info">@infoMsg</div>
+}
+
 @if (cargando)
 {
     <div class="editar-loading">
@@ -41,7 +46,7 @@ else if (!usuarioAutorizadoEditar)
     <section class="panel-card">
         <div class="empty-state">
             <div class="empty-title">Acceso restringido</div>
-            <div class="empty-text">Solo el auditor principal o el segundo auditor del proceso pueden editar este hallazgo.</div>
+            <div class="empty-text">Solo el auditor principal o el segundo auditor del proceso pueden editar este hallazgo (cuando fue rechazado). SGC puede editar hallazgos ya aprobados.</div>
             <button type="button" class="hero-btn primary mt-3" @onclick="Volver">
                 Volver
             </button>
@@ -53,10 +58,12 @@ else
     <div class="editar-page">
         <section class="editar-hero">
             <div>
-                <span class="editar-kicker">Editar hallazgo rechazado</span>
+                <span class="editar-kicker">@(modoSgc ? "Edición SGC de hallazgo aprobado" : "Editar hallazgo rechazado")</span>
                 <h1>Hallazgo #@hallazgoId</h1>
                 <p class="hero-text">
-                    Corrige la información y guarda los cambios. Cuando esté lista, reenvía el hallazgo a validación SGC.
+                    @(modoSgc
+                        ? "Modifica los datos que necesites (por ejemplo, el responsable de cierre). La edición queda registrada en el historial del hallazgo con el detalle de lo que cambió."
+                        : "Corrige la información y guarda los cambios. Cuando esté lista, reenvía el hallazgo a validación SGC.")
                 </p>
             </div>
 
@@ -67,7 +74,7 @@ else
             </div>
         </section>
 
-        @if (!string.IsNullOrWhiteSpace(hallazgo.ComentarioRevisionSgc))
+        @if (!modoSgc && !string.IsNullOrWhiteSpace(hallazgo.ComentarioRevisionSgc))
         {
             <section class="panel-card">
                 <div class="panel-head">
@@ -91,6 +98,12 @@ else
                 </div>
 
                 <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Cláusula de la norma aplicable</label>
+                        <InputText class="mo-form-control" @bind-Value="vm.ClausulaAplicable" placeholder="Ej. 8.5.1.1, 9.1.1..." />
+                        <div class="field-help">Opcional. Indica a qué cláusula de la norma está dirigido este hallazgo.</div>
+                    </div>
+
                     <div class="col-md-6">
                         <label class="form-label">Fecha compromiso</label>
                         <InputDate class="mo-form-control" @bind-Value="vm.FechaCompromiso" />
@@ -105,6 +118,11 @@ else
                                 <option value="@t.TipoHallazgoId">@t.Nombre</option>
                             }
                         </InputSelect>
+
+                        @if (modoSgc)
+                        {
+                            <div class="field-help">Cambiar el tipo después de la aprobación puede afectar el flujo (por ejemplo, los 5 porqués de una NC Menor).</div>
+                        }
                     </div>
 
                     <div class="col-md-6">
@@ -140,7 +158,9 @@ else
                     <div>
                         <h2>Acciones</h2>
                         <p class="panel-subtitle mb-0">
-                            Guarda los cambios y, cuando esté listo, reenvía el hallazgo a validación SGC.
+                            @(modoSgc
+                                ? "Guarda los cambios. Quedarán registrados en el historial de ediciones del hallazgo."
+                                : "Guarda los cambios y, cuando esté listo, reenvía el hallazgo a validación SGC.")
                         </p>
                     </div>
 
@@ -149,9 +169,12 @@ else
                             @(guardando ? "Guardando..." : "Guardar cambios")
                         </button>
 
-                        <button class="mo-btn mo-btn-success" type="button" @onclick="ReenviarAValidacion" disabled="@guardando">
-                            @(guardando ? "Guardando..." : "Reenviar a validación")
-                        </button>
+                        @if (!modoSgc)
+                        {
+                            <button class="mo-btn mo-btn-success" type="button" @onclick="ReenviarAValidacion" disabled="@guardando">
+                                @(guardando ? "Guardando..." : "Reenviar a validación")
+                            </button>
+                        }
                     </div>
                 </div>
             </section>
@@ -166,15 +189,19 @@ else
     private bool cargando = true;
     private bool guardando;
     private string? errorMsg;
+    private string? infoMsg;
 
     private string usuarioActualId = "sistema";
     private bool usuarioAutorizadoEditar;
+    private bool usuarioEsSgc;
+    private bool modoSgc;
 
     private Hallazgo? hallazgo;
     private List<TipoHallazgo> tiposHallazgo = new();
     private List<MeaxAllUser> usuariosDisponibles = new();
 
     private Vm vm = new();
+    private Vm original = new();
 
     private class Vm
     {
@@ -184,12 +211,14 @@ else
         public string? Descripcion { get; set; }
         public string? Evidencia { get; set; }
         public string? JustificacionNoConformidad { get; set; }
+        public string? ClausulaAplicable { get; set; }
     }
 
     protected override async Task OnParametersSetAsync()
     {
         cargando = true;
         errorMsg = null;
+        infoMsg = null;
 
         await CargarUsuarioActual();
         await CargarPantalla();
@@ -219,6 +248,15 @@ else
         {
             usuarioActualId = "sistema";
         }
+
+        var loginNormalizado = NormalizarLogin(usuarioActualId);
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == loginNormalizado &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
     }
 
     private async Task CargarPantalla()
@@ -240,7 +278,14 @@ else
             !string.IsNullOrWhiteSpace(hallazgo.AuditoriaProceso?.SegundoAuditorId) &&
             NormalizarLogin(usuarioActualId) == NormalizarLogin(hallazgo.AuditoriaProceso.SegundoAuditorId);
 
-        usuarioAutorizadoEditar = esAuditorPrincipal || esSegundoAuditor;
+        // SGC puede editar un hallazgo ya aprobado (p. ej. cambiar al responsable de cierre);
+        // el auditor principal/segundo solo lo corrige cuando fue rechazado.
+        var hallazgoAprobado =
+            string.IsNullOrWhiteSpace(hallazgo.EstatusValidacionSgc) ||
+            string.Equals(hallazgo.EstatusValidacionSgc, "Aprobado", StringComparison.OrdinalIgnoreCase);
+
+        modoSgc = usuarioEsSgc && hallazgoAprobado;
+        usuarioAutorizadoEditar = modoSgc || esAuditorPrincipal || esSegundoAuditor;
 
         if (!usuarioAutorizadoEditar)
             return;
@@ -252,7 +297,19 @@ else
             ResponsableCierreId = hallazgo.ResponsableCierreId,
             Descripcion = hallazgo.Descripcion,
             Evidencia = hallazgo.Evidencia,
-            JustificacionNoConformidad = hallazgo.JustificacionNoConformidad
+            JustificacionNoConformidad = hallazgo.JustificacionNoConformidad,
+            ClausulaAplicable = hallazgo.ClausulaAplicable
+        };
+
+        original = new Vm
+        {
+            TipoHallazgoId = vm.TipoHallazgoId,
+            FechaCompromiso = vm.FechaCompromiso,
+            ResponsableCierreId = vm.ResponsableCierreId,
+            Descripcion = vm.Descripcion,
+            Evidencia = vm.Evidencia,
+            JustificacionNoConformidad = vm.JustificacionNoConformidad,
+            ClausulaAplicable = vm.ClausulaAplicable
         };
 
         tiposHallazgo = await Db.TiposHallazgo
@@ -329,9 +386,16 @@ else
     {
         if (guardando) return;
         errorMsg = null;
+        infoMsg = null;
 
         if (!Validar())
             return;
+
+        if (modoSgc)
+        {
+            await GuardarComoSgc();
+            return;
+        }
 
         guardando = true;
 
@@ -351,6 +415,7 @@ else
             entity.Descripcion = vm.Descripcion!.Trim();
             entity.Evidencia = vm.Evidencia!.Trim();
             entity.JustificacionNoConformidad = string.IsNullOrWhiteSpace(vm.JustificacionNoConformidad) ? null : vm.JustificacionNoConformidad.Trim();
+            entity.ClausulaAplicable = string.IsNullOrWhiteSpace(vm.ClausulaAplicable) ? null : vm.ClausulaAplicable.Trim();
 
             Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
             {
@@ -372,6 +437,126 @@ else
         {
             guardando = false;
         }
+    }
+
+    private async Task GuardarComoSgc()
+    {
+        guardando = true;
+
+        try
+        {
+            var entity = await Db.Hallazgos.FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId && h.AuditoriaId == auditoriaId);
+
+            if (entity is null)
+            {
+                errorMsg = "No se encontró el hallazgo.";
+                return;
+            }
+
+            if (string.Equals(entity.EstatusValidacionSgc, "Pendiente", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(entity.EstatusValidacionSgc, "Rechazado", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMsg = "Este hallazgo ya no está aprobado.";
+                return;
+            }
+
+            var cambios = CalcularCambios();
+
+            if (cambios.Count == 0)
+            {
+                infoMsg = "No hay cambios por guardar.";
+                return;
+            }
+
+            entity.TipoHallazgoId = vm.TipoHallazgoId;
+            entity.FechaCompromiso = vm.FechaCompromiso;
+            entity.ResponsableCierreId = vm.ResponsableCierreId!.Trim();
+            entity.Descripcion = vm.Descripcion!.Trim();
+            entity.Evidencia = vm.Evidencia!.Trim();
+            entity.JustificacionNoConformidad = string.IsNullOrWhiteSpace(vm.JustificacionNoConformidad) ? null : vm.JustificacionNoConformidad.Trim();
+            entity.ClausulaAplicable = string.IsNullOrWhiteSpace(vm.ClausulaAplicable) ? null : vm.ClausulaAplicable.Trim();
+
+            var comentario = HallazgoSeguimiento.PrefijoEdicionSgc + "\n" + string.Join("\n", cambios);
+
+            if (comentario.Length > 2000)
+                comentario = comentario[..1999] + "…";
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = entity.HallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = comentario
+            });
+
+            await Db.SaveChangesAsync();
+
+            Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}");
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private List<string> CalcularCambios()
+    {
+        var cambios = new List<string>();
+
+        void CompararTexto(string campo, string? antes, string? despues)
+        {
+            var a = antes?.Trim() ?? "";
+            var d = despues?.Trim() ?? "";
+
+            if (!string.Equals(a, d, StringComparison.Ordinal))
+                cambios.Add($"{campo}: {ResumirTexto(a)} → {ResumirTexto(d)}");
+        }
+
+        if (original.TipoHallazgoId != vm.TipoHallazgoId)
+            cambios.Add($"Tipo de hallazgo: {NombreTipo(original.TipoHallazgoId)} → {NombreTipo(vm.TipoHallazgoId)}");
+
+        if (original.FechaCompromiso.Date != vm.FechaCompromiso.Date)
+            cambios.Add($"Fecha compromiso: {original.FechaCompromiso:yyyy-MM-dd} → {vm.FechaCompromiso:yyyy-MM-dd}");
+
+        if (!string.Equals(original.ResponsableCierreId?.Trim() ?? "", vm.ResponsableCierreId?.Trim() ?? "", StringComparison.OrdinalIgnoreCase))
+            cambios.Add($"Responsable de cierre: {NombrePersona(original.ResponsableCierreId)} → {NombrePersona(vm.ResponsableCierreId)}");
+
+        CompararTexto("Cláusula aplicable", original.ClausulaAplicable, vm.ClausulaAplicable);
+        CompararTexto("Descripción", original.Descripcion, vm.Descripcion);
+        CompararTexto("Evidencia", original.Evidencia, vm.Evidencia);
+        CompararTexto("Justificación", original.JustificacionNoConformidad, vm.JustificacionNoConformidad);
+
+        return cambios;
+    }
+
+    private string NombreTipo(int tipoId) =>
+        tiposHallazgo.FirstOrDefault(t => t.TipoHallazgoId == tipoId)?.Nombre ?? "Sin tipo";
+
+    private string NombrePersona(string? login)
+    {
+        if (string.IsNullOrWhiteSpace(login))
+            return "Sin asignar";
+
+        var u = usuariosDisponibles.FirstOrDefault(x =>
+            string.Equals(x.pc_login_id, login.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (u is null)
+            return login.Trim();
+
+        var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username;
+        return $"{nombre} ({u.pc_login_id})";
+    }
+
+    private static string ResumirTexto(string valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return "(vacío)";
+
+        var limpio = string.Join(" ", valor.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return limpio.Length <= 150 ? $"«{limpio}»" : $"«{limpio[..150]}…»";
     }
 
     private async Task ReenviarAValidacion()
@@ -408,6 +593,7 @@ else
             entity.Descripcion = vm.Descripcion!.Trim();
             entity.Evidencia = vm.Evidencia!.Trim();
             entity.JustificacionNoConformidad = string.IsNullOrWhiteSpace(vm.JustificacionNoConformidad) ? null : vm.JustificacionNoConformidad.Trim();
+            entity.ClausulaAplicable = string.IsNullOrWhiteSpace(vm.ClausulaAplicable) ? null : vm.ClausulaAplicable.Trim();
 
             entity.EstatusValidacionSgc = "Pendiente";
             entity.Estatus = "Pendiente SGC";

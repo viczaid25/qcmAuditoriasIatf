@@ -31,4 +31,8 @@ public class Auditor
     public string? PcLoginId { get; set; }
 
     public bool Activo { get; set; } = true;
+
+    // Calificado para liderar auditorías (independiente de Tipo: un Auditor puede
+    // o no estar además calificado como líder). Matriz de competencias MX-6100-F7.
+    public bool EsAuditorLider { get; set; } = false;
 }

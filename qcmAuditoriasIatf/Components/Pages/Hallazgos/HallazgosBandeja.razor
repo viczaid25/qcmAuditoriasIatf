@@ -182,6 +182,7 @@ else
                             <tr>
                                 <th>#</th>
                                 <th>Proceso</th>
+                                <th>Línea</th>
                                 <th>Tipo</th>
                                 <th>Descripción</th>
                                 <th>Responsables</th>
@@ -197,6 +198,7 @@ else
                                 <th><input class="mo-th-filter" data-mo-filter-col="4" placeholder="Filtrar…"></th>
                                 <th><input class="mo-th-filter" data-mo-filter-col="5" placeholder="Filtrar…"></th>
                                 <th><input class="mo-th-filter" data-mo-filter-col="6" placeholder="Filtrar…"></th>
+                                <th><input class="mo-th-filter" data-mo-filter-col="7" placeholder="Filtrar…"></th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -211,6 +213,17 @@ else
 
                                     <td>
                                         <div class="cell-title">@TextoProceso(h)</div>
+                                    </td>
+
+                                    <td>
+                                        @if (string.IsNullOrWhiteSpace(h.AuditoriaProceso?.LineaNombre))
+                                        {
+                                            <span class="empty-inline">—</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="linea-pill">@h.AuditoriaProceso.LineaNombre</span>
+                                        }
                                     </td>
 
                                     <td>
@@ -423,6 +436,7 @@ else
             .Include(h => h.Clausula)
             .Include(h => h.Pregunta)
             .Include(h => h.TipoHallazgo)
+            .Include(h => h.AuditoriaProceso)
             .Where(h => h.AuditoriaId == auditoriaId);
 
         if (procesoIdSeleccionado > 0)

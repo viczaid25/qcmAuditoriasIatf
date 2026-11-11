@@ -16,3 +16,11 @@
 .mo-table-wrap table.mo-table td:nth-child(3) {
     min-width: 700px;
 }
+
+.table-action-group {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}

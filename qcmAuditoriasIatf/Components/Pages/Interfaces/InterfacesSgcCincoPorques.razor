@@ -156,6 +156,10 @@ else
 
                                     <td>
                                         <div class="cell-title">@row.ProcesoTexto</div>
+                                        @if (!string.IsNullOrWhiteSpace(row.LineaTexto))
+                                        {
+                                            <div class="cell-subtitle">Línea: @row.LineaTexto</div>
+                                        }
                                     </td>
 
                                     <td>
@@ -251,7 +255,13 @@ else
                             <div class="reviewed-head">
                                 <div>
                                     <div class="reviewed-title">Hallazgo #@row.HallazgoId</div>
-                                    <div class="reviewed-subtitle">@row.ProcesoTexto · @row.TipoHallazgoNombre</div>
+                                    <div class="reviewed-subtitle">
+                                        @row.ProcesoTexto · @row.TipoHallazgoNombre
+                                        @if (!string.IsNullOrWhiteSpace(row.LineaTexto))
+                                        {
+                                            @: · Línea: @row.LineaTexto
+                                        }
+                                    </div>
                                 </div>
 
                                 <span class="validacion-pill @GetValidacionClass(row.Estatus)">
@@ -317,6 +327,7 @@ else
         public int HallazgoId { get; set; }
         public int AuditoriaId { get; set; }
         public string ProcesoTexto { get; set; } = "";
+        public string? LineaTexto { get; set; }
         public string TipoHallazgoNombre { get; set; } = "";
         public string PorQue1 { get; set; } = "";
         public string PorQue2 { get; set; } = "";
@@ -400,6 +411,7 @@ else
             .AsNoTracking()
             .Include(x => x.Hallazgo!).ThenInclude(h => h.Proceso)
             .Include(x => x.Hallazgo!).ThenInclude(h => h.TipoHallazgo)
+            .Include(x => x.Hallazgo!).ThenInclude(h => h.AuditoriaProceso)
             .Where(x => x.Estatus == "Pendiente")
             .OrderBy(x => x.FechaRegistro)
             .ToListAsync();
@@ -413,6 +425,7 @@ else
             .AsNoTracking()
             .Include(x => x.Hallazgo!).ThenInclude(h => h.Proceso)
             .Include(x => x.Hallazgo!).ThenInclude(h => h.TipoHallazgo)
+            .Include(x => x.Hallazgo!).ThenInclude(h => h.AuditoriaProceso)
             .Where(x => x.Estatus == "Aprobado" || x.Estatus == "Rechazado")
             .OrderByDescending(x => x.FechaRevisionSgc ?? x.FechaRegistro)
             .ThenByDescending(x => x.HallazgoCincoPorQueId)
@@ -435,6 +448,7 @@ else
         HallazgoId = x.HallazgoId,
         AuditoriaId = x.Hallazgo!.AuditoriaId,
         ProcesoTexto = $"{x.Hallazgo.Proceso?.Codigo} - {x.Hallazgo.Proceso?.Nombre}",
+        LineaTexto = x.Hallazgo.AuditoriaProceso?.LineaNombre,
         TipoHallazgoNombre = x.Hallazgo.TipoHallazgo?.Nombre ?? "Sin tipo",
         PorQue1 = x.PorQue1,
         PorQue2 = x.PorQue2,
@@ -497,14 +511,27 @@ else
             entity.FechaRevisionSgc = DateTime.Now;
             entity.ComentarioSgc = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
 
-            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            var seguimiento = new HallazgoSeguimiento
             {
                 HallazgoId = entity.HallazgoId,
                 UsuarioId = usuarioActualId,
                 Comentario = aprobado
                     ? $"SGC aprobó los 5 porqués.{(string.IsNullOrWhiteSpace(comentario) ? "" : $" Comentario: {comentario}")}"
                     : $"SGC rechazó los 5 porqués. Motivo: {comentario}"
-            });
+            };
+
+            if (aprobado)
+            {
+                var hallazgoEntity = await Db.Hallazgos.FirstOrDefaultAsync(h => h.HallazgoId == entity.HallazgoId);
+
+                if (hallazgoEntity is not null && string.Equals(hallazgoEntity.Estatus, "Abierto", StringComparison.OrdinalIgnoreCase))
+                {
+                    hallazgoEntity.Estatus = "En Proceso";
+                    seguimiento.EstatusNuevo = hallazgoEntity.Estatus;
+                }
+            }
+
+            Db.HallazgoSeguimientos.Add(seguimiento);
 
             await Db.SaveChangesAsync();
             await NotificarResolucionAsync(entity);

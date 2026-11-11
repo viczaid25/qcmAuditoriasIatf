@@ -1,0 +1,583 @@
+@page "/auditores/{auditorId:int}/perfil"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Models.Evidencias
+@using qcmAuditoriasIatf.Services
+@using System.Security.Claims
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+@inject IWebHostEnvironment Env
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger" style="white-space:pre-wrap">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="perfil-loading">
+        <div class="perfil-skeleton perfil-skeleton-hero"></div>
+        <div class="perfil-skeleton perfil-skeleton-body"></div>
+    </div>
+}
+else if (auditor is null)
+{
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">No se encontró el auditor</div>
+            <button type="button" class="hero-btn primary mt-3" @onclick="Volver">
+                Volver a auditores
+            </button>
+        </div>
+    </section>
+}
+else
+{
+    <div class="perfil-page">
+        <section class="perfil-hero">
+            <div>
+                <span class="perfil-kicker">Perfil de auditor</span>
+                <h1>@auditor.Nombre</h1>
+
+                <div class="perfil-meta">
+                    <span class="meta-chip">@auditor.Tipo</span>
+
+                    @if (!string.IsNullOrWhiteSpace(auditor.Funcion))
+                    {
+                        <span class="meta-chip">@auditor.Funcion</span>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(auditor.Departamento))
+                    {
+                        <span class="meta-chip">@auditor.Departamento</span>
+                    }
+
+                    @if (auditor.EsAuditorLider)
+                    {
+                        <span class="meta-chip lider">Auditor líder</span>
+                    }
+
+                    <span class="meta-chip">@competenciasConSi.Count de @competencias.Count competencias</span>
+                </div>
+            </div>
+
+            <div class="hero-actions">
+                <button type="button" class="hero-btn" @onclick='() => Nav.NavigateTo("auditores/matriz-competencias")'>
+                    Ver matriz completa
+                </button>
+
+                <button type="button" class="hero-btn" @onclick="Volver">
+                    Volver a auditores
+                </button>
+            </div>
+        </section>
+
+        @if (!usuarioEsSgc)
+        {
+            <div class="alert alert-info mb-0">
+                Estás en modo de solo lectura. Solo el equipo SGC/Administrador puede adjuntar o eliminar certificados.
+            </div>
+        }
+
+        @if (competenciasVencidas > 0 || competenciasPorVencer > 0)
+        {
+            <div class="alert alert-warning mb-0">
+                <strong>Certificados por renovar:</strong>
+                @if (competenciasVencidas > 0)
+                {
+                    <span>@competenciasVencidas competencia(s) obligatoria(s) con certificado vencido.</span>
+                }
+                @if (competenciasPorVencer > 0)
+                {
+                    <span>@competenciasPorVencer competencia(s) obligatoria(s) por vencer (en los próximos @VigenciaCertificados.DiasAviso días).</span>
+                }
+            </div>
+        }
+
+        @if (auditor.EsAuditorLider)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Auditor líder</h2>
+                    </div>
+                </div>
+
+                <div class="perfil-competencias">
+                    <div class="perfil-competencia">
+                        <div class="perfil-competencia-head">
+                            <span class="perfil-competencia-nombre">Calificación como auditor líder</span>
+                            <span class="matriz-badge ok">Sí</span>
+                        </div>
+
+                        @CertificadosLista(certificadosLider)
+
+                        @if (usuarioEsSgc)
+                        {
+                            <div class="subida-certificado mt-2">
+                                <label class="form-label">1. Fecha en que se tomó <span class="req">(obligatoria)</span></label>
+                                <InputDate class='@(fechaNuevaLider is null ? "mo-form-control fecha-vacia" : "mo-form-control")' @bind-Value="fechaNuevaLider" max="@HoyTexto" />
+                                <label class="form-label">2. Archivo del certificado</label>
+                                <InputFile OnChange="SubirCertificadoLider" multiple disabled="@(subiendo || fechaNuevaLider is null)" />
+                                <div class="field-help @(fechaNuevaLider is null ? "requiere-fecha" : "")">@(fechaNuevaLider is null ? "Primero captura la fecha: mientras esté vacía, el botón de archivo se mantiene deshabilitado. " : "")Tamaño máximo por archivo: 20 MB.</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </section>
+        }
+
+        @if (competenciasConSi.Count == 0)
+        {
+            <section class="panel-card">
+                <div class="empty-state compact">
+                    Este auditor todavía no tiene competencias marcadas con "Sí" en la matriz.
+                </div>
+            </section>
+        }
+        else
+        {
+            @foreach (var grupo in competenciasConSi.GroupBy(c => c.Competencia.Grupo ?? ""))
+            {
+                <section class="panel-card">
+                    <div class="panel-head">
+                        <div>
+                            <h2>@grupo.Key</h2>
+                        </div>
+                    </div>
+
+                    <div class="perfil-competencias">
+                        @foreach (var item in grupo)
+                        {
+                            <div class="perfil-competencia @ClaseVigencia(item.Vigencia.Estado)" @key="item.Competencia.CompetenciaAuditorId">
+                                <div class="perfil-competencia-head">
+                                    <span class="perfil-competencia-nombre">
+                                        @item.Competencia.Nombre@(item.Competencia.Obligatoria ? "**" : "")
+                                    </span>
+                                    <span class="matriz-badge ok">Sí</span>
+                                </div>
+
+                                @if (item.Competencia.Obligatoria && item.Vigencia.Estado != EstadoVigencia.SinCertificado)
+                                {
+                                    <div class="vigencia-linea @ClaseVigencia(item.Vigencia.Estado)">
+                                        <span class="matriz-badge @ClaseBadgeVigencia(item.Vigencia.Estado)">@EtiquetaVigencia(item.Vigencia.Estado)</span>
+                                        <span>@TextoVigencia(item.Vigencia)</span>
+                                    </div>
+                                }
+
+                                @CertificadosLista(item.Certificados)
+
+                                @if (usuarioEsSgc)
+                                {
+                                    <div class="subida-certificado mt-2">
+                                        <label class="form-label">1. Fecha en que se tomó <span class="req">(obligatoria)</span></label>
+                                        <InputDate class='@(item.FechaNueva is null ? "mo-form-control fecha-vacia" : "mo-form-control")' @bind-Value="item.FechaNueva" max="@HoyTexto" />
+                                        <label class="form-label">2. Archivo del certificado</label>
+                                        <InputFile OnChange="@(e => SubirCertificado(e, item.AuditorCompetenciaId, item.FechaNueva))" multiple disabled="@(subiendo || item.FechaNueva is null)" />
+                                        <div class="field-help @(item.FechaNueva is null ? "requiere-fecha" : "")">@(item.FechaNueva is null ? "Primero captura la fecha: mientras esté vacía, el botón de archivo se mantiene deshabilitado. " : "")Tamaño máximo por archivo: 20 MB.@(item.Competencia.Obligatoria ? " Vigencia de 2 años." : "")</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int auditorId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private bool cargando = true;
+    private bool subiendo;
+    private string? errorMsg;
+
+    private string usuarioActualId = "sistema";
+    private bool usuarioEsSgc;
+
+    private Auditor? auditor;
+    private List<CompetenciaAuditor> competencias = new();
+    private List<CompetenciaConSiVm> competenciasConSi = new();
+    private List<Evidencia> certificadosLider = new();
+    private DateTime? fechaNuevaLider;
+
+    private static string HoyTexto => DateTime.Today.ToString("yyyy-MM-dd");
+
+    private int competenciasVencidas => competenciasConSi.Count(c => c.Vigencia.Estado == EstadoVigencia.Vencido);
+    private int competenciasPorVencer => competenciasConSi.Count(c => c.Vigencia.Estado == EstadoVigencia.PorVencer);
+
+    private static string ClaseVigencia(EstadoVigencia estado) => estado switch
+    {
+        EstadoVigencia.Vencido => "vig-vencido",
+        EstadoVigencia.PorVencer => "vig-por-vencer",
+        EstadoVigencia.SinFecha => "vig-sin-fecha",
+        EstadoVigencia.Vigente => "vig-vigente",
+        _ => ""
+    };
+
+    private static string ClaseBadgeVigencia(EstadoVigencia estado) => estado switch
+    {
+        EstadoVigencia.Vencido => "danger",
+        EstadoVigencia.PorVencer => "warn",
+        EstadoVigencia.SinFecha => "warn",
+        _ => "ok"
+    };
+
+    private static string EtiquetaVigencia(EstadoVigencia estado) => estado switch
+    {
+        EstadoVigencia.Vencido => "Vencido",
+        EstadoVigencia.PorVencer => "Por vencer",
+        EstadoVigencia.SinFecha => "Sin fecha",
+        _ => "Vigente"
+    };
+
+    private static string TextoVigencia(VigenciaCertificado v)
+    {
+        var tomado = v.FechaToma?.ToString("yyyy-MM-dd");
+        var vence = v.FechaVence?.ToString("yyyy-MM-dd");
+
+        return v.Estado switch
+        {
+            EstadoVigencia.SinFecha => "Captura la fecha en que se tomó para calcular la vigencia (2 años).",
+            EstadoVigencia.Vencido => $"Tomado el {tomado} · venció el {vence} (hace {-v.DiasRestantes} días). Renovar certificado.",
+            EstadoVigencia.PorVencer => $"Tomado el {tomado} · vence el {vence} (en {v.DiasRestantes} días). Renovar certificado.",
+            _ => $"Tomado el {tomado} · vigente hasta el {vence}."
+        };
+    }
+
+    private RenderFragment CertificadosLista(List<Evidencia> certificados) => @<text>
+        @if (certificados.Count == 0)
+        {
+            <div class="empty-state compact mt-2">
+                Sin certificado adjunto.
+            </div>
+        }
+        else
+        {
+            <div class="evidencia-list mt-2">
+                @foreach (var ev in certificados)
+                {
+                    <div class="evidencia-item" @key="ev.EvidenciaId">
+                        <a href="@($"evidencias/{ev.EvidenciaId}?ver=true")" target="_blank" class="evidencia-link" title="@ev.NombreOriginal">
+                            Ver certificado
+                        </a>
+                        <div class="evidencia-fecha">
+                            <span class="evidencia-meta">Tomado:</span>
+                            @if (usuarioEsSgc)
+                            {
+                                <input type="date"
+                                       class="evidencia-fecha-input"
+                                       max="@HoyTexto"
+                                       value="@(ev.FechaCertificado?.ToString("yyyy-MM-dd"))"
+                                       @onchange="e => ActualizarFechaCertificado(ev.EvidenciaId, e.Value?.ToString())" />
+                            }
+                            else
+                            {
+                                <strong class="evidencia-meta">@(ev.FechaCertificado?.ToString("yyyy-MM-dd") ?? "Sin fecha")</strong>
+                            }
+                        </div>
+                        <div class="evidencia-actions">
+                            <span class="evidencia-meta">Subido: @ev.FechaCarga.ToString("yyyy-MM-dd")</span>
+                            <div class="evidencia-buttons">
+                                <a href="@($"evidencias/{ev.EvidenciaId}")" class="table-btn table-btn-xs" title="Descargar">
+                                    Descargar
+                                </a>
+
+                                @if (usuarioEsSgc)
+                                {
+                                    <button type="button" class="table-btn table-btn-danger table-btn-xs" @onclick="() => EliminarCertificado(ev.EvidenciaId)">
+                                        Eliminar
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </text>;
+
+    private class CompetenciaConSiVm
+    {
+        public int AuditorCompetenciaId { get; set; }
+        public CompetenciaAuditor Competencia { get; set; } = null!;
+        public List<Evidencia> Certificados { get; set; } = new();
+        public VigenciaCertificado Vigencia { get; set; } = new(EstadoVigencia.NoAplica, null, null, null);
+        public DateTime? FechaNueva { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            await CargarUsuarioActual();
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+        }
+
+        var loginNormalizado = usuarioActualId.Trim().ToUpper();
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == loginNormalizado &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
+    }
+
+    private async Task CargarPantalla()
+    {
+        Db.ChangeTracker.Clear();
+
+        auditor = await Db.Auditores
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.AuditorId == auditorId);
+
+        if (auditor is null)
+            return;
+
+        competencias = await Db.CompetenciasAuditor
+            .AsNoTracking()
+            .Where(c => c.Activo)
+            .OrderBy(c => c.Orden)
+            .ToListAsync();
+
+        var calificaciones = await Db.AuditorCompetencias
+            .AsNoTracking()
+            .Where(x => x.AuditorId == auditorId && x.TieneCompetencia)
+            .ToListAsync();
+
+        var idsAuditorCompetencia = calificaciones.Select(x => x.AuditorCompetenciaId).ToList();
+
+        var certificados = idsAuditorCompetencia.Count == 0
+            ? new List<Evidencia>()
+            : await Db.Evidencias
+                .AsNoTracking()
+                .Where(e => e.ReferenciaTipo == "CompetenciaAuditor" && idsAuditorCompetencia.Contains(e.ReferenciaId))
+                .OrderByDescending(e => e.FechaCarga)
+                .ToListAsync();
+
+        certificadosLider = await Db.Evidencias
+            .AsNoTracking()
+            .Where(e => e.ReferenciaTipo == "AuditorLider" && e.ReferenciaId == auditorId)
+            .OrderByDescending(e => e.FechaCarga)
+            .ToListAsync();
+
+        competenciasConSi = calificaciones
+            .Select(cal => new CompetenciaConSiVm
+            {
+                AuditorCompetenciaId = cal.AuditorCompetenciaId,
+                Competencia = competencias.FirstOrDefault(c => c.CompetenciaAuditorId == cal.CompetenciaAuditorId)
+                    ?? new CompetenciaAuditor { Nombre = "(competencia inactiva)" },
+                Certificados = certificados.Where(e => e.ReferenciaId == cal.AuditorCompetenciaId).ToList()
+            })
+            .OrderBy(x => x.Competencia.Orden)
+            .ToList();
+
+        foreach (var item in competenciasConSi)
+        {
+            item.Vigencia = VigenciaCertificados.Evaluar(
+                item.Competencia.Obligatoria,
+                item.Certificados.Select(c => c.FechaCertificado),
+                DateTime.Today);
+        }
+    }
+
+    private Task SubirCertificado(InputFileChangeEventArgs e, int auditorCompetenciaId, DateTime? fechaToma) =>
+        SubirArchivos(e, "CompetenciaAuditor", auditorCompetenciaId, "competencias", fechaToma);
+
+    private Task SubirCertificadoLider(InputFileChangeEventArgs e) =>
+        SubirArchivos(e, "AuditorLider", auditorId, "auditor-lider", fechaNuevaLider);
+
+    private async Task ActualizarFechaCertificado(int evidenciaId, string? valor)
+    {
+        if (!usuarioEsSgc)
+            return;
+
+        errorMsg = null;
+
+        try
+        {
+            DateTime? fecha = null;
+
+            if (!string.IsNullOrWhiteSpace(valor))
+            {
+                if (!DateTime.TryParse(valor, out var parseada))
+                {
+                    errorMsg = "La fecha capturada no es válida.";
+                    return;
+                }
+
+                if (parseada.Date > DateTime.Today)
+                {
+                    errorMsg = "La fecha en que se tomó el curso no puede ser futura.";
+                    await CargarPantalla();
+                    return;
+                }
+
+                fecha = parseada.Date;
+            }
+
+            var entity = await Db.Evidencias.FirstOrDefaultAsync(x => x.EvidenciaId == evidenciaId);
+            if (entity is null)
+                return;
+
+            entity.FechaCertificado = fecha;
+            await Db.SaveChangesAsync();
+
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+    }
+
+    private async Task SubirArchivos(InputFileChangeEventArgs e, string referenciaTipo, int referenciaId, string carpetaBase, DateTime? fechaToma)
+    {
+        if (subiendo || !usuarioEsSgc)
+            return;
+
+        if (fechaToma is null)
+        {
+            errorMsg = "Captura primero la fecha en que se tomó el curso.";
+            return;
+        }
+
+        if (fechaToma.Value.Date > DateTime.Today)
+        {
+            errorMsg = "La fecha en que se tomó el curso no puede ser futura.";
+            return;
+        }
+
+        const long maxBytes = 20 * 1024 * 1024;
+
+        subiendo = true;
+        errorMsg = null;
+
+        try
+        {
+            var carpeta = Path.Combine(Env.ContentRootPath, "App_Data", "evidencias", carpetaBase, referenciaId.ToString());
+            Directory.CreateDirectory(carpeta);
+
+            var archivosSubidos = 0;
+
+            foreach (var file in e.GetMultipleFiles(10))
+            {
+                if (file.Size > maxBytes)
+                {
+                    errorMsg = $"El archivo \"{file.Name}\" excede el límite de 20 MB y no se subió.";
+                    continue;
+                }
+
+                var nombreArchivo = $"{Guid.NewGuid():N}{Path.GetExtension(file.Name)}";
+                var rutaCompleta = Path.Combine(carpeta, nombreArchivo);
+
+                await using (var origen = file.OpenReadStream(maxAllowedSize: maxBytes))
+                await using (var destino = File.Create(rutaCompleta))
+                {
+                    await origen.CopyToAsync(destino);
+                }
+
+                Db.Evidencias.Add(new Evidencia
+                {
+                    ReferenciaTipo = referenciaTipo,
+                    ReferenciaId = referenciaId,
+                    RutaArchivo = Path.Combine(carpetaBase, referenciaId.ToString(), nombreArchivo),
+                    NombreOriginal = file.Name,
+                    TipoArchivo = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                    FechaCarga = DateTime.Now,
+                    FechaCertificado = fechaToma.Value.Date,
+                    UsuarioId = usuarioActualId
+                });
+
+                archivosSubidos++;
+            }
+
+            if (archivosSubidos > 0)
+            {
+                await Db.SaveChangesAsync();
+
+                if (referenciaTipo == "AuditorLider")
+                    fechaNuevaLider = null;
+
+                await CargarPantalla();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            subiendo = false;
+        }
+    }
+
+    private async Task EliminarCertificado(int evidenciaId)
+    {
+        if (!usuarioEsSgc)
+            return;
+
+        errorMsg = null;
+
+        try
+        {
+            var entity = await Db.Evidencias.FirstOrDefaultAsync(x => x.EvidenciaId == evidenciaId);
+            if (entity is null)
+                return;
+
+            var rutaCompleta = Path.Combine(Env.ContentRootPath, "App_Data", "evidencias", entity.RutaArchivo);
+
+            Db.Evidencias.Remove(entity);
+            await Db.SaveChangesAsync();
+
+            if (File.Exists(rutaCompleta))
+                File.Delete(rutaCompleta);
+
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+    }
+
+    private void Volver() => Nav.NavigateTo("auditores");
+}

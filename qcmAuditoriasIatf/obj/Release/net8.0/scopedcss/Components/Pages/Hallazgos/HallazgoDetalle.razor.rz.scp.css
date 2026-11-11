@@ -49,6 +49,101 @@
     font-size: 0.88rem;
 }
 
+    .meta-chip.edited[b-632mtvfssd] {
+        background: rgba(251,191,36,0.20);
+        color: #fde68a;
+    }
+
+.edicion-list[b-632mtvfssd] {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.edicion-item[b-632mtvfssd] {
+    padding: 0.85rem 1rem;
+    border-radius: 16px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+}
+
+.edicion-head[b-632mtvfssd] {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: #78350f;
+    font-size: 0.88rem;
+}
+
+.edicion-cambios[b-632mtvfssd] {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.3rem;
+    color: #451a03;
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+}
+
+.panel-badge.danger[b-632mtvfssd] {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.confirm-modal-backdrop[b-632mtvfssd] {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1100;
+}
+
+.confirm-modal-dialog[b-632mtvfssd] {
+    width: 100%;
+    max-width: 540px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.confirm-box[b-632mtvfssd] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.confirm-name[b-632mtvfssd] {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.confirm-meta[b-632mtvfssd] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    color: #475569;
+    font-size: 0.9rem;
+}
+
+.confirm-warning[b-632mtvfssd] {
+    padding: 0.9rem 1rem;
+    border-radius: 18px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    line-height: 1.45;
+}
+
+.confirm-actions[b-632mtvfssd] {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
 .hero-text[b-632mtvfssd] {
     margin: 0;
     max-width: 720px;
@@ -105,6 +200,17 @@
     .hero-btn:hover[b-632mtvfssd] {
         background: rgba(255,255,255,0.16);
     }
+
+    .hero-btn.danger[b-632mtvfssd] {
+        background: rgba(239,68,68,0.22);
+        border-color: rgba(252,165,165,0.45);
+        color: #fecaca;
+    }
+
+        .hero-btn.danger:hover[b-632mtvfssd] {
+            background: rgba(239,68,68,0.45);
+            color: #fff;
+        }
 
     .hero-btn.primary[b-632mtvfssd] {
         background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);

@@ -21,16 +21,63 @@
    </div>
    <div class="mo-table-pagination" data-mo-pagination></div>
 
-   No requiere llamar nada manualmente: se auto-inicializa en
-   DOMContentLoaded sobre todos los [data-mo-table] de la página.
+   No requiere llamar nada manualmente: se auto-inicializa sola.
+
+   Por qué NO basta con DOMContentLoaded:
+   Muchas pantallas de Blazor Server muestran primero un esqueleto de
+   carga ("cargando") y solo agregan la tabla real al DOM más tarde,
+   cuando el circuito de SignalR responde con los datos — después de
+   que DOMContentLoaded ya se disparó. Además, Blazor puede reemplazar
+   filas de una tabla ya inicializada en cualquier momento (filtros del
+   servidor, aprobar/rechazar un registro, etc.), también sin disparar
+   un nuevo DOMContentLoaded. En ambos casos, una tabla que no se
+   inicializó a tiempo se queda con las cajitas de "Filtrar…" sin
+   ningún listener — el síntoma es que se ve todo normal pero escribir
+   en el filtro no hace nada.
+
+   Por eso este script observa TODO el documento con un MutationObserver
+   y reinicializa las tablas [data-mo-table] presentes cada vez que el
+   DOM cambia (con un pequeño debounce), sin importar cuándo ni cómo
+   Blazor las haya agregado o modificado.
 ══════════════════════════════════════════════════════════════ */
 (function () {
     'use strict';
 
+    // Mientras es mayor a 0, las mutaciones que haga este script sobre el DOM
+    // (agregar/quitar la fila de "sin resultados", reconstruir los botones de
+    // paginación) no vuelven a disparar una reinicialización — evita que el
+    // propio script entre en bucle reaccionando a sus propios cambios. Es un
+    // contador (no un booleano) porque varias llamadas guardadas pueden
+    // solaparse (p. ej. initAll() reinicializando varias tablas, cada una
+    // agregando su propia fila vacía) y cada una libera su parte por separado.
+    var mutationGuardDepth = 0;
+
+    function withMutationGuard(fn) {
+        mutationGuardDepth++;
+        fn();
+        // Se libera en una macrotarea (setTimeout) para que el callback del
+        // MutationObserver (entregado como microtarea, que corre antes que
+        // cualquier setTimeout) alcance a ver el contador todavía activo y
+        // descarte las mutaciones que acabamos de hacer nosotros.
+        setTimeout(function () {
+            mutationGuardDepth = Math.max(0, mutationGuardDepth - 1);
+        }, 0);
+    }
+
     function initTable(wrap) {
+        // Si esta tabla ya se había inicializado antes (por ejemplo, Blazor
+        // acaba de cambiarle las filas), primero se limpia el estado anterior
+        // (listeners, fila de "sin resultados") para reconstruirlo desde
+        // cero contra el DOM actual.
+        if (wrap._moTableCleanup) {
+            wrap._moTableCleanup();
+        }
+
         var table = wrap.querySelector('table.mo-table');
         if (!table) return;
         var tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
         var allRows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
         var filterInputs = Array.prototype.slice.call(wrap.querySelectorAll('.mo-th-filter'));
         var paginationEl = wrap.nextElementSibling && wrap.nextElementSibling.hasAttribute('data-mo-pagination')
@@ -40,12 +87,65 @@
         var pageSize = parseInt(wrap.getAttribute('data-page-size'), 10) || 10;
         var currentPage = 1;
 
-        // Fila de "sin resultados" (se inserta una vez y se muestra/oculta)
+        // Fila de "sin resultados" (se inserta una vez y se muestra/oculta).
         var emptyRow = document.createElement('tr');
         var colCount = table.querySelectorAll('thead tr:first-child th').length || 1;
         emptyRow.innerHTML = '<td class="mo-table-empty" colspan="' + colCount + '">No se encontraron resultados con esos filtros.</td>';
         emptyRow.style.display = 'none';
-        tbody.appendChild(emptyRow);
+        withMutationGuard(function () { tbody.appendChild(emptyRow); });
+
+        // Valor que representa a una celda en un filtro de lista desplegable: el
+        // atributo data-mo-value de la celda si existe (útil cuando la celda mezcla
+        // varios textos), o su texto visible.
+        function cellValue(cell) {
+            if (!cell) return '';
+            var v = cell.getAttribute('data-mo-value');
+            return (v !== null ? v : cell.textContent).replace(/\s+/g, ' ').trim();
+        }
+
+        // Los <select data-mo-auto> arman sus opciones con los valores distintos que
+        // realmente aparecen en la columna, así la lista siempre coincide con la tabla.
+        function populateAutoSelects() {
+            withMutationGuard(function () {
+                filterInputs.forEach(function (input) {
+                    if (input.tagName !== 'SELECT' || !input.hasAttribute('data-mo-auto')) return;
+
+                    var col = parseInt(input.getAttribute('data-mo-filter-col'), 10);
+                    var seen = {};
+                    var values = [];
+
+                    allRows.forEach(function (row) {
+                        var v = cellValue(row.children[col]);
+                        if (v && !seen[v]) {
+                            seen[v] = true;
+                            values.push(v);
+                        }
+                    });
+
+                    values.sort(function (a, b) {
+                        return a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' });
+                    });
+
+                    var previous = input.value;
+
+                    input.innerHTML = '';
+
+                    var all = document.createElement('option');
+                    all.value = '';
+                    all.textContent = 'Todos';
+                    input.appendChild(all);
+
+                    values.forEach(function (v) {
+                        var opt = document.createElement('option');
+                        opt.value = v;
+                        opt.textContent = v;
+                        input.appendChild(opt);
+                    });
+
+                    if (previous && seen[previous]) input.value = previous;
+                });
+            });
+        }
 
         function rowMatchesFilters(row) {
             for (var i = 0; i < filterInputs.length; i++) {
@@ -54,10 +154,10 @@
                 if (!val) continue;
                 var col = parseInt(input.getAttribute('data-mo-filter-col'), 10);
                 var cell = row.children[col];
-                var cellText = cell ? cell.textContent.trim().toLowerCase() : '';
                 if (input.tagName === 'SELECT') {
-                    if (cellText !== val) return false;
+                    if (cellValue(cell).toLowerCase() !== val) return false;
                 } else {
+                    var cellText = cell ? cell.textContent.trim().toLowerCase() : '';
                     if (cellText.indexOf(val) === -1) return false;
                 }
             }
@@ -69,21 +169,28 @@
         }
 
         function render() {
-            var filtered = getFiltered();
-            var totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-            if (currentPage > totalPages) currentPage = totalPages;
-            if (currentPage < 1) currentPage = 1;
+            // renderPagination() reconstruye por completo el <div data-mo-pagination>
+            // (borra y vuelve a crear sus botones) cada vez que se llama, incluyendo
+            // cuando el usuario da clic en un botón de página. Sin este seguro, esa
+            // reconstrucción se veía como un cambio de Blazor y disparaba una
+            // reinicialización que reiniciaba currentPage a 1 — deshaciendo el clic.
+            withMutationGuard(function () {
+                var filtered = getFiltered();
+                var totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+                if (currentPage > totalPages) currentPage = totalPages;
+                if (currentPage < 1) currentPage = 1;
 
-            var start = (currentPage - 1) * pageSize;
-            var end = start + pageSize;
-            var pageRows = filtered.slice(start, end);
+                var start = (currentPage - 1) * pageSize;
+                var end = start + pageSize;
+                var pageRows = filtered.slice(start, end);
 
-            allRows.forEach(function (r) { r.classList.add('mo-row-hidden'); });
-            pageRows.forEach(function (r) { r.classList.remove('mo-row-hidden'); });
+                allRows.forEach(function (r) { r.classList.add('mo-row-hidden'); });
+                pageRows.forEach(function (r) { r.classList.remove('mo-row-hidden'); });
 
-            emptyRow.style.display = filtered.length === 0 ? '' : 'none';
+                emptyRow.style.display = filtered.length === 0 ? '' : 'none';
 
-            if (paginationEl) renderPagination(paginationEl, filtered.length, totalPages);
+                if (paginationEl) renderPagination(paginationEl, filtered.length, totalPages);
+            });
         }
 
         function renderPagination(el, totalResults, totalPages) {
@@ -96,7 +203,7 @@
             summary.className = 'mo-pg-summary';
             summary.innerHTML = totalResults === 0
                 ? 'Sin resultados'
-                : 'Mostrando <b>' + start + '\u2013' + end + '</b> de <b>' + totalResults + '</b>';
+                : 'Mostrando <b>' + start + '–' + end + '</b> de <b>' + totalResults + '</b>';
             el.appendChild(summary);
 
             var right = document.createElement('div');
@@ -152,7 +259,7 @@
                 if (lastShown && p - lastShown > 1) {
                     var dots = document.createElement('span');
                     dots.className = 'mo-pg-ellipsis';
-                    dots.textContent = '\u2026';
+                    dots.textContent = '…';
                     pagesWrap.appendChild(dots);
                 }
                 pagesWrap.appendChild(makeBtn(String(p), p, { active: p === currentPage }));
@@ -165,18 +272,57 @@
             el.appendChild(right);
         }
 
+        var filterListeners = [];
         filterInputs.forEach(function (input) {
             var evt = input.tagName === 'SELECT' ? 'change' : 'input';
-            input.addEventListener(evt, function () {
+            var handler = function () {
                 currentPage = 1;
                 render();
-            });
+            };
+            input.addEventListener(evt, handler);
+            filterListeners.push({ input: input, evt: evt, handler: handler });
         });
 
+        wrap._moTableCleanup = function () {
+            filterListeners.forEach(function (l) {
+                l.input.removeEventListener(l.evt, l.handler);
+            });
+            if (emptyRow.parentNode) {
+                withMutationGuard(function () { emptyRow.parentNode.removeChild(emptyRow); });
+            }
+            wrap._moTableCleanup = null;
+        };
+
+        populateAutoSelects();
         render();
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    function initAll() {
         Array.prototype.slice.call(document.querySelectorAll('[data-mo-table]')).forEach(initTable);
-    });
+    }
+
+    function scrollTo(id) {
+        var el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    window.moTable = { init: initTable, initAll: initAll, scrollTo: scrollTo };
+
+    document.addEventListener('DOMContentLoaded', initAll);
+
+    function startWatching() {
+        var pending = null;
+
+        new MutationObserver(function () {
+            if (mutationGuardDepth > 0) return;
+            clearTimeout(pending);
+            pending = setTimeout(initAll, 40);
+        }).observe(document.body, { childList: true, subtree: true });
+    }
+
+    if (document.body) {
+        startWatching();
+    } else {
+        document.addEventListener('DOMContentLoaded', startWatching);
+    }
 })();

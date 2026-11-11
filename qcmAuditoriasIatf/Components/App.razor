@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@inject IWebHostEnvironment Env
+
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
@@ -7,10 +9,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
-    <link rel="stylesheet" href="css/meaxone-template.css" />
-    <link rel="stylesheet" href="app.css" />
-    <link rel="stylesheet" href="qcmAuditoriasIatf.styles.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="css/meaxone-template.css?v=@Asset("css/meaxone-template.css")" />
+    <link rel="stylesheet" href="app.css?v=@Asset("app.css")" />
+    <link rel="stylesheet" href="qcmAuditoriasIatf.styles.css?v=@Asset("qcmAuditoriasIatf.styles.css")" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico?v=@Asset("favicon.ico")" />
     <HeadOutlet />
 </head>
 
@@ -19,9 +21,31 @@
 
     <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
-    <script src="js/calendar-export.js"></script>
-    <script src="js/meaxone-table.js"></script>
+    <script src="js/calendar-export.js?v=@Asset("js/calendar-export.js")"></script>
+    <script src="js/meaxone-table.js?v=@Asset("js/meaxone-table.js")"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 
 </html>
+
+@code {
+    // Los estáticos (CSS/JS) no cambian de nombre entre despliegues, así que el navegador
+    // puede seguir sirviendo una copia vieja desde caché después de actualizar el servidor
+    // (justo lo que causó que el informe se viera "sin estilo" tras el último cambio).
+    // Se agrega la fecha de última modificación del archivo como query string para que el
+    // navegador solo reutilice la caché mientras el archivo no haya cambiado.
+    private string Asset(string relativePath)
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(Env.WebRootPath, relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar));
+            return System.IO.File.Exists(path)
+                ? System.IO.File.GetLastWriteTimeUtc(path).Ticks.ToString()
+                : "0";
+        }
+        catch
+        {
+            return "0";
+        }
+    }
+}

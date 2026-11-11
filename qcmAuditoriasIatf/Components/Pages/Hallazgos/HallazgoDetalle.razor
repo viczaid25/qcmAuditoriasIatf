@@ -14,6 +14,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IWebHostEnvironment Env
 @inject EmailService EmailSvc
+@inject ILogger<HallazgoDetalle> Logger
 
 @attribute [Authorize]
 
@@ -66,6 +67,18 @@ else
                     <span class="meta-chip">
                         Compromiso: <strong>@hallazgo.FechaCompromiso.ToString("yyyy-MM-dd")</strong>
                     </span>
+                    @if (!string.IsNullOrWhiteSpace(hallazgo.AuditoriaProceso?.LineaNombre))
+                    {
+                        <span class="meta-chip">
+                            Línea: <strong>@hallazgo.AuditoriaProceso.LineaNombre</strong>
+                        </span>
+                    }
+                    @if (edicionesSgc.Count > 0)
+                    {
+                        <span class="meta-chip edited">
+                            Editado por SGC · <strong>@edicionesSgc[0].FechaRegistro.ToString("yyyy-MM-dd")</strong>
+                        </span>
+                    }
                     @if (EsNcMenor)
                     {
                         <span class="meta-chip">Flujo 5 porqués activo</span>
@@ -86,6 +99,20 @@ else
                         <div class="user-card-name">@usuarioActualNombre</div>
                     }
                 </div>
+
+                @if (usuarioEsSgc && HallazgoLiberadoPorSgc)
+                {
+                    <button type="button" class="hero-btn" @onclick="IrEditar">
+                        Editar hallazgo
+                    </button>
+                }
+
+                @if (usuarioEsSgc)
+                {
+                    <button type="button" class="hero-btn danger" @onclick="IniciarEliminar">
+                        Eliminar hallazgo
+                    </button>
+                }
 
                 <button type="button" class="hero-btn primary" @onclick="VolverAuditoria">
                     Volver a hallazgos
@@ -147,6 +174,16 @@ else
                 </div>
 
                 <div class="content-box">@hallazgo.Descripcion</div>
+
+                @if (!string.IsNullOrWhiteSpace(hallazgo.ClausulaAplicable))
+                {
+                    <div class="section-divider"></div>
+
+                    <div class="mini-section">
+                        <div class="mini-section-label">Cláusula de la norma aplicable</div>
+                        <div class="content-box subtle">@hallazgo.ClausulaAplicable</div>
+                    </div>
+                }
 
                 @if (!string.IsNullOrWhiteSpace(hallazgo.JustificacionNoConformidad))
                 {
@@ -231,6 +268,48 @@ else
                 }
             </div>
         </section>
+
+        @if (edicionesSgc.Count > 0)
+        {
+            <section class="panel-card">
+                <div class="panel-head">
+                    <div>
+                        <h2>Historial de ediciones SGC</h2>
+                        <p class="panel-subtitle">Cambios que SGC hizo al hallazgo después de aprobarlo.</p>
+                    </div>
+
+                    <span class="panel-badge">@edicionesSgc.Count edición(es)</span>
+                </div>
+
+                <div class="edicion-list">
+                    @foreach (var ed in edicionesSgc)
+                    {
+                        <div class="edicion-item" @key="ed.HallazgoSeguimientoId">
+                            <div class="edicion-head">
+                                <strong>@MostrarPersona(ed.UsuarioId, ed.UsuarioId)</strong>
+                                <span>@ed.FechaRegistro.ToString("yyyy-MM-dd HH:mm")</span>
+                            </div>
+
+                            <ul class="edicion-cambios">
+                                @foreach (var cambio in LineasEdicion(ed.Comentario))
+                                {
+                                    <li>
+                                        @if (string.IsNullOrEmpty(cambio.Campo))
+                                        {
+                                            @cambio.Detalle
+                                        }
+                                        else
+                                        {
+                                            <strong>@cambio.Campo:</strong> @cambio.Detalle
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
 
         @if (EsNcMenor && HallazgoLiberadoPorSgc)
         {
@@ -617,6 +696,53 @@ else
                     </div>
                 }
 
+                <div class="verificacion-accion mt-3">
+                    <label class="form-label">Verificación de acción · evidencia</label>
+
+                    @if (UsuarioActualEsResponsableCierre && !ValidacionAccionAprobada)
+                    {
+                        @if (accionCorrectiva is null)
+                        {
+                            <div class="field-help">
+                                Primero adjunta el archivo de acción correctiva; después podrás registrar aquí la evidencia de la verificación de la acción.
+                            </div>
+                        }
+                        else
+                        {
+                            <InputTextArea class="mo-form-control"
+                                           rows="4"
+                                           maxlength="4000"
+                                           @bind-Value="textoVerificacionAccion"
+                                           placeholder="Describe la evidencia que respalda que la acción se implementó y se verificó."
+                                           disabled="@guardandoVerificacionAccion" />
+
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <button type="button"
+                                        class="mo-btn mo-btn-primary"
+                                        @onclick="GuardarVerificacionAccion"
+                                        disabled="@guardandoVerificacionAccion">
+                                    @(guardandoVerificacionAccion ? "Guardando..." : "Guardar verificación")
+                                </button>
+
+                                @if (!string.IsNullOrWhiteSpace(mensajeVerificacionAccion))
+                                {
+                                    <span class="field-help">@mensajeVerificacionAccion</span>
+                                }
+                            </div>
+                        }
+                    }
+                    else if (string.IsNullOrWhiteSpace(accionCorrectiva?.EvidenciaVerificacion))
+                    {
+                        <div class="empty-state compact">
+                            Aún no se ha registrado la evidencia de la verificación de la acción.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="content-box subtle">@accionCorrectiva.EvidenciaVerificacion</div>
+                    }
+                </div>
+
                 @if (!string.IsNullOrWhiteSpace(accionCorrectiva?.ComentarioSgc))
                 {
                     <div class="comment-box mt-3">
@@ -815,6 +941,82 @@ else
             </section>
         }
     </div>
+
+    @if (pasoEliminar > 0 && usuarioEsSgc)
+    {
+        <div class="confirm-modal-backdrop">
+            <section class="panel-card confirm-modal-dialog">
+                <div class="panel-head">
+                    <div>
+                        <h2>@(pasoEliminar == 1 ? "Eliminar hallazgo" : "Confirmación final")</h2>
+                        <p class="panel-subtitle">Paso @pasoEliminar de 2</p>
+                    </div>
+
+                    <span class="panel-badge danger">Irreversible</span>
+                </div>
+
+                <div class="confirm-box">
+                    <div class="confirm-name">Hallazgo #@hallazgoId</div>
+
+                    <div class="confirm-meta">
+                        <span>Tipo: <strong>@(hallazgo.TipoHallazgo?.Nombre ?? "Sin tipo")</strong></span>
+                        <span>Estatus: <strong>@hallazgo.Estatus</strong></span>
+                        <span>Validación SGC: <strong>@TextoValidacionSgc</strong></span>
+                    </div>
+
+                    @if (pasoEliminar == 1)
+                    {
+                        <div class="confirm-warning">
+                            Se eliminará de forma permanente este hallazgo junto con sus 5 porqués, acciones correctivas,
+                            seguimientos y archivos de evidencia adjuntos. Dejará de aparecer en el informe de la auditoría
+                            y esta acción no se puede deshacer.
+                        </div>
+
+                        <div class="confirm-actions">
+                            <button type="button" class="mo-btn mo-btn-secondary-outline" @onclick="CancelarEliminar">
+                                Cancelar
+                            </button>
+
+                            <button type="button" class="mo-btn mo-btn-danger" @onclick="ContinuarEliminar">
+                                Continuar
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div>
+                            <label class="form-label">
+                                Para confirmar, escribe <strong>@TextoConfirmacionEliminar</strong>
+                            </label>
+                            <input class="mo-form-control"
+                                   @bind="textoConfirmacionEliminar"
+                                   @bind:event="oninput"
+                                   autocomplete="off"
+                                   disabled="@eliminando" />
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(errorEliminar))
+                        {
+                            <div class="alert alert-danger mb-0">@errorEliminar</div>
+                        }
+
+                        <div class="confirm-actions">
+                            <button type="button" class="mo-btn mo-btn-secondary-outline" @onclick="CancelarEliminar" disabled="@eliminando">
+                                Cancelar
+                            </button>
+
+                            <button type="button"
+                                    class="mo-btn mo-btn-danger"
+                                    @onclick="EliminarHallazgoAsync"
+                                    disabled="@(eliminando || !ConfirmacionEliminarValida)">
+                                @(eliminando ? "Eliminando..." : "Eliminar definitivamente")
+                            </button>
+                        </div>
+                    }
+                </div>
+            </section>
+        </div>
+    }
 }
 
 @code {
@@ -843,6 +1045,7 @@ else
     private AccionCorrectiva? accionCorrectiva;
     private List<MeaxAllUser> usuariosDisponibles = new();
     private List<Evidencia> evidenciasHallazgo = new();
+    private List<HallazgoSeguimiento> edicionesSgc = new();
     private bool subiendoEvidencia;
     private string? evidenciaErrorMsg;
 
@@ -853,6 +1056,20 @@ else
 
     private bool guardandoSeguimientoInforme;
     private string? seguimientoInformeErrorMsg;
+
+    private string? textoVerificacionAccion;
+    private bool guardandoVerificacionAccion;
+    private string? mensajeVerificacionAccion;
+
+    private int pasoEliminar;
+    private bool eliminando;
+    private string? textoConfirmacionEliminar;
+    private string? errorEliminar;
+
+    private const string TextoConfirmacionEliminar = "ELIMINAR";
+
+    private bool ConfirmacionEliminarValida =>
+        string.Equals(textoConfirmacionEliminar?.Trim(), TextoConfirmacionEliminar, StringComparison.OrdinalIgnoreCase);
 
     private CincoPorQueVm vm5 = new();
 
@@ -1101,8 +1318,16 @@ else
             .OrderByDescending(a => a.AccionCorrectivaId)
             .FirstOrDefaultAsync();
 
+        textoVerificacionAccion = accionCorrectiva?.EvidenciaVerificacion;
+
         await CargarEvidencias();
         await CargarEvidenciasValidacionAccion();
+
+        edicionesSgc = await Db.HallazgoSeguimientos
+            .AsNoTracking()
+            .Where(x => x.HallazgoId == hallazgoId && x.Comentario.StartsWith(HallazgoSeguimiento.PrefijoEdicionSgc))
+            .OrderByDescending(x => x.FechaRegistro)
+            .ToListAsync();
 
         if (cincoPorQue is not null)
         {
@@ -1137,7 +1362,30 @@ else
                     hallazgo?.RevisadoPorSgcId,
                     AuditorPrincipalId,
                     SegundoAuditorId
-                }));
+                })
+                .Concat(edicionesSgc.Select(x => (string?)x.UsuarioId)));
+    }
+
+    private static List<(string Campo, string Detalle)> LineasEdicion(string comentario)
+    {
+        var resultado = new List<(string Campo, string Detalle)>();
+
+        var lineas = comentario
+            .Replace("\r", "")
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim())
+            .Where(l => l.Length > 0 && !string.Equals(l, HallazgoSeguimiento.PrefijoEdicionSgc, StringComparison.Ordinal));
+
+        foreach (var linea in lineas)
+        {
+            var separador = linea.IndexOf(": ", StringComparison.Ordinal);
+
+            resultado.Add(separador > 0
+                ? (linea[..separador], linea[(separador + 2)..])
+                : (string.Empty, linea));
+        }
+
+        return resultado;
     }
 
     private string ConstruirAnalisisCausa(HallazgoCincoPorQue entity)
@@ -1321,14 +1569,27 @@ else
             entity.FechaRevisionSgc = DateTime.Now;
             entity.ComentarioSgc = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
 
-            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            var seguimiento = new HallazgoSeguimiento
             {
                 HallazgoId = entity.HallazgoId,
                 UsuarioId = usuarioActualId,
                 Comentario = aprobado
                     ? $"SGC aprobó los 5 porqués.{(string.IsNullOrWhiteSpace(comentario) ? "" : $" Comentario: {comentario}")}"
                     : $"SGC rechazó los 5 porqués. Motivo: {comentario}"
-            });
+            };
+
+            if (aprobado)
+            {
+                var hallazgoEntity = await Db.Hallazgos.FirstOrDefaultAsync(h => h.HallazgoId == entity.HallazgoId);
+
+                if (hallazgoEntity is not null && string.Equals(hallazgoEntity.Estatus, "Abierto", StringComparison.OrdinalIgnoreCase))
+                {
+                    hallazgoEntity.Estatus = "En Proceso";
+                    seguimiento.EstatusNuevo = hallazgoEntity.Estatus;
+                }
+            }
+
+            Db.HallazgoSeguimientos.Add(seguimiento);
 
             await Db.SaveChangesAsync();
             await NotificarResolucion5PorquesAsync();
@@ -1362,6 +1623,72 @@ else
             .Where(e => e.ReferenciaTipo == "ValidacionAccion" && e.ReferenciaId == hallazgoId)
             .OrderByDescending(e => e.FechaCarga)
             .ToListAsync();
+    }
+
+    private async Task GuardarVerificacionAccion()
+    {
+        if (guardandoVerificacionAccion || hallazgo is null || accionCorrectiva is null ||
+            !UsuarioActualEsResponsableCierre || ValidacionAccionAprobada || EsNcMenor)
+            return;
+
+        mensajeVerificacionAccion = null;
+        validacionAccionErrorMsg = null;
+
+        var texto = textoVerificacionAccion?.Trim();
+
+        if (string.IsNullOrWhiteSpace(texto))
+        {
+            validacionAccionErrorMsg = "Captura la evidencia de la verificación de la acción.";
+            return;
+        }
+
+        guardandoVerificacionAccion = true;
+
+        try
+        {
+            var entity = await Db.AccionesCorrectivas.FirstOrDefaultAsync(a => a.AccionCorrectivaId == accionCorrectiva.AccionCorrectivaId);
+
+            if (entity is null)
+                return;
+
+            var reenvia = string.Equals(entity.EstatusValidacion, "Rechazado", StringComparison.OrdinalIgnoreCase);
+
+            entity.EvidenciaVerificacion = texto;
+
+            // Igual que al adjuntar un archivo nuevo: si SGC la había rechazado, vuelve a revisión.
+            if (reenvia)
+            {
+                entity.EstatusValidacion = "Pendiente";
+                entity.RevisadoPorSgcId = null;
+                entity.FechaRevisionSgc = null;
+                entity.ComentarioSgc = null;
+            }
+
+            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            {
+                HallazgoId = hallazgoId,
+                UsuarioId = usuarioActualId,
+                Comentario = reenvia
+                    ? "Registró la evidencia de verificación de la acción y la reenvió a validación."
+                    : "Registró la evidencia de verificación de la acción."
+            });
+
+            await Db.SaveChangesAsync();
+
+            if (reenvia)
+                await NotificarCapturaValidacionAccionAsync();
+
+            await CargarPantalla();
+            mensajeVerificacionAccion = "Verificación guardada.";
+        }
+        catch (Exception ex)
+        {
+            validacionAccionErrorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardandoVerificacionAccion = false;
+        }
     }
 
     private async Task SubirValidacionAccion(InputFileChangeEventArgs e)
@@ -1523,14 +1850,27 @@ else
             entity.FechaRevisionSgc = DateTime.Now;
             entity.ComentarioSgc = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
 
-            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            var seguimiento = new HallazgoSeguimiento
             {
                 HallazgoId = entity.HallazgoId,
                 UsuarioId = usuarioActualId,
                 Comentario = aprobado
                     ? $"SGC aprobó la acción correctiva.{(string.IsNullOrWhiteSpace(comentario) ? "" : $" Comentario: {comentario}")}"
                     : $"SGC rechazó la acción correctiva. Motivo: {comentario}"
-            });
+            };
+
+            if (aprobado)
+            {
+                var hallazgoEntity = await Db.Hallazgos.FirstOrDefaultAsync(h => h.HallazgoId == entity.HallazgoId);
+
+                if (hallazgoEntity is not null && string.Equals(hallazgoEntity.Estatus, "Abierto", StringComparison.OrdinalIgnoreCase))
+                {
+                    hallazgoEntity.Estatus = "En Proceso";
+                    seguimiento.EstatusNuevo = hallazgoEntity.Estatus;
+                }
+            }
+
+            Db.HallazgoSeguimientos.Add(seguimiento);
 
             await Db.SaveChangesAsync();
             await NotificarResolucionValidacionAccionAsync();
@@ -1785,6 +2125,105 @@ else
 
     private void VolverAuditoria() =>
         Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos");
+
+    private void IniciarEliminar()
+    {
+        if (!usuarioEsSgc) return;
+
+        textoConfirmacionEliminar = null;
+        errorEliminar = null;
+        pasoEliminar = 1;
+    }
+
+    private void ContinuarEliminar()
+    {
+        if (pasoEliminar == 1)
+            pasoEliminar = 2;
+    }
+
+    private void CancelarEliminar()
+    {
+        if (eliminando) return;
+
+        pasoEliminar = 0;
+        textoConfirmacionEliminar = null;
+        errorEliminar = null;
+    }
+
+    private async Task EliminarHallazgoAsync()
+    {
+        if (eliminando || !usuarioEsSgc || pasoEliminar != 2 || !ConfirmacionEliminarValida)
+            return;
+
+        eliminando = true;
+        errorEliminar = null;
+
+        var rutasArchivos = new List<string>();
+
+        try
+        {
+            await using var tx = await Db.Database.BeginTransactionAsync();
+
+            var entity = await Db.Hallazgos
+                .Include(h => h.AccionesCorrectivas)
+                .FirstOrDefaultAsync(h => h.HallazgoId == hallazgoId && h.AuditoriaId == auditoriaId);
+
+            if (entity is null)
+            {
+                errorEliminar = "No se encontró el hallazgo; puede que ya haya sido eliminado.";
+                return;
+            }
+
+            // Evidencias ligadas al hallazgo (referencia polimórfica, sin FK en la BD).
+            var evidencias = await Db.Evidencias
+                .Where(e => e.ReferenciaId == hallazgoId &&
+                            (e.ReferenciaTipo == "Hallazgo" ||
+                             e.ReferenciaTipo == "ValidacionAccion" ||
+                             e.ReferenciaTipo == "VerificacionQms"))
+                .ToListAsync();
+
+            rutasArchivos.AddRange(evidencias.Select(e => e.RutaArchivo));
+
+            Db.Evidencias.RemoveRange(evidencias);
+            Db.AccionesCorrectivas.RemoveRange(entity.AccionesCorrectivas);
+            Db.Hallazgos.Remove(entity); // 5 porqués y seguimientos se eliminan en cascada
+
+            await Db.SaveChangesAsync();
+            await tx.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            errorEliminar = ex.InnerException?.Message ?? ex.Message;
+            return;
+        }
+        finally
+        {
+            eliminando = false;
+        }
+
+        // Los archivos físicos se borran hasta que la BD ya confirmó la eliminación.
+        var carpetaBase = Path.GetFullPath(Path.Combine(Env.ContentRootPath, "App_Data", "evidencias"));
+
+        foreach (var ruta in rutasArchivos)
+        {
+            try
+            {
+                var completa = Path.GetFullPath(Path.Combine(carpetaBase, ruta));
+
+                if (completa.StartsWith(carpetaBase, StringComparison.OrdinalIgnoreCase) && File.Exists(completa))
+                    File.Delete(completa);
+            }
+            catch
+            {
+                // Un archivo huérfano en disco no debe impedir completar la eliminación.
+            }
+        }
+
+        Logger.LogWarning("Hallazgo {HallazgoId} de la auditoría {AuditoriaId} eliminado por {Usuario}.",
+            hallazgoId, auditoriaId, usuarioActualId);
+
+        Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos");
+    }
 
     private void IrEditar() =>
         Nav.NavigateTo($"auditorias/{auditoriaId}/hallazgos/{hallazgoId}/editar");

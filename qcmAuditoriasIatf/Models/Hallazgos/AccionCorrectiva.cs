@@ -37,4 +37,9 @@ public class AccionCorrectiva
 
     [StringLength(2000)]
     public string? ComentarioSgc { get; set; }
+
+    // "Verificación de acción" (NC Mayor): evidencia escrita que captura el responsable de cierre
+    // además del archivo de acción correctiva.
+    [StringLength(4000)]
+    public string? EvidenciaVerificacion { get; set; }
 }

@@ -4,27 +4,72 @@
     gap: 1.5rem;
 }
 
-/* #mo-banner viene con su propio margen (22px 24px 0) pensado para
-   sentarse directo en #mo-main; como esta página se renderiza dentro
-   de .mo-page-wrap (padding 24px), se cancela ese padding para que el
-   banner quede a ras del borde, igual que en el Hub. */
+/* #mo-banner traía margen izquierdo/derecho propio (24px) ENCIMA del
+   padding de .mo-page-wrap, así que quedaba más metido que las tarjetas
+   de abajo (que solo usan el padding de la página). Se deja en 0 para
+   que el borde del banner coincida exactamente con el de las tarjetas. */
 #mo-banner {
-    margin: -24px -24px 22px;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+}
+
+.dashboard-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.dashboard-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+    .dashboard-section-head h2 {
+        margin: 0 0 0.2rem;
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .dashboard-section-head p {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.88rem;
+    }
+
+.dashboard-section-badge {
+    flex-shrink: 0;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
 }
 
 .dashboard-cards {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
+    gap: 0.75rem;
+}
+
+.dashboard-cards-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .dashboard-card {
     display: block;
-    padding: 1.2rem;
-    border-radius: 20px;
+    padding: 0.75rem 0.9rem;
+    border-radius: 14px;
     background: rgba(255,255,255,0.92);
     border: 1px solid rgba(226,232,240,0.95);
-    box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+    border-left: 3px solid #cbd5e1;
+    box-shadow: 0 8px 18px rgba(15,23,42,0.05);
     text-decoration: none;
     color: inherit;
     transition: transform 0.18s ease, box-shadow 0.18s ease;
@@ -35,24 +80,45 @@
         box-shadow: 0 18px 34px rgba(15,23,42,0.10);
     }
 
+    .dashboard-card.urgent {
+        border-left-color: #ea580c;
+    }
+
+        .dashboard-card.urgent .dashboard-card-value {
+            color: #ea580c;
+        }
+
+    .dashboard-card.calm {
+        border-left-color: #10b981;
+    }
+
+        .dashboard-card.calm .dashboard-card-value {
+            color: #059669;
+        }
+
+    .dashboard-card.neutral {
+        border-left-color: #3b82f6;
+    }
+
 .dashboard-card-title {
     color: #64748b;
-    font-size: 0.92rem;
+    font-size: 0.78rem;
     font-weight: 600;
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.3rem;
 }
 
 .dashboard-card-value {
     color: #0f172a;
-    font-size: 2rem;
+    font-size: 1.4rem;
     font-weight: 800;
     line-height: 1;
-    margin-bottom: 0.45rem;
+    margin-bottom: 0.25rem;
 }
 
 .dashboard-card-text {
     color: #64748b;
-    font-size: 0.88rem;
+    font-size: 0.76rem;
+    line-height: 1.3;
 }
 
 .dashboard-grid {

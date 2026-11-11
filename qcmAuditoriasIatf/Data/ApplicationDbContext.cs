@@ -19,12 +19,17 @@ public class ApplicationDbContext : DbContext
     public DbSet<TipoHallazgo> TiposHallazgo => Set<TipoHallazgo>();
     public DbSet<UnidadNegocio> UnidadesNegocio => Set<UnidadNegocio>();
     public DbSet<Auditor> Auditores => Set<Auditor>();
+    public DbSet<CompetenciaAuditor> CompetenciasAuditor => Set<CompetenciaAuditor>();
+    public DbSet<AuditorCompetenciaCalificacion> AuditorCompetencias => Set<AuditorCompetenciaCalificacion>();
     public DbSet<MeaxAllUser> MeaxAllUsers => Set<MeaxAllUser>();
 
     // Auditoría
     public DbSet<Auditoria> Auditorias => Set<Auditoria>();
     public DbSet<AuditoriaProceso> AuditoriaProcesos => Set<AuditoriaProceso>();
     public DbSet<AuditoriaChecklist> AuditoriaChecklists => Set<AuditoriaChecklist>();
+    public DbSet<EvaluacionAuditor> EvaluacionesAuditor => Set<EvaluacionAuditor>();
+    public DbSet<EvaluacionAuditorRespuesta> EvaluacionAuditorRespuestas => Set<EvaluacionAuditorRespuesta>();
+    public DbSet<InformeMisconductRevision> InformesMisconductRevisiones => Set<InformeMisconductRevision>();
 
     // Hallazgos
     public DbSet<Hallazgo> Hallazgos => Set<Hallazgo>();
@@ -180,5 +185,50 @@ public class ApplicationDbContext : DbContext
             .HasIndex(x => new { x.PcLoginId, x.Perfil })
             .IsUnique();
 
+        modelBuilder.Entity<AuditorCompetenciaCalificacion>()
+            .HasOne(x => x.Auditor)
+            .WithMany()
+            .HasForeignKey(x => x.AuditorId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AuditorCompetenciaCalificacion>()
+            .HasOne(x => x.Competencia)
+            .WithMany(c => c.Calificaciones)
+            .HasForeignKey(x => x.CompetenciaAuditorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AuditorCompetenciaCalificacion>()
+            .HasIndex(x => new { x.AuditorId, x.CompetenciaAuditorId })
+            .IsUnique();
+
+        modelBuilder.Entity<EvaluacionAuditor>()
+            .HasOne(x => x.Auditoria)
+            .WithMany(a => a.EvaluacionesAuditor)
+            .HasForeignKey(x => x.AuditoriaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<EvaluacionAuditor>()
+            .HasIndex(x => new { x.AuditoriaId, x.AuditorEvaluadoId })
+            .IsUnique();
+
+        modelBuilder.Entity<InformeMisconductRevision>()
+            .HasOne(x => x.Auditoria)
+            .WithMany()
+            .HasForeignKey(x => x.AuditoriaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<InformeMisconductRevision>()
+            .HasIndex(x => new { x.AuditoriaId, x.RevisorId })
+            .IsUnique();
+
+        modelBuilder.Entity<EvaluacionAuditorRespuesta>()
+            .HasOne(x => x.Evaluacion)
+            .WithMany(e => e.Respuestas)
+            .HasForeignKey(x => x.EvaluacionAuditorId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<EvaluacionAuditorRespuesta>()
+            .HasIndex(x => new { x.EvaluacionAuditorId, x.NumeroPregunta })
+            .IsUnique();
     }
 }

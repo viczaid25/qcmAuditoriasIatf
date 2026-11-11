@@ -1,0 +1,532 @@
+@page "/auditores/matriz-competencias"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Catalogos
+@using qcmAuditoriasIatf.Services
+@using System.Security.Claims
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger" style="white-space:pre-wrap">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="matriz-loading">
+        <div class="matriz-skeleton matriz-skeleton-hero"></div>
+        <div class="matriz-skeleton matriz-skeleton-table"></div>
+    </div>
+}
+else
+{
+    <div class="matriz-page">
+        <section class="matriz-hero">
+            <div>
+                <span class="matriz-kicker">Equipo auditor</span>
+                <h1>Matriz de competencias</h1>
+                <p class="hero-text">
+                    Basada en el formato MX-6100-F7. Las competencias marcadas con <b>**</b> son obligatorias para ser auditor interno o auditor líder. Marca la casilla cuando el auditor cuente con la competencia (el certificado se adjunta en su perfil).
+                </p>
+            </div>
+
+            <div class="hero-actions">
+                @if (usuarioEsSgc)
+                {
+                    <button type="button" class="hero-btn primary" @onclick="GuardarCambios" disabled="@guardando">
+                        @(guardando ? "Guardando..." : "Guardar cambios")
+                    </button>
+                }
+
+                <button type="button" class="hero-btn" @onclick="Volver">
+                    Volver a auditores
+                </button>
+            </div>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(mensajeGuardado))
+        {
+            <div class="matriz-save-ok">@mensajeGuardado</div>
+        }
+
+        @if (!usuarioEsSgc)
+        {
+            <div class="alert alert-info mb-0">
+                Estás en modo de solo lectura. Solo el equipo SGC/Administrador puede capturar competencias.
+            </div>
+        }
+
+        <div class="matriz-leyenda">
+            <span class="leyenda-item"><span class="leyenda-cuadro ok"></span> Con competencia / vigente</span>
+            <span class="leyenda-item"><span class="leyenda-cuadro warn"></span> Certificado por vencer (menos de @VigenciaCertificados.DiasAviso días)</span>
+            <span class="leyenda-item"><span class="leyenda-cuadro danger"></span> Certificado vencido</span>
+            <span class="leyenda-nota">Las competencias obligatorias (**) vencen @VigenciaCertificados.AnosVigencia años después de la fecha en que se tomó el curso.</span>
+        </div>
+
+        @if (filas.Count == 0)
+        {
+            <section class="panel-card">
+                <div class="empty-state compact">
+                    No hay auditores registrados en el catálogo.
+                </div>
+            </section>
+        }
+        else
+        {
+            <div class="matriz-scroll">
+                <table class="matriz-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="matriz-col-fija">Nombre</th>
+                            <th rowspan="2" class="matriz-col-fija">Función</th>
+                            <th rowspan="2" class="matriz-col-fija">Departamento</th>
+                            <th rowspan="2" class="matriz-col-fija">Auditor líder</th>
+
+                            @foreach (var grupo in gruposCompetencias)
+                            {
+                                <th colspan="@grupo.Count()" class="matriz-grupo-header">@grupo.Key</th>
+                            }
+
+                            <th rowspan="2" class="matriz-col-fija">Obligatorias</th>
+                        </tr>
+                        <tr>
+                            @foreach (var c in competencias)
+                            {
+                                <th class="matriz-comp-header" title="@c.Nombre">
+                                    @c.Nombre@(c.Obligatoria ? "**" : "")
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var seccion in secciones)
+                        {
+                            var filasSeccion = filas.Where(f => f.Tipo == seccion.Tipo).ToList();
+
+                            if (filasSeccion.Count == 0)
+                            {
+                                continue;
+                            }
+
+                            <tr class="matriz-section-row">
+                                <td colspan="@(4 + competencias.Count + 1)">@seccion.Titulo</td>
+                            </tr>
+
+                            @foreach (var f in filasSeccion)
+                            {
+                                <tr @key="f.AuditorId">
+                                    <td class="matriz-col-fija">
+                                        <a class="cell-title matriz-link" href="@($"auditores/{f.AuditorId}/perfil")">@f.Nombre</a>
+                                    </td>
+                                    <td class="matriz-col-fija">@f.Funcion</td>
+                                    <td class="matriz-col-fija">@f.Departamento</td>
+                                    <td class="matriz-col-fija text-center">
+                                        @if (usuarioEsSgc)
+                                        {
+                                            <label class="matriz-check">
+                                                <input type="checkbox" @bind="f.EsAuditorLider" />
+                                                <span class="matriz-check-box @(f.EsAuditorLider ? "checked" : "")">
+                                                    @if (f.EsAuditorLider)
+                                                    {
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                                    }
+                                                </span>
+                                            </label>
+                                        }
+                                        else
+                                        {
+                                            <span class="matriz-check-box @(f.EsAuditorLider ? "checked" : "")">
+                                                @if (f.EsAuditorLider)
+                                                {
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                                }
+                                            </span>
+                                        }
+                                    </td>
+
+                                    @foreach (var c in competencias)
+                                    {
+                                        var celda = f.Celdas[c.CompetenciaAuditorId];
+
+                                        <td class="matriz-celda">
+                                            @if (usuarioEsSgc)
+                                            {
+                                                <label class="matriz-check">
+                                                    <input type="checkbox" @bind="celda.TieneCompetencia" />
+                                                    <span class="matriz-check-box @ClaseCelda(celda)" title="@TitleCelda(celda)">
+                                                        @if (celda.TieneCompetencia)
+                                                        {
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                                        }
+                                                    </span>
+                                                </label>
+                                            }
+                                            else
+                                            {
+                                                <span class="matriz-check-box @ClaseCelda(celda)" title="@TitleCelda(celda)">
+                                                    @if (celda.TieneCompetencia)
+                                                    {
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                                    }
+                                                </span>
+                                            }
+                                        </td>
+                                    }
+
+                                    <td class="matriz-col-fija text-center">
+                                        @if (FaltanObligatorias(f))
+                                        {
+                                            <span class="matriz-badge danger">Faltan</span>
+                                        }
+                                        else if (ObligatoriasConEstado(f, EstadoVigencia.Vencido))
+                                        {
+                                            <span class="matriz-badge danger" title="Hay certificados obligatorios vencidos">Vencidas</span>
+                                        }
+                                        else if (ObligatoriasConEstado(f, EstadoVigencia.PorVencer))
+                                        {
+                                            <span class="matriz-badge warn" title="Hay certificados obligatorios por vencer">Por vencer</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="matriz-badge ok">Completo</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private bool cargando = true;
+    private bool guardando;
+    private string? errorMsg;
+    private string? mensajeGuardado;
+
+    private string usuarioActualId = "sistema";
+    private bool usuarioEsSgc;
+
+    private List<CompetenciaAuditor> competencias = new();
+    private List<IGrouping<string, CompetenciaAuditor>> gruposCompetencias = new();
+    private List<AuditorRowVm> filas = new();
+
+    private readonly (string Tipo, string Titulo)[] secciones = new[]
+    {
+        ("Auditor", "Auditores"),
+        ("Entrenamiento", "Auditores en entrenamiento"),
+        ("Observador", "Observadores"),
+    };
+
+    private class AuditorRowVm
+    {
+        public int AuditorId { get; set; }
+        public string Nombre { get; set; } = "";
+        public string? Funcion { get; set; }
+        public string? Departamento { get; set; }
+        public string Tipo { get; set; } = "";
+        public bool EsAuditorLider { get; set; }
+        public bool EsAuditorLiderOriginal { get; set; }
+        public Dictionary<int, CeldaVm> Celdas { get; set; } = new();
+    }
+
+    private class CeldaVm
+    {
+        public bool TieneCompetencia { get; set; }
+        public bool TieneCompetenciaOriginal { get; set; }
+        public VigenciaCertificado Vigencia { get; set; } = new(EstadoVigencia.NoAplica, null, null, null);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            await CargarUsuarioActual();
+
+            competencias = await Db.CompetenciasAuditor
+                .AsNoTracking()
+                .Where(c => c.Activo)
+                .OrderBy(c => c.Orden)
+                .ToListAsync();
+
+            gruposCompetencias = competencias
+                .GroupBy(c => c.Grupo ?? "")
+                .ToList();
+
+            var auditores = await Db.Auditores
+                .AsNoTracking()
+                .Where(a => a.Activo)
+                .OrderBy(a => a.Nombre)
+                .ToListAsync();
+
+            var calificaciones = await Db.AuditorCompetencias
+                .AsNoTracking()
+                .ToListAsync();
+
+            var mapaCalificaciones = calificaciones
+                .ToDictionary(x => (x.AuditorId, x.CompetenciaAuditorId), x => x.TieneCompetencia);
+
+            var idCalificacion = calificaciones
+                .ToDictionary(x => (x.AuditorId, x.CompetenciaAuditorId), x => x.AuditorCompetenciaId);
+
+            var certificados = await Db.Evidencias
+                .AsNoTracking()
+                .Where(e => e.ReferenciaTipo == "CompetenciaAuditor")
+                .Select(e => new { e.ReferenciaId, e.FechaCertificado })
+                .ToListAsync();
+
+            var fechasPorCalificacion = certificados
+                .GroupBy(c => c.ReferenciaId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.FechaCertificado).ToList());
+
+            var hoy = DateTime.Today;
+
+            filas = auditores.Select(a =>
+            {
+                var fila = new AuditorRowVm
+                {
+                    AuditorId = a.AuditorId,
+                    Nombre = a.Nombre,
+                    Funcion = a.Funcion,
+                    Departamento = a.Departamento,
+                    Tipo = a.Tipo,
+                    EsAuditorLider = a.EsAuditorLider,
+                    EsAuditorLiderOriginal = a.EsAuditorLider
+                };
+
+                foreach (var c in competencias)
+                {
+                    mapaCalificaciones.TryGetValue((a.AuditorId, c.CompetenciaAuditorId), out var valor);
+                    var vigencia = new VigenciaCertificado(EstadoVigencia.NoAplica, null, null, null);
+
+                    if (valor && idCalificacion.TryGetValue((a.AuditorId, c.CompetenciaAuditorId), out var idCal))
+                    {
+                        vigencia = VigenciaCertificados.Evaluar(
+                            c.Obligatoria,
+                            fechasPorCalificacion.GetValueOrDefault(idCal) ?? new List<DateTime?>(),
+                            hoy);
+                    }
+
+                    fila.Celdas[c.CompetenciaAuditorId] = new CeldaVm
+                    {
+                        TieneCompetencia = valor,
+                        TieneCompetenciaOriginal = valor,
+                        Vigencia = vigencia
+                    };
+                }
+
+                return fila;
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+        }
+
+        var loginNormalizado = usuarioActualId.Trim().ToUpper();
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == loginNormalizado &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
+    }
+
+    private static string ClaseCelda(CeldaVm celda)
+    {
+        if (!celda.TieneCompetencia)
+            return "";
+
+        return celda.Vigencia.Estado switch
+        {
+            EstadoVigencia.Vencido => "checked vig-vencido",
+            EstadoVigencia.PorVencer => "checked vig-por-vencer",
+            _ => "checked"
+        };
+    }
+
+    private static string TitleCelda(CeldaVm celda)
+    {
+        if (!celda.TieneCompetencia)
+            return "";
+
+        var v = celda.Vigencia;
+        var tomado = v.FechaToma?.ToString("yyyy-MM-dd");
+        var vence = v.FechaVence?.ToString("yyyy-MM-dd");
+
+        return v.Estado switch
+        {
+            EstadoVigencia.Vencido => $"Certificado vencido: tomado el {tomado}, venció el {vence}",
+            EstadoVigencia.PorVencer => $"Certificado por vencer: tomado el {tomado}, vence el {vence} (en {v.DiasRestantes} días)",
+            EstadoVigencia.Vigente => $"Tomado el {tomado} · vigente hasta el {vence}",
+            EstadoVigencia.SinFecha => "Certificado sin fecha de toma capturada",
+            EstadoVigencia.SinCertificado => "Sin certificado adjunto",
+            _ => v.FechaToma.HasValue ? $"Tomado el {tomado}" : ""
+        };
+    }
+
+    private bool ObligatoriasConEstado(AuditorRowVm f, EstadoVigencia estado)
+    {
+        if (f.Tipo != "Auditor" && !f.EsAuditorLider)
+            return false;
+
+        return competencias.Where(c => c.Obligatoria).Any(c =>
+            f.Celdas.TryGetValue(c.CompetenciaAuditorId, out var celda) &&
+            celda.TieneCompetencia &&
+            celda.Vigencia.Estado == estado);
+    }
+
+    private bool FaltanObligatorias(AuditorRowVm f)
+    {
+        if (f.Tipo != "Auditor" && !f.EsAuditorLider)
+            return false;
+
+        return competencias.Where(c => c.Obligatoria).Any(c =>
+        {
+            var tiene = f.Celdas.TryGetValue(c.CompetenciaAuditorId, out var celda) && celda.TieneCompetencia;
+            return !tiene;
+        });
+    }
+
+    private async Task GuardarCambios()
+    {
+        if (guardando || !usuarioEsSgc) return;
+
+        guardando = true;
+        errorMsg = null;
+        mensajeGuardado = null;
+
+        try
+        {
+            Db.ChangeTracker.Clear();
+
+            var cambios = 0;
+
+            var idsLiderCambiados = filas
+                .Where(f => f.EsAuditorLider != f.EsAuditorLiderOriginal)
+                .Select(f => f.AuditorId)
+                .ToList();
+
+            if (idsLiderCambiados.Count > 0)
+            {
+                var auditoresEntity = await Db.Auditores
+                    .Where(a => idsLiderCambiados.Contains(a.AuditorId))
+                    .ToListAsync();
+
+                foreach (var f in filas.Where(f => idsLiderCambiados.Contains(f.AuditorId)))
+                {
+                    var entidad = auditoresEntity.FirstOrDefault(a => a.AuditorId == f.AuditorId);
+                    if (entidad is null) continue;
+
+                    entidad.EsAuditorLider = f.EsAuditorLider;
+                    cambios++;
+                }
+            }
+
+            var celdasCambiadas = new List<(int AuditorId, int CompetenciaId, bool Valor)>();
+
+            foreach (var f in filas)
+            {
+                foreach (var kv in f.Celdas)
+                {
+                    if (kv.Value.TieneCompetencia != kv.Value.TieneCompetenciaOriginal)
+                    {
+                        celdasCambiadas.Add((f.AuditorId, kv.Key, kv.Value.TieneCompetencia));
+                    }
+                }
+            }
+
+            if (celdasCambiadas.Count > 0)
+            {
+                var auditorIdsAfectados = celdasCambiadas.Select(c => c.AuditorId).Distinct().ToList();
+
+                var existentes = await Db.AuditorCompetencias
+                    .Where(x => auditorIdsAfectados.Contains(x.AuditorId))
+                    .ToListAsync();
+
+                var mapa = existentes.ToDictionary(x => (x.AuditorId, x.CompetenciaAuditorId), x => x);
+
+                foreach (var c in celdasCambiadas)
+                {
+                    if (mapa.TryGetValue((c.AuditorId, c.CompetenciaId), out var entidad))
+                    {
+                        entidad.TieneCompetencia = c.Valor;
+                        entidad.FechaActualizacion = DateTime.Now;
+                        entidad.ActualizadoPorId = usuarioActualId;
+                    }
+                    else
+                    {
+                        Db.AuditorCompetencias.Add(new AuditorCompetenciaCalificacion
+                        {
+                            AuditorId = c.AuditorId,
+                            CompetenciaAuditorId = c.CompetenciaId,
+                            TieneCompetencia = c.Valor,
+                            FechaActualizacion = DateTime.Now,
+                            ActualizadoPorId = usuarioActualId
+                        });
+                    }
+
+                    cambios++;
+                }
+            }
+
+            await Db.SaveChangesAsync();
+
+            foreach (var f in filas)
+            {
+                f.EsAuditorLiderOriginal = f.EsAuditorLider;
+                foreach (var kv in f.Celdas)
+                    kv.Value.TieneCompetenciaOriginal = kv.Value.TieneCompetencia;
+            }
+
+            mensajeGuardado = cambios > 0
+                ? $"Guardado ({cambios} cambio(s))."
+                : "No había cambios por guardar.";
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private void Volver() => Nav.NavigateTo("auditores");
+}

@@ -39,4 +39,5 @@ public class Auditoria
     public ICollection<AuditoriaProceso> AuditoriaProcesos { get; set; } = new List<AuditoriaProceso>();
     public ICollection<AuditoriaChecklist> AuditoriaChecklists { get; set; } = new List<AuditoriaChecklist>();
     public ICollection<Hallazgo> Hallazgos { get; set; } = new List<Hallazgo>();
+    public ICollection<EvaluacionAuditor> EvaluacionesAuditor { get; set; } = new List<EvaluacionAuditor>();
 }

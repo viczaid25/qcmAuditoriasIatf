@@ -109,15 +109,17 @@ else
                         </td>
 
                         <td class="text-end">
-                            <button type="button" class="mo-btn mo-btn-primary-outline mo-btn-sm me-2" @onclick="() => IrEditar(p.PreguntaId)">
-                                Editar
-                            </button>
+                            <div class="table-action-group">
+                                <button type="button" class="mo-btn mo-btn-primary-outline mo-btn-sm" @onclick="() => IrEditar(p.PreguntaId)">
+                                    Editar
+                                </button>
 
-                            <button type="button"
-                                    class="@(p.Activo ? "mo-btn mo-btn-danger-outline mo-btn-sm" : "mo-btn mo-btn-success-outline mo-btn-sm")"
-                                    @onclick="() => ToggleActivo(p)">
-                                @(p.Activo ? "Desactivar" : "Activar")
-                            </button>
+                                <button type="button"
+                                        class="@(p.Activo ? "mo-btn mo-btn-danger-outline mo-btn-sm" : "mo-btn mo-btn-success-outline mo-btn-sm")"
+                                        @onclick="() => ToggleActivo(p)">
+                                    @(p.Activo ? "Desactivar" : "Activar")
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 }

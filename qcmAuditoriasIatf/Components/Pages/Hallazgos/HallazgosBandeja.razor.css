@@ -256,12 +256,29 @@
 }
 
 .mo-table-wrap table.mo-table {
-    min-width: 1400px;
+    min-width: 1600px;
 }
 
-.mo-table-wrap table.mo-table th:nth-child(4),
-.mo-table-wrap table.mo-table td:nth-child(4) {
+.mo-table-wrap table.mo-table th:nth-child(5),
+.mo-table-wrap table.mo-table td:nth-child(5) {
     min-width: 560px;
+}
+
+.linea-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.empty-inline {
+    color: #94a3b8;
 }
 
 .evidencia-box {

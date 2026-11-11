@@ -1,0 +1,376 @@
+@page "/interfaces/sgc/evaluaciones-auditores"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using qcmAuditoriasIatf.Models.Auditorias
+@using System.Security.Claims
+@inject qcmAuditoriasIatf.Data.ApplicationDbContext Db
+@inject NavigationManager Nav
+
+@attribute [Authorize]
+
+@if (!string.IsNullOrWhiteSpace(errorMsg))
+{
+    <div class="alert alert-danger">@errorMsg</div>
+}
+
+@if (cargando)
+{
+    <div class="interfaces-loading">
+        <div class="interfaces-skeleton interfaces-skeleton-hero"></div>
+        <div class="interfaces-skeleton interfaces-skeleton-table"></div>
+    </div>
+}
+else if (!usuarioEsSgc)
+{
+    <section class="panel-card">
+        <div class="empty-state">
+            <div class="empty-title">Acceso restringido</div>
+            <div class="empty-text">
+                Esta bandeja es exclusiva para usuarios del equipo SGC.
+            </div>
+
+            <button type="button" class="hero-btn primary mt-3" @onclick="IrInicio">
+                Volver al inicio
+            </button>
+        </div>
+    </section>
+}
+else
+{
+    <div class="interfaces-page">
+        <section class="interfaces-hero">
+            <div>
+                <span class="interfaces-kicker">Interfaces · Evaluación de auditores</span>
+                <h1>Evaluación de auditores internos</h1>
+
+                <div class="interfaces-meta">
+                    <span class="meta-chip">
+                        Pendientes:
+                        <strong>@pendientes.Count</strong>
+                    </span>
+                </div>
+
+                <p class="hero-text">
+                    Formato MX-6100-F3. Se genera un pendiente por cada auditor principal o segundo auditor que haya participado, al cerrarse la auditoría. Los observadores no se evalúan.
+                </p>
+            </div>
+
+            <div class="hero-actions">
+                <button type="button" class="hero-btn" @onclick="IrInicio">
+                    Volver
+                </button>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Evaluaciones pendientes</h2>
+                    <p class="panel-subtitle">Auditores que ya participaron en una auditoría cerrada y aún no tienen evaluación capturada.</p>
+                </div>
+
+                <span class="panel-badge">@pendientes.Count pendiente(s)</span>
+            </div>
+
+            @if (pendientes.Count == 0)
+            {
+                <div class="empty-state compact">
+                    No hay evaluaciones pendientes de captura.
+                </div>
+            }
+            else
+            {
+                <div class="mo-table-wrap">
+                    <table class="mo-table">
+                        <thead>
+                            <tr>
+                                <th>Auditoría</th>
+                                <th>Auditor evaluado</th>
+                                <th>Pendiente desde</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var ev in pendientes)
+                            {
+                                <tr @key="ev.EvaluacionAuditorId">
+                                    <td>
+                                        <div class="cell-title">#@ev.AuditoriaId</div>
+                                        <div class="cell-subtitle">@ev.AuditoriaTexto</div>
+                                    </td>
+                                    <td>
+                                        <div class="cell-title">@MostrarPersona(ev.AuditorEvaluadoId)</div>
+                                    </td>
+                                    <td>
+                                        <div class="cell-title">@ev.FechaCreacion.ToString("yyyy-MM-dd")</div>
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="button" class="table-btn table-btn-primary" @onclick="() => IrLlenar(ev.AuditoriaId, ev.EvaluacionAuditorId)">
+                                            Llenar evaluación
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2>Completadas</h2>
+                    <p class="panel-subtitle">Historial de evaluaciones ya capturadas.</p>
+                </div>
+
+                <span class="panel-badge">@completadas.Count completada(s)</span>
+            </div>
+
+            @if (completadas.Count == 0)
+            {
+                <div class="empty-state compact">
+                    Aún no hay evaluaciones completadas.
+                </div>
+            }
+            else
+            {
+                <div class="reviewed-list">
+                    @foreach (var ev in completadas)
+                    {
+                        <div class="reviewed-item" @key="ev.EvaluacionAuditorId">
+                            <div class="reviewed-head">
+                                <div>
+                                    <div class="reviewed-title">@MostrarPersona(ev.AuditorEvaluadoId) · Auditoría #@ev.AuditoriaId</div>
+                                    <div class="reviewed-subtitle">@ev.AuditoriaTexto</div>
+                                </div>
+
+                                <span class="validacion-pill @(ev.CalificacionGeneral >= 80 ? "approved" : "rejected")">
+                                    @(ev.CalificacionGeneral.HasValue ? $"{ev.CalificacionGeneral:0.##}%" : "—")
+                                </span>
+                            </div>
+
+                            <div class="reviewed-body">
+                                <div class="reviewed-meta">
+                                    <span>Evaluó: <strong>@(ev.ResponsablesEvaluacion ?? "—")</strong></span>
+                                    @if (ev.FechaCompletada.HasValue)
+                                    {
+                                        <span>Fecha: <strong>@ev.FechaCompletada.Value.ToString("yyyy-MM-dd")</strong></span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="reviewed-actions">
+                                <button type="button" class="table-btn" @onclick="() => IrDetalle(ev.AuditoriaId, ev.EvaluacionAuditorId)">
+                                    Ver detalle
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private readonly Dictionary<string, string> personasDisplay = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool cargando = true;
+    private string? errorMsg;
+
+    private string usuarioActualId = "sistema";
+    private bool usuarioEsSgc;
+
+    private List<EvaluacionRowVm> pendientes = new();
+    private List<EvaluacionRowVm> completadas = new();
+
+    private class EvaluacionRowVm
+    {
+        public int EvaluacionAuditorId { get; set; }
+        public int AuditoriaId { get; set; }
+        public string AuditoriaTexto { get; set; } = "";
+        public string AuditorEvaluadoId { get; set; } = "";
+        public DateTime FechaCreacion { get; set; }
+        public decimal? CalificacionGeneral { get; set; }
+        public string? ResponsablesEvaluacion { get; set; }
+        public DateTime? FechaCompletada { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        cargando = true;
+        errorMsg = null;
+
+        try
+        {
+            await CargarUsuarioActual();
+            await CargarPantalla();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.ToString();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarUsuarioActual()
+    {
+        if (AuthenticationStateTask is null)
+            return;
+
+        var authState = await AuthenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            usuarioActualId =
+                user.FindFirst("pc_login_id")?.Value
+                ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? "sistema";
+        }
+
+        var loginNormalizado = usuarioActualId.Trim().ToUpper();
+
+        usuarioEsSgc = await Db.UsuariosPerfil
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Activo &&
+                x.PcLoginId.ToUpper() == loginNormalizado &&
+                (x.Perfil == "SGC" || x.Perfil == "Administrador"));
+    }
+
+    private async Task CargarPantalla()
+    {
+        pendientes.Clear();
+        completadas.Clear();
+        personasDisplay.Clear();
+
+        if (!usuarioEsSgc)
+            return;
+
+        var evaluaciones = await Db.EvaluacionesAuditor
+            .AsNoTracking()
+            .Include(x => x.Auditoria)
+            .OrderBy(x => x.FechaCreacion)
+            .ToListAsync();
+
+        pendientes = evaluaciones
+            .Where(x => x.Estatus == "Pendiente")
+            .Select(MapRow)
+            .ToList();
+
+        completadas = evaluaciones
+            .Where(x => x.Estatus == "Completada")
+            .OrderByDescending(x => x.FechaCompletada ?? x.FechaCreacion)
+            .Select(MapRow)
+            .ToList();
+
+        await CargarPersonasDisplay(
+            pendientes.Select(x => (string?)x.AuditorEvaluadoId)
+                .Concat(completadas.Select(x => (string?)x.AuditorEvaluadoId)));
+    }
+
+    private static EvaluacionRowVm MapRow(EvaluacionAuditor x) => new()
+    {
+        EvaluacionAuditorId = x.EvaluacionAuditorId,
+        AuditoriaId = x.AuditoriaId,
+        AuditoriaTexto = x.Auditoria is null
+            ? ""
+            : $"{x.Auditoria.TipoAuditoria} | {x.Auditoria.FechaInicio:yyyy-MM-dd} a {x.Auditoria.FechaFin:yyyy-MM-dd}",
+        AuditorEvaluadoId = x.AuditorEvaluadoId,
+        FechaCreacion = x.FechaCreacion,
+        CalificacionGeneral = x.CalificacionGeneral,
+        ResponsablesEvaluacion = x.ResponsablesEvaluacion,
+        FechaCompletada = x.FechaCompletada
+    };
+
+    private async Task CargarPersonasDisplay(IEnumerable<string?> valores)
+    {
+        var ids = valores
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (ids.Count == 0)
+            return;
+
+        var auditores = await Db.Auditores
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.PcLoginId) && ids.Contains(x.PcLoginId)) ||
+                ids.Contains(x.Nombre))
+            .ToListAsync();
+
+        foreach (var a in auditores)
+        {
+            var display = !string.IsNullOrWhiteSpace(a.PcLoginId) &&
+                          !string.Equals(a.Nombre.Trim(), a.PcLoginId.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{a.Nombre} ({a.PcLoginId})"
+                : a.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(a.PcLoginId))
+                personasDisplay[a.PcLoginId.Trim()] = display;
+
+            personasDisplay[a.Nombre.Trim()] = display;
+        }
+
+        var faltantes = ids.Where(x => !personasDisplay.ContainsKey(x)).ToList();
+
+        if (faltantes.Count == 0)
+            return;
+
+        var usuarios = await Db.MeaxAllUsers
+            .AsNoTracking()
+            .Where(x =>
+                (!string.IsNullOrWhiteSpace(x.pc_login_id) && faltantes.Contains(x.pc_login_id)) ||
+                (!string.IsNullOrWhiteSpace(x.username) && faltantes.Contains(x.username)))
+            .ToListAsync();
+
+        foreach (var u in usuarios)
+        {
+            var nombre = string.IsNullOrWhiteSpace(u.username) ? u.pc_login_id : u.username!;
+            var display = !string.IsNullOrWhiteSpace(u.pc_login_id) &&
+                          !string.Equals(nombre.Trim(), u.pc_login_id.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{nombre} ({u.pc_login_id})"
+                : nombre;
+
+            if (!string.IsNullOrWhiteSpace(u.pc_login_id))
+                personasDisplay[u.pc_login_id.Trim()] = display;
+
+            if (!string.IsNullOrWhiteSpace(u.username))
+                personasDisplay[u.username.Trim()] = display;
+        }
+
+        foreach (var id in ids)
+        {
+            if (!personasDisplay.ContainsKey(id))
+                personasDisplay[id] = id;
+        }
+    }
+
+    private string MostrarPersona(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return "Sin asignar";
+
+        var clave = valor.Trim();
+        return personasDisplay.TryGetValue(clave, out var nombre) ? nombre : clave;
+    }
+
+    private void IrLlenar(int auditoriaId, int evaluacionId) =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/evaluaciones/{evaluacionId}");
+
+    private void IrDetalle(int auditoriaId, int evaluacionId) =>
+        Nav.NavigateTo($"auditorias/{auditoriaId}/evaluaciones/{evaluacionId}");
+
+    private void IrInicio() => Nav.NavigateTo("");
+}

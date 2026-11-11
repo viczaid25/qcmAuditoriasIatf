@@ -120,7 +120,13 @@ else
                             <div class="reviewed-head">
                                 <div>
                                     <div class="reviewed-title">Hallazgo #@row.HallazgoId · Auditoría #@row.AuditoriaId</div>
-                                    <div class="reviewed-subtitle">@row.ProcesoTexto · @row.TipoHallazgoNombre</div>
+                                    <div class="reviewed-subtitle">
+                                        @row.ProcesoTexto · @row.TipoHallazgoNombre
+                                        @if (!string.IsNullOrWhiteSpace(row.LineaTexto))
+                                        {
+                                            @: · Línea: @row.LineaTexto
+                                        }
+                                    </div>
                                 </div>
 
                                 <span class="validacion-pill pending">Pendiente</span>
@@ -155,6 +161,19 @@ else
                                             </div>
                                         }
                                     </div>
+                                }
+
+                                <div class="mini-label mt-3">Verificación de acción · evidencia</div>
+
+                                @if (string.IsNullOrWhiteSpace(row.EvidenciaVerificacion))
+                                {
+                                    <div class="empty-state compact">
+                                        Aún no se registró la evidencia de verificación.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="verificacion-texto">@row.EvidenciaVerificacion</div>
                                 }
 
                                 <div class="comment-box mt-3">
@@ -216,7 +235,13 @@ else
                             <div class="reviewed-head">
                                 <div>
                                     <div class="reviewed-title">Hallazgo #@row.HallazgoId</div>
-                                    <div class="reviewed-subtitle">@row.ProcesoTexto · @row.TipoHallazgoNombre</div>
+                                    <div class="reviewed-subtitle">
+                                        @row.ProcesoTexto · @row.TipoHallazgoNombre
+                                        @if (!string.IsNullOrWhiteSpace(row.LineaTexto))
+                                        {
+                                            @: · Línea: @row.LineaTexto
+                                        }
+                                    </div>
                                 </div>
 
                                 <span class="validacion-pill @GetValidacionClass(row.EstatusValidacion)">
@@ -281,6 +306,7 @@ else
         public int HallazgoId { get; set; }
         public int AuditoriaId { get; set; }
         public string ProcesoTexto { get; set; } = "";
+        public string? LineaTexto { get; set; }
         public string TipoHallazgoNombre { get; set; } = "";
         public string ResponsableId { get; set; } = "";
         public DateTime FechaImplementacion { get; set; }
@@ -288,6 +314,7 @@ else
         public string? RevisadoPorSgcId { get; set; }
         public DateTime? FechaRevisionSgc { get; set; }
         public string? ComentarioSgc { get; set; }
+        public string? EvidenciaVerificacion { get; set; }
         public List<Evidencia> Archivos { get; set; } = new();
     }
 
@@ -357,6 +384,7 @@ else
             .AsNoTracking()
             .Include(x => x.Hallazgo!).ThenInclude(h => h.Proceso)
             .Include(x => x.Hallazgo!).ThenInclude(h => h.TipoHallazgo)
+            .Include(x => x.Hallazgo!).ThenInclude(h => h.AuditoriaProceso)
             .Where(x => x.EstatusValidacion == "Pendiente")
             .OrderBy(x => x.FechaImplementacion)
             .ToListAsync();
@@ -370,6 +398,7 @@ else
             .AsNoTracking()
             .Include(x => x.Hallazgo!).ThenInclude(h => h.Proceso)
             .Include(x => x.Hallazgo!).ThenInclude(h => h.TipoHallazgo)
+            .Include(x => x.Hallazgo!).ThenInclude(h => h.AuditoriaProceso)
             .Where(x => x.EstatusValidacion == "Aprobado" || x.EstatusValidacion == "Rechazado")
             .OrderByDescending(x => x.FechaRevisionSgc ?? x.FechaImplementacion)
             .ThenByDescending(x => x.AccionCorrectivaId)
@@ -405,13 +434,15 @@ else
         HallazgoId = x.HallazgoId,
         AuditoriaId = x.Hallazgo!.AuditoriaId,
         ProcesoTexto = $"{x.Hallazgo.Proceso?.Codigo} - {x.Hallazgo.Proceso?.Nombre}",
+        LineaTexto = x.Hallazgo.AuditoriaProceso?.LineaNombre,
         TipoHallazgoNombre = x.Hallazgo.TipoHallazgo?.Nombre ?? "Sin tipo",
         ResponsableId = x.ResponsableId,
         FechaImplementacion = x.FechaImplementacion,
         EstatusValidacion = x.EstatusValidacion,
         RevisadoPorSgcId = x.RevisadoPorSgcId,
         FechaRevisionSgc = x.FechaRevisionSgc,
-        ComentarioSgc = x.ComentarioSgc
+        ComentarioSgc = x.ComentarioSgc,
+        EvidenciaVerificacion = x.EvidenciaVerificacion
     };
 
     private async Task ResolverAccion(int accionCorrectivaId, bool aprobado)
@@ -465,14 +496,27 @@ else
             entity.FechaRevisionSgc = DateTime.Now;
             entity.ComentarioSgc = string.IsNullOrWhiteSpace(comentario) ? null : comentario;
 
-            Db.HallazgoSeguimientos.Add(new HallazgoSeguimiento
+            var seguimiento = new HallazgoSeguimiento
             {
                 HallazgoId = entity.HallazgoId,
                 UsuarioId = usuarioActualId,
                 Comentario = aprobado
                     ? $"SGC aprobó la acción correctiva.{(string.IsNullOrWhiteSpace(comentario) ? "" : $" Comentario: {comentario}")}"
                     : $"SGC rechazó la acción correctiva. Motivo: {comentario}"
-            });
+            };
+
+            if (aprobado)
+            {
+                var hallazgoEntity = await Db.Hallazgos.FirstOrDefaultAsync(h => h.HallazgoId == entity.HallazgoId);
+
+                if (hallazgoEntity is not null && string.Equals(hallazgoEntity.Estatus, "Abierto", StringComparison.OrdinalIgnoreCase))
+                {
+                    hallazgoEntity.Estatus = "En Proceso";
+                    seguimiento.EstatusNuevo = hallazgoEntity.Estatus;
+                }
+            }
+
+            Db.HallazgoSeguimientos.Add(seguimiento);
 
             await Db.SaveChangesAsync();
             await NotificarResolucionAsync(entity);

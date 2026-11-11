@@ -68,18 +68,20 @@ else
                     <td>@(p.LineaNombre ?? "-")</td>
                     <td>@(p.Activo ? "Sí" : "No")</td>
                     <td class="text-end">
-                        <button class="mo-btn mo-btn-primary-outline mo-btn-sm me-2"
-                                @onclick="() => IrEditar(p.ProcesoId)">
-                            Editar
-                        </button>
-                        <button class="@(p.Activo ? "mo-btn mo-btn-danger-outline mo-btn-sm me-2" : "mo-btn mo-btn-success-outline mo-btn-sm me-2")"
-                                @onclick="() => ToggleActivo(p)">
-                            @(p.Activo ? "Desactivar" : "Activar")
-                        </button>
-                        <button class="mo-btn mo-btn-danger mo-btn-sm"
-                                @onclick="() => PedirEliminar(p)">
-                            Eliminar
-                        </button>
+                        <div class="table-action-group">
+                            <button class="mo-btn mo-btn-primary-outline mo-btn-sm"
+                                    @onclick="() => IrEditar(p.ProcesoId)">
+                                Editar
+                            </button>
+                            <button class="@(p.Activo ? "mo-btn mo-btn-danger-outline mo-btn-sm" : "mo-btn mo-btn-success-outline mo-btn-sm")"
+                                    @onclick="() => ToggleActivo(p)">
+                                @(p.Activo ? "Desactivar" : "Activar")
+                            </button>
+                            <button class="mo-btn mo-btn-danger mo-btn-sm"
+                                    @onclick="() => PedirEliminar(p)">
+                                Eliminar
+                            </button>
+                        </div>
                     </td>
                 </tr>
             }

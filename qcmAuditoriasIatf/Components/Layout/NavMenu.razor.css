@@ -1,0 +1,51 @@
+.mo-sb-collapsible-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: calc(100% - 12px);
+    margin: 4px 6px 1px;
+    padding: 10px 10px 3px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.28);
+    letter-spacing: 1.2px;
+    white-space: nowrap;
+    font-family: 'Montserrat', sans-serif;
+    text-transform: uppercase;
+}
+
+    .mo-sb-collapsible-header:hover {
+        color: rgba(255,255,255,0.55);
+    }
+
+.mo-sb-chevron {
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+    .mo-sb-chevron.expanded {
+        transform: rotate(90deg);
+    }
+
+.mo-sb-subsection-label {
+    padding: 8px 16px 3px 30px;
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.22);
+    letter-spacing: 1.2px;
+    white-space: nowrap;
+    font-family: 'Montserrat', sans-serif;
+    text-transform: uppercase;
+}
+
+.mo-sb-item-nested {
+    margin-left: 14px;
+}
+
+#mo-sidebar.collapsed .mo-sb-collapsible-header,
+#mo-sidebar.collapsed .mo-sb-subsection-label {
+    display: none;
+}
